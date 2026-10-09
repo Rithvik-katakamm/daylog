@@ -71,7 +71,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func show() {
         placePanel()
         panel.makeKeyAndOrderFront(nil)
-        store.isOpen = true  // SwiftUI grows the bar out of the bottom of the screen
+        store.isOpen = true  // SwiftUI grows the bar down from the top of the screen
+        Sound.open.play()
         store.focusRequest += 1
         Task { await store.refreshAll() }
         // Click anywhere outside daylog to dismiss.
@@ -92,6 +93,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 MainActor.assumeIsolated { store.enterBrowse() }; return nil             // ↑ start looking back
             case (36, .browse): MainActor.assumeIsolated { store.beginFill() }; return nil
             case (45, .input) where cmd: MainActor.assumeIsolated { store.beginNote() }; return nil  // ⌘N
+            case (31, .input) where cmd: MainActor.assumeIsolated { store.ghostKey() }; return nil   // ⌘O
             case (51, .browse) where cmd: MainActor.assumeIsolated { store.deleteCurrent() }; return nil
             default: break
             }

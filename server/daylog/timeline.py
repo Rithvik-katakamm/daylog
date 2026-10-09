@@ -21,7 +21,7 @@ ACTIVITY_CAP = timedelta(minutes=10)
 # Claims can start before the window they overlap (a timer started last night).
 CLAIM_LOOKBACK = timedelta(hours=24)
 
-CLAIM_TYPES = ["timer.start", "entry.log"]
+CLAIM_TYPES = ["timer.start", "entry.log", "ghost.start"]
 ACTIVITY_TYPES = ["app.focus", "away.start"]
 
 
@@ -43,13 +43,24 @@ def _seg(start: datetime, end: datetime | None, **fields: Any) -> dict[str, Any]
     return out
 
 
-def running_timer(conn: sqlite3.Connection) -> dict[str, Any] | None:
+def _open_span(conn: sqlite3.Connection, start_type: str) -> dict[str, Any] | None:
+    """The latest span of `start_type` that nothing has stopped or deleted yet."""
     r = conn.execute(
-        "SELECT * FROM events e WHERE e.type = 'timer.start' AND NOT EXISTS ("
+        "SELECT * FROM events e WHERE e.type = ? AND NOT EXISTS ("
         "  SELECT 1 FROM events x WHERE x.ref = e.id AND x.type IN ('timer.stop', 'entry.delete'))"
-        " ORDER BY e.start DESC LIMIT 1"
+        " ORDER BY e.start DESC LIMIT 1",
+        (start_type,),
     ).fetchone()
     return db.to_dict(r) if r else None
+
+
+def running_timer(conn: sqlite3.Connection) -> dict[str, Any] | None:
+    return _open_span(conn, "timer.start")
+
+
+def ghost(conn: sqlite3.Connection) -> dict[str, Any] | None:
+    """Ghost mode: he's gone dark. Nothing is logged about him until he comes back."""
+    return _open_span(conn, "ghost.start")
 
 
 def claims(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[str, Any]]:
@@ -66,7 +77,7 @@ def claims(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[st
             continue
         start = db.parse(e["start"])
         running = False
-        if e["type"] == "timer.start":
+        if e["type"] in ("timer.start", "ghost.start"):
             stop = stops.get(e["id"])
             if stop:
                 end = db.parse(stop["start"])
@@ -85,7 +96,7 @@ def claims(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[st
                 id=e["id"],
                 label=e["label"],
                 source=e["source"],
-                type="timer" if e["type"] == "timer.start" else "entry",
+                type={"timer.start": "timer", "ghost.start": "ghost"}.get(e["type"], "entry"),
                 running=running,
             )
         )
@@ -225,7 +236,8 @@ def summary(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> dict[str, A
     tl = timeline(conn, lo, hi)
     by_label: dict[str, timedelta] = {}
     known: list[tuple[datetime, datetime]] = []
-    for seg in tl["claims"] + [dict(m, label=f"meeting: {m['label']}") for m in tl["meetings"]]:
+    segs = [dict(c, label=f"ghost: {c['label']}") if c["type"] == "ghost" else c for c in tl["claims"]]
+    for seg in segs + [dict(m, label=f"meeting: {m['label']}") for m in tl["meetings"]]:
         s = db.parse(seg["start"])
         e = db.parse(seg["end"]) if seg["end"] else now
         clipped = _clip(s, e, lo, hi)
@@ -255,6 +267,7 @@ def summary(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> dict[str, A
 def now_state(conn: sqlite3.Connection) -> dict[str, Any]:
     now = db.utcnow()
     timer = running_timer(conn)
+    g = ghost(conn)
     last_act = conn.execute(
         "SELECT * FROM events WHERE type IN ('app.focus', 'away.start') ORDER BY start DESC LIMIT 1"
     ).fetchone()
@@ -280,4 +293,9 @@ def now_state(conn: sqlite3.Connection) -> dict[str, Any]:
         ),
         "activity": current_app,
         "meeting": meeting,
+        "ghost": (
+            {"id": g["id"], "status": g["label"], "start": g["start"],
+             "elapsed_minutes": _minutes(now - db.parse(g["start"]))}
+            if g else None
+        ),
     }

@@ -6,6 +6,7 @@ import SwiftUI
 @MainActor
 final class Store: ObservableObject {
     @Published var timer: TimerInfo?
+    @Published var ghost: GhostInfo?  // ghost mode: offline, logging nothing
     @Published var summary: Summary?
     @Published var serverDown = false
     @Published var error: String?
@@ -16,7 +17,7 @@ final class Store: ObservableObject {
     @Published var isOpen = false   // drives the grow/shrink animation
 
     // Scrolling back through the past with ↑/↓.
-    enum Mode: Equatable { case input, browse, fill, note }
+    enum Mode: Equatable { case input, browse, fill, note, ghost }
     @Published var mode: Mode = .input
     @Published var history: [HistoryItem] = []
     @Published var index = 0
@@ -56,6 +57,7 @@ final class Store: ObservableObject {
             index = 0
             movedOlder = true
             mode = .browse
+            Sound.mode.play()
         }
     }
 
@@ -88,8 +90,44 @@ final class Store: ObservableObject {
     func back() {
         switch mode {
         case .fill: mode = .browse; fillItem = nil; input = ""
-        case .note: mode = .input; input = ""
+        case .note, .ghost: mode = .input; input = ""
         default: mode = .input
+        }
+    }
+
+    /// ⌘O: go ghost (type an optional status), or come back if already a ghost.
+    func ghostKey() {
+        if ghost != nil {
+            ghost = nil
+            Sound.saved.play()
+            flash = "Back online"
+            Task {
+                do { try await API.delete("ghost") } catch { self.error = error.localizedDescription }
+                await refreshAll()
+                try? await Task.sleep(for: .seconds(0.9))
+                onSubmitted?(); flash = nil
+            }
+            return
+        }
+        input = ""; preview = nil
+        mode = .ghost
+        Sound.mode.play()
+        focusRequest += 1
+    }
+
+    private func submitGhost() {
+        let status = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        input = ""
+        timer = nil  // optimistic: going dark stops the clock
+        ghost = GhostInfo(id: "pending", status: status.isEmpty ? "offline" : status, start: Time.string(Date()))
+        Sound.ghost.play()
+        flash = "Ghost mode · nothing is being logged"
+        Task {
+            do { try await API.post("ghost", ["status": status, "source": "button"]) }
+            catch { self.error = error.localizedDescription }
+            await refreshAll()
+            try? await Task.sleep(for: .seconds(1.1))
+            onSubmitted?(); flash = nil
         }
     }
 
@@ -98,6 +136,7 @@ final class Store: ObservableObject {
         input = ""
         preview = nil
         mode = .note
+        Sound.mode.play()
         focusRequest += 1
     }
 
@@ -106,6 +145,7 @@ final class Store: ObservableObject {
         guard !text.isEmpty else { return }
         input = ""
         flash = "Noted"
+        Sound.saved.play()
         Task {
             do { try await API.post("notes", ["text": text, "source": "button"]) }
             catch { self.error = error.localizedDescription }
@@ -136,6 +176,7 @@ final class Store: ObservableObject {
             do {
                 try await API.post("entries", ["label": label, "start": gap.start, "end": gap.end, "source": "button"])
                 flashBriefly("Logged “\(label)”  \(gap.range)")
+                Sound.saved.play()
             } catch {
                 self.error = error.localizedDescription
             }
@@ -181,6 +222,7 @@ final class Store: ObservableObject {
     func submit(forceTimer: Bool = false) {
         if mode == .fill { submitFill(); return }
         if mode == .note { submitNote(); return }
+        if mode == .ghost { submitGhost(); return }
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         let willLog = !forceTimer && preview?.action == "log"
@@ -189,6 +231,8 @@ final class Store: ObservableObject {
             timer = TimerInfo(id: "pending", label: label, start: Time.string(Date()))
         }
         flash = willLog ? describe(preview).map { "Logged \($0)" } : nil
+        if !willLog { ghost = nil }  // starting a task brings you back from ghost mode
+        Sound.saved.play()
         input = ""
         preview = nil
         run { try await API.post("log", ["text": text, "timer": forceTimer, "source": "button"]) }
@@ -221,6 +265,7 @@ final class Store: ObservableObject {
         do {
             let now: NowState = try await API.get("now")
             if now.timer != timer { timer = now.timer }
+            if now.ghost != ghost { ghost = now.ghost }
             serverDown = false
         } catch {
             serverDown = true
@@ -244,6 +289,8 @@ final class Store: ObservableObject {
     // MARK: actions
 
     func stop() {
+        guard timer != nil else { return }
+        Sound.saved.play()
         timer = nil  // optimistic
         run { try await API.post("timer/stop", ["source": "button"]) }
     }

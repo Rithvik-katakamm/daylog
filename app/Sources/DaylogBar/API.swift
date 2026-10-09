@@ -66,6 +66,13 @@ struct NowState: Decodable {
     let timer: TimerInfo?
     let activity: ActivityInfo?
     let meeting: Segment?
+    let ghost: GhostInfo?
+}
+
+struct GhostInfo: Decodable, Equatable {
+    let id: String
+    let status: String
+    let start: String
 }
 
 struct TimerInfo: Decodable, Equatable {

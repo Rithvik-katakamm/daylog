@@ -229,3 +229,29 @@ def test_note_attaches_to_running_timer_without_changing_it(client, clock):
     assert [(n["text"], n["during"]) for n in notes] == [("history view should show notes", "building daylog")]
     kinds = [i["kind"] for i in client.get("/history").json()["items"]]
     assert "note" in kinds
+
+
+# ---------- ghost mode ----------
+
+def test_ghost_stops_timer_blocks_activity_and_ends_on_new_task(client, clock):
+    client.post("/timer/start", json={"label": "coding"})
+    clock.advance(minutes=10)
+    now = client.post("/ghost", json={"status": "dinner with family"}).json()
+    assert now["timer"] is None and now["ghost"]["status"] == "dinner with family"
+
+    r = client.post("/observations", json={"type": "app.focus", "data": {"app": "Safari"}})
+    assert r.json() == {"ignored": "ghost mode"}
+
+    clock.advance(minutes=60)
+    now = client.post("/timer/start", json={"label": "back to coding"}).json()
+    assert now["ghost"] is None and now["timer"]["label"] == "back to coding"
+    s = client.get("/summary").json()
+    assert s["by_label"]["ghost: dinner with family"] == 60
+
+
+def test_ghost_off(client):
+    client.post("/ghost", json={})
+    assert client.get("/now").json()["ghost"]["status"] == "offline"
+    assert client.delete("/ghost").status_code == 200
+    assert client.get("/now").json()["ghost"] is None
+    assert client.delete("/ghost").status_code == 409

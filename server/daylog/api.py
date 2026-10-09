@@ -85,6 +85,11 @@ class Line(BaseModel):
     source: str = "api"
 
 
+class Ghost(BaseModel):
+    status: str = Field(default="", max_length=500)
+    source: str = "api"
+
+
 class Note(BaseModel):
     text: str = Field(min_length=1, max_length=5000)
     source: str = "api"
@@ -122,6 +127,14 @@ def _stop_running(source: str):
     )
 
 
+def _end_ghost(source: str):
+    g = timeline.ghost(conn())
+    if not g:
+        return None
+    return db.append(conn(), kind="claim", type="timer.stop", source=source,
+                     start=db.utcnow(), ref=g["id"])
+
+
 # ---------- routes ----------
 
 @app.get("/health")
@@ -137,6 +150,7 @@ async def now():
 @app.post("/timer/start", status_code=201)
 async def timer_start(body: TimerStart):
     _stop_running(body.source)  # one timer at a time: starting X ends Y
+    _end_ghost(body.source)     # starting a task means you're back
     db.append(conn(), kind="claim", type="timer.start", source=body.source,
               start=db.utcnow(), label=body.label.strip())
     return timeline.now_state(conn())
@@ -179,6 +193,9 @@ async def delete_entry(event_id: str, source: str = "api"):
 
 @app.post("/observations", status_code=201)
 async def add_observation(body: Observation):
+    # Ghost mode means log nothing. Enforced here, so no recorder can leak data by accident.
+    if timeline.ghost(conn()):
+        return {"ignored": "ghost mode"}
     start = db.parse(body.start.isoformat()) if body.start else db.utcnow()
     end = db.parse(body.end.isoformat()) if body.end else None
     row = db.append(conn(), kind="observation", type=body.type, source=body.source,
@@ -191,6 +208,23 @@ def _describe(p: parse.Parsed) -> dict:
         return {"action": "timer", "label": p.label}
     return {"action": "log", "label": p.label, "start": db.iso(p.start), "end": db.iso(p.end),
             "minutes": round((p.end - p.start).total_seconds() / 60), "until_now": p.open_ended}
+
+
+@app.post("/ghost", status_code=201)
+async def ghost_on(body: Ghost):
+    """Go dark: stop the timer, leave a status, and log nothing about him until he's back."""
+    _stop_running(body.source)
+    _end_ghost(body.source)  # a new status replaces the old one
+    db.append(conn(), kind="claim", type="ghost.start", source=body.source,
+              start=db.utcnow(), label=body.status.strip() or "offline")
+    return timeline.now_state(conn())
+
+
+@app.delete("/ghost")
+async def ghost_off(source: str = "api"):
+    if not _end_ghost(source):
+        raise HTTPException(409, "not in ghost mode")
+    return timeline.now_state(conn())
 
 
 @app.post("/notes", status_code=201)

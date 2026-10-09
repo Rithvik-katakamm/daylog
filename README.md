@@ -20,7 +20,14 @@ Keyboard only. Press **⌥L** and a black capsule drops down from the top of the
   - ⌘⌫ deletes a logged block. Esc steps back.
 - **⌘N: note.** Jot a thought at this moment without switching tasks. It's tagged with
   the running timer (blue ring), and notes show up when you scroll back.
+- **⌘O: ghost mode.** Go offline with an optional status ("dinner with family"). It stops
+  your timer, and the server refuses all Mac activity until you're back. ⌘O again or
+  starting a task brings you back.
 - **⌘.** stops the running timer.
+
+**One input line; the ring tells you the mode:** green = task · blue = note (⌘N) ·
+purple = ghost (⌘O) · yellow = looking back (↑). Sounds are consistent too: Pop = open,
+Tink = mode switch, Bottle = saved, Submarine = gone ghost.
 - The bar closes itself after ⏎. Esc closes it too.
 - **Agents:** any Claude Code session has the `daylog` MCP tools:
   `what_is_rithvik_doing`, `timeline`, `day_summary`, `log_activity`.
