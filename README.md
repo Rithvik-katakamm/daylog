@@ -5,17 +5,19 @@ not what you planned.
 
 ## Use it
 
-- **The pill** on the right edge of your screen. Click it, or press **⌥ + fn** (needs Accessibility for Daylog) or **⌃⌥D**.
-  Drag it up or down to move it.
-- **Type what you're doing + ⏎** to start a timer. Typing something new switches
-  (the old timer stops).
-- **Already did it?** Type it, then hit 15m / 30m / 1h / 2h to log the time ending now.
-- **The day view:** drag across any time range to say what you were doing then.
-  Right-click a block to delete it. ‹ › moves between days.
-  - Mint = what you logged. Violet = Wispr meetings (automatic).
-  - The thin colored strip = which app was in front.
+Keyboard only. Press **⌥ + fn** (or **⌃⌥D**) and a small panel opens at the top of the screen.
+
+- **Type what you're doing + ⏎** to start a timer. Typing something new switches timers.
+- **Add a time to log something that already happened:**
+  - `client call 3:10-3:25`, `client call 2pm to 2:40`
+  - `client call 15m` (ended now), `deep work since 1pm`
+
+  The line under the field shows what daylog understood before you press ⏎.
+  **⇧⏎** forces a timer even when there's a time in the text.
+- The panel closes itself after ⏎. Esc closes it too.
 - **Agents:** any Claude Code session has the `daylog` MCP tools:
   `what_is_rithvik_doing`, `timeline`, `day_summary`, `log_activity`.
+- **Phone/scripts:** `POST /log {"text": "client call 15m"}` uses the same parser.
 
 ## Install / update / remove
 

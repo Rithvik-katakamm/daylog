@@ -38,7 +38,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>14.0</string>
 </dict></plist>
 PLIST
-codesign --force --sign - "$APP" >/dev/null 2>&1
+# Sign with a stable local identity so macOS remembers Accessibility permission across
+# rebuilds (an ad-hoc signature changes every build and resets it). Falls back to ad-hoc.
+IDENTITY="$(security find-identity -p codesigning 2>/dev/null | awk '/"daylog-local"/{print $2; exit}')"
+codesign --force --sign "${IDENTITY:--}" "$APP" >/dev/null 2>&1
 
 write_agent() {  # label, program args (xml), extra keys
   cat > "$AGENTS/$1.plist" <<PLIST
@@ -75,5 +78,5 @@ for _ in $(seq 1 30); do
   echo -n "."; sleep 1
 done
 curl -fs http://127.0.0.1:7878/health && echo
-echo "✓ daylog installed. Pill on the right edge of your screen; ⌥+fn (or ⌃⌥D) toggles the panel."
+echo "✓ daylog installed. Press ⌥+fn (or ⌃⌥D) to open it."
 echo "  Logs: $LOGS"

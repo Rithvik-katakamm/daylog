@@ -9,36 +9,24 @@ final class KeyPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
-/// The pill. Never takes focus.
-final class HandlePanel: NSPanel {
-    override var canBecomeKey: Bool { false }
-    override var canBecomeMain: Bool { false }
-}
-
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let store = Store()
     let recorder = ActivityRecorder()
-    var handle: HandlePanel!
     var panel: KeyPanel!
     var hotKey: HotKey?
     var clickMonitor: Any?
     var keyMonitor: Any?
 
-    private let handleSize = NSSize(width: 34, height: 52)
-    private let panelSize = NSSize(width: 360, height: 600)
+    static let panelSize = NSSize(width: 480, height: 190)
 
     func applicationDidFinishLaunching(_ note: Notification) {
-        makeHandle()
         makePanel()
+        store.onSubmitted = { [weak self] in self?.hide() }
         hotKey = HotKey { [weak self] in MainActor.assumeIsolated { self?.toggle() } }
         watchOptionFn()
         recorder.start()
         store.startPolling()
-        NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
-                                               object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.placeHandle() }
-        }
     }
 
     // MARK: ⌥ + fn (like Wispr Flow's fn key)
@@ -78,61 +66,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
     }
 
-    private func makeHandle() {
-        handle = HandlePanel(contentRect: NSRect(origin: .zero, size: handleSize),
-                             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        floating(handle)
-        let view = HandleView(store: store)
-            .gesture(DragGesture(minimumDistance: 3, coordinateSpace: .global)
-                .onChanged { [weak self] v in self?.dragHandle(by: v.translation.height) }
-                .onEnded { [weak self] _ in self?.endDrag() })
-            .onTapGesture { [weak self] in self?.toggle() }
-        handle.contentView = NSHostingView(rootView: view)
-        placeHandle()
-        handle.orderFrontRegardless()
-    }
-
     private func makePanel() {
-        panel = KeyPanel(contentRect: NSRect(origin: .zero, size: panelSize),
+        panel = KeyPanel(contentRect: NSRect(origin: .zero, size: Self.panelSize),
                          styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         floating(panel)
         panel.contentView = NSHostingView(rootView: PanelView(store: store))
     }
 
-    // MARK: handle position (remembered, draggable vertically)
-
-    private var dragOriginY: CGFloat?
-
-    private var screen: NSRect { (NSScreen.main ?? NSScreen.screens[0]).visibleFrame }
-
-    private func placeHandle() {
-        let saved = UserDefaults.standard.object(forKey: "handleY") as? Double
-        let y = saved.map { CGFloat($0) } ?? (screen.midY + 80)
-        setHandle(y: y)
-    }
-
-    private func setHandle(y: CGFloat) {
-        let clamped = min(max(y, screen.minY + 8), screen.maxY - handleSize.height - 8)
-        handle.setFrameOrigin(NSPoint(x: screen.maxX - handleSize.width - 2, y: clamped))
-        if panel?.isVisible == true { placePanel() }
-    }
-
-    private func dragHandle(by dy: CGFloat) {
-        if dragOriginY == nil { dragOriginY = handle.frame.origin.y }
-        setHandle(y: dragOriginY! - dy)  // screen y grows upward, drag y grows downward
-    }
-
-    private func endDrag() {
-        UserDefaults.standard.set(Double(handle.frame.origin.y), forKey: "handleY")
-        dragOriginY = nil
-    }
+    // MARK: placement: top-center of the screen you're on, like Spotlight
 
     private func placePanel() {
-        let h = handle.frame
-        var y = h.midY - panelSize.height / 2
-        y = min(max(y, screen.minY + 8), screen.maxY - panelSize.height - 8)
-        panel.setFrame(NSRect(x: h.minX - panelSize.width - 8, y: y, width: panelSize.width,
-                              height: panelSize.height), display: true)
+        let screen = (NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
+                      ?? NSScreen.screens[0]).visibleFrame
+        let size = Self.panelSize
+        let x = screen.midX - size.width / 2
+        let y = screen.maxY - screen.height * 0.22 - size.height
+        panel.setFrame(NSRect(x: x, y: y, width: size.width, height: size.height), display: true)
     }
 
     // MARK: show / hide
@@ -153,6 +102,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Esc dismisses (unless a field is handling it).
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
             if e.keyCode == 53 { MainActor.assumeIsolated { self?.hide() }; return nil }
+            if e.keyCode == 36 && e.modifierFlags.contains(.shift) {  // ⇧⏎: force a timer
+                MainActor.assumeIsolated { self?.store.submit(forceTimer: true) }
+                return nil
+            }
             return e
         }
     }

@@ -6,14 +6,55 @@ import SwiftUI
 @MainActor
 final class Store: ObservableObject {
     @Published var timer: TimerInfo?
-    @Published var day: Date = Calendar.current.startOfDay(for: Date())
-    @Published var timeline: Timeline?
     @Published var summary: Summary?
     @Published var serverDown = false
     @Published var error: String?
     @Published var focusRequest = 0  // bump to focus the input field
+    @Published var input = "" { didSet { schedulePreview() } }
+    @Published var preview: LinePreview?
+    @Published var flash: String?  // brief confirmation after an action
 
-    var isToday: Bool { Calendar.current.isDateInToday(day) }
+    private var previewTask: Task<Void, Never>?
+    var onSubmitted: (() -> Void)?  // the window closes itself after a submit
+
+    private func schedulePreview() {
+        previewTask?.cancel()
+        let text = input.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { preview = nil; return }
+        previewTask = Task {
+            try? await Task.sleep(for: .milliseconds(60))  // debounce keystrokes
+            guard !Task.isCancelled else { return }
+            if let p: LinePreview = try? await API.get("parse", query: ["text": text]), !Task.isCancelled {
+                preview = p
+            }
+        }
+    }
+
+    /// ⏎: a time in the text logs it; otherwise starts a timer. ⇧⏎ forces a timer.
+    func submit(forceTimer: Bool = false) {
+        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        let willLog = !forceTimer && preview?.action == "log"
+        if !willLog {  // optimistic: show the timer immediately
+            let label = forceTimer ? (preview?.label ?? text) : text
+            timer = TimerInfo(id: "pending", label: label, start: Time.string(Date()))
+        }
+        flash = willLog ? describe(preview) : nil
+        input = ""
+        preview = nil
+        run { try await API.post("log", ["text": text, "timer": forceTimer, "source": "button"]) }
+        Task {
+            try? await Task.sleep(for: .seconds(flash != nil ? 1.2 : 0.5))
+            onSubmitted?()
+            flash = nil
+        }
+    }
+
+    func describe(_ p: LinePreview?) -> String? {
+        guard let p, p.action == "log", let s = p.start, let e = p.end else { return nil }
+        let end = p.untilNow == true ? "now" : Time.clockString(Time.parse(e))
+        return "“\(p.label)”  \(Time.clockString(Time.parse(s)))–\(end)  (\(Time.minutes(p.minutes ?? 0)))"
+    }
 
     private var poller: Task<Void, Never>?
 
@@ -38,12 +79,8 @@ final class Store: ObservableObject {
     }
 
     func refreshDay() async {
-        let d = Time.dayString(day)
         do {
-            async let tl: Timeline = API.get("timeline", query: ["date": d])
-            async let sm: Summary = API.get("summary", query: ["date": d])
-            timeline = try await tl
-            summary = try await sm
+            summary = try await API.get("summary")
             serverDown = false
         } catch {
             serverDown = true
@@ -57,48 +94,9 @@ final class Store: ObservableObject {
 
     // MARK: actions
 
-    func start(_ label: String) {
-        let label = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !label.isEmpty else { return }
-        timer = TimerInfo(id: "pending", label: label, start: Time.string(Date()))  // optimistic
-        run { try await API.post("timer/start", ["label": label, "source": "button"]) }
-    }
-
     func stop() {
         timer = nil  // optimistic
         run { try await API.post("timer/stop", ["source": "button"]) }
-    }
-
-    func logPast(_ label: String, minutes: Int) {
-        let label = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !label.isEmpty else { return }
-        run { try await API.post("entries", ["label": label, "minutes": minutes, "source": "button"]) }
-    }
-
-    func log(_ label: String, from: Date, to: Date) {
-        let label = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !label.isEmpty, to > from else { return }
-        run {
-            try await API.post("entries", ["label": label, "start": Time.string(from),
-                                           "end": Time.string(min(to, Date())), "source": "button"])
-        }
-    }
-
-    func delete(_ seg: Segment) {
-        guard let id = seg.id else { return }
-        run { try await API.delete("entries/\(id)") }
-    }
-
-    func shiftDay(_ n: Int) {
-        guard let d = Calendar.current.date(byAdding: .day, value: n, to: day) else { return }
-        if d > Date() { return }
-        day = d
-        Task { await refreshDay() }
-    }
-
-    func goToday() {
-        day = Calendar.current.startOfDay(for: Date())
-        Task { await refreshDay() }
     }
 
     private func run(_ op: @escaping () async throws -> Any) {

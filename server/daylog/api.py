@@ -23,7 +23,7 @@ from datetime import date, datetime, timedelta
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from . import db, timeline, wispr
+from . import db, parse, timeline, wispr
 
 log = logging.getLogger("daylog")
 
@@ -76,6 +76,12 @@ class Entry(BaseModel):
     start: datetime | None = None
     end: datetime | None = None
     minutes: int | None = Field(default=None, gt=0, le=24 * 60)
+    source: str = "api"
+
+
+class Line(BaseModel):
+    text: str = Field(min_length=1, max_length=500)
+    timer: bool = False  # force a timer even if the text contains a time
     source: str = "api"
 
 
@@ -173,6 +179,32 @@ async def add_observation(body: Observation):
     row = db.append(conn(), kind="observation", type=body.type, source=body.source,
                     start=start, end=end, data=body.data, source_key=body.source_key)
     return row or {"duplicate": True}
+
+
+def _describe(p: parse.Parsed) -> dict:
+    if not p.is_range:
+        return {"action": "timer", "label": p.label}
+    return {"action": "log", "label": p.label, "start": db.iso(p.start), "end": db.iso(p.end),
+            "minutes": round((p.end - p.start).total_seconds() / 60), "until_now": p.open_ended}
+
+
+@app.get("/parse")
+async def parse_line(text: str):
+    """What would /log do with this line? Used for the live preview while typing."""
+    return _describe(parse.parse(text))
+
+
+@app.post("/log", status_code=201)
+async def log_line(body: Line):
+    """One line in, the right event out: a time in the text logs it, otherwise starts a timer.
+    The same endpoint the panel, the phone, or a shortcut can call."""
+    p = parse.parse(body.text)
+    if body.timer or not p.is_range:
+        await timer_start(TimerStart(label=p.label if p.is_range else body.text, source=body.source))
+        return {"action": "timer", **timeline.now_state(conn())}
+    row = db.append(conn(), kind="claim", type="entry.log", source=body.source,
+                    start=p.start, end=p.end, label=p.label.strip())
+    return {"action": "log", "entry": row}
 
 
 @app.get("/timeline")

@@ -102,6 +102,16 @@ struct Timeline: Decodable {
     let activity: [Segment]
 }
 
+/// What the server would do with the current line (live preview).
+struct LinePreview: Decodable, Equatable {
+    let action: String  // "log" or "timer"
+    let label: String
+    let start: String?
+    let end: String?
+    let minutes: Int?
+    let untilNow: Bool?
+}
+
 struct Summary: Decodable {
     let trackedMinutes: Int
     let untrackedMinutes: Int

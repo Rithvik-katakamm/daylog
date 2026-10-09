@@ -170,3 +170,24 @@ def test_wispr_import_meetings_and_dictations(conn, tmp_path):
     ms = timeline.meetings(conn, start - timedelta(hours=1), start + timedelta(hours=2))
     assert [(m["label"], m["start"], m["end"]) for m in ms] == [
         ("Sync", "2026-10-08T20:00:00Z", "2026-10-08T20:30:00Z")]
+
+
+# ---------- one-line logging ----------
+
+def test_log_line_with_duration_records_an_entry(client):
+    r = client.post("/log", json={"text": "client call 15m"})
+    assert r.status_code == 201 and r.json()["action"] == "log"
+    assert r.json()["entry"]["label"] == "client call"
+    assert client.get("/now").json()["timer"] is None
+
+
+def test_log_line_without_time_starts_timer(client):
+    r = client.post("/log", json={"text": "building daylog"})
+    assert r.json()["action"] == "timer"
+    assert client.get("/now").json()["timer"]["label"] == "building daylog"
+
+
+def test_parse_preview_does_not_write(client):
+    r = client.get("/parse", params={"text": "client call 30m"})
+    assert r.json()["action"] == "log" and r.json()["minutes"] == 30
+    assert client.get("/timeline").json()["claims"] == []
