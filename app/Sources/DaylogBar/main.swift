@@ -91,6 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case (126, .input) where store.input.isEmpty:
                 MainActor.assumeIsolated { store.enterBrowse() }; return nil             // ↑ start looking back
             case (36, .browse): MainActor.assumeIsolated { store.beginFill() }; return nil
+            case (45, .input) where cmd: MainActor.assumeIsolated { store.beginNote() }; return nil  // ⌘N
             case (51, .browse) where cmd: MainActor.assumeIsolated { store.deleteCurrent() }; return nil
             default: break
             }

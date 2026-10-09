@@ -8,8 +8,8 @@ final class HotKey {
     private var handler: EventHandlerRef?
     private let action: () -> Void
 
-    /// Default: ⌃⌥D
-    init(keyCode: UInt32 = UInt32(kVK_ANSI_D), modifiers: UInt32 = UInt32(controlKey | optionKey),
+    /// Default: ⌥L ("L" for log)
+    init(keyCode: UInt32 = UInt32(kVK_ANSI_L), modifiers: UInt32 = UInt32(optionKey),
          action: @escaping () -> Void) {
         self.action = action
         var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))

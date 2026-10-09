@@ -85,6 +85,11 @@ class Line(BaseModel):
     source: str = "api"
 
 
+class Note(BaseModel):
+    text: str = Field(min_length=1, max_length=5000)
+    source: str = "api"
+
+
 class Observation(BaseModel):
     type: str = Field(pattern=r"^(app\.focus|away\.start)$")
     start: datetime | None = None
@@ -165,8 +170,8 @@ async def add_entry(body: Entry):
 @app.delete("/entries/{event_id}")
 async def delete_entry(event_id: str, source: str = "api"):
     target = db.get(conn(), event_id)
-    if not target or target["type"] not in ("entry.log", "timer.start"):
-        raise HTTPException(404, "no entry or timer with that id")
+    if not target or target["type"] not in ("entry.log", "timer.start", "note"):
+        raise HTTPException(404, "no entry, timer or note with that id")
     tombstone = db.append(conn(), kind="claim", type="entry.delete", source=source,
                           start=db.utcnow(), ref=event_id)
     return {"deleted": event_id, "tombstone": tombstone["id"]}
@@ -186,6 +191,16 @@ def _describe(p: parse.Parsed) -> dict:
         return {"action": "timer", "label": p.label}
     return {"action": "log", "label": p.label, "start": db.iso(p.start), "end": db.iso(p.end),
             "minutes": round((p.end - p.start).total_seconds() / 60), "until_now": p.open_ended}
+
+
+@app.post("/notes", status_code=201)
+async def add_note(body: Note):
+    """A thought at this moment. Attached to the running timer (if any) without
+    changing it, so notes say what was on his mind *during* a task."""
+    running = timeline.running_timer(conn())
+    return db.append(conn(), kind="claim", type="note", source=body.source, start=db.utcnow(),
+                     label=body.text.strip(), ref=running["id"] if running else None,
+                     data={"during": running["label"]} if running else {})
 
 
 @app.get("/parse")

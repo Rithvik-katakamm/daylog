@@ -114,15 +114,17 @@ struct LinePreview: Decodable, Equatable {
 
 /// One stop when scrolling back: a logged block, a meeting, or an untracked gap.
 struct HistoryItem: Decodable, Equatable {
-    let kind: String  // "entry", "timer", "meeting", "gap"
+    let kind: String  // "entry", "timer", "meeting", "gap", "note"
     let id: String?
     let label: String?
     let start: String
     let end: String
     let minutes: Int
+    let during: String?  // notes: the task running when it was written
 
     var key: String { "\(kind)-\(start)" }
     var isGap: Bool { kind == "gap" }
+    var isNote: Bool { kind == "note" }
     var startDate: Date { Time.parse(start) }
     var endDate: Date { Time.parse(end) }
     var range: String { "\(Time.clockString(startDate)) – \(Time.clockString(endDate))" }

@@ -7,6 +7,7 @@ enum Theme {
     static let accent = Color(red: 0.36, green: 0.96, blue: 0.78)  // neon mint: a running timer
     static let ring = Color(red: 1.0, green: 0.84, blue: 0.32)     // yellow: you're looking at the past
     static let meeting = Color(red: 0.70, green: 0.55, blue: 1.0)  // violet: Wispr meetings
+    static let note = Color(red: 0.55, green: 0.76, blue: 1.0)     // soft blue: a thought, not a task
     static let chrome = Color(white: 0.035)  // solid, like Wispr: nothing bleeds through
     static let edge = Color.white.opacity(0.09)
     static let text = Color.white.opacity(0.94)
@@ -39,7 +40,11 @@ struct BarView: View {
 
     private var bar: some View {
         let size = store.isOpen ? Theme.barSize : Theme.restSize
-        let past = store.mode != .input
+        let ring: Color? = switch store.mode {
+            case .input: nil
+            case .note: Theme.note
+            case .browse, .fill: Theme.ring
+        }
         return ZStack {
             switch store.mode {
             case .input:
@@ -54,6 +59,19 @@ struct BarView: View {
                         .transition(.asymmetric(
                             insertion: .move(edge: store.movedOlder ? .top : .bottom).combined(with: .opacity),
                             removal: .move(edge: store.movedOlder ? .bottom : .top).combined(with: .opacity)))
+                }
+            case .note:
+                HStack(spacing: 10) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "note.text")
+                        Text(store.timer.map { "note · \($0.label)" } ?? "note")
+                            .lineLimit(1).truncationMode(.tail).frame(maxWidth: 170, alignment: .leading)
+                    }
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.note)
+                    .padding(.horizontal, 10).frame(height: 30)
+                    .background(Capsule().fill(Theme.note.opacity(0.13)))
+                    field("What’s on your mind?")
                 }
             case .fill:
                 HStack(spacing: 10) {
@@ -74,8 +92,8 @@ struct BarView: View {
         .frame(width: size.width, height: size.height)
         .clipShape(Capsule())
         .background(Capsule().fill(Theme.chrome))
-        .overlay(Capsule().strokeBorder(past ? Theme.ring.opacity(0.9) : Theme.edge, lineWidth: past ? 1.5 : 1))
-        .shadow(color: past ? Theme.ring.opacity(0.18) : .clear, radius: 10)
+        .overlay(Capsule().strokeBorder(ring?.opacity(0.9) ?? Theme.edge, lineWidth: ring == nil ? 1 : 1.5))
+        .shadow(color: ring?.opacity(0.18) ?? .clear, radius: 10)
         .shadow(color: .black.opacity(store.isOpen ? 0.45 : 0), radius: 22, y: 8)
         .animation(.easeOut(duration: 0.15), value: store.mode)
         .scaleEffect(store.isOpen ? 1 : 0.85, anchor: .top)
@@ -94,11 +112,16 @@ struct BarView: View {
 
     /// One stop in the past, shown inside the oval.
     private func stop(_ item: HistoryItem) -> some View {
-        let color: Color = item.isGap ? Theme.muted : item.kind == "meeting" ? Theme.meeting : Theme.accent
+        let color: Color = item.isGap ? Theme.muted : item.kind == "meeting" ? Theme.meeting
+            : item.isNote ? Theme.note : Theme.accent
         return HStack(spacing: 12) {
-            Circle().fill(item.isGap ? .clear : color).overlay(Circle().strokeBorder(color, lineWidth: 1))
-                .frame(width: 7, height: 7)
-            Text(item.range)
+            if item.isNote {
+                Image(systemName: "note.text").font(.system(size: 11)).foregroundStyle(color)
+            } else {
+                Circle().fill(item.isGap ? .clear : color).overlay(Circle().strokeBorder(color, lineWidth: 1))
+                    .frame(width: 7, height: 7)
+            }
+            Text(item.isNote ? Time.clockString(item.startDate) : item.range)
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
                 .foregroundStyle(Theme.muted)
             Text(item.isGap ? "untracked" : (item.label ?? ""))
@@ -107,7 +130,7 @@ struct BarView: View {
                 .foregroundStyle(item.isGap ? Theme.muted : Theme.text)
                 .lineLimit(1).truncationMode(.tail)
             Spacer(minLength: 8)
-            Text(Time.minutes(item.minutes))
+            Text(item.isNote ? "" : Time.minutes(item.minutes))
                 .font(.system(size: 13, weight: .semibold, design: .monospaced))
                 .foregroundStyle(item.isGap ? Theme.muted : Theme.text)
         }
@@ -154,6 +177,9 @@ struct BarView: View {
             Text(flash).foregroundStyle(Theme.text)
         } else if let err = store.error {
             Text(err).foregroundStyle(.red.opacity(0.9))
+        } else if store.mode == .note {
+            Text("⏎ save note").foregroundStyle(Theme.text)
+            Text(store.timer == nil ? "· esc back" : "· your timer keeps running · esc back").foregroundStyle(Theme.muted)
         } else if store.mode == .fill {
             Text("⏎ log it").foregroundStyle(Theme.text)
             Text("· esc back").foregroundStyle(Theme.muted)
@@ -164,6 +190,9 @@ struct BarView: View {
             switch item.kind {
             case "gap": Text("· ⏎ fill in").foregroundStyle(Theme.text)
             case "meeting": Text("· from Wispr").foregroundStyle(Theme.muted)
+            case "note":
+                if let d = item.during { Text("· during \(d)").foregroundStyle(Theme.muted).lineLimit(1) }
+                Text("· ⌘⌫ delete").foregroundStyle(Theme.muted)
             default: Text("· ⌘⌫ delete").foregroundStyle(Theme.muted)
             }
         } else if typed, let p = store.preview, p.action == "log", let d = store.describe(p) {
@@ -178,7 +207,7 @@ struct BarView: View {
                 Text("today").foregroundStyle(Theme.muted)
                 Text("\(Time.minutes(s.trackedMinutes)) logged").foregroundStyle(Theme.text)
             }
-            Text("· ↑ look back").foregroundStyle(Theme.muted)
+            Text("· ↑ look back · ⌘N note").foregroundStyle(Theme.muted)
             if store.timer != nil { Text("· ⌘. stop").foregroundStyle(Theme.muted) }
         }
     }

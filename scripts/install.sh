@@ -78,5 +78,5 @@ for _ in $(seq 1 30); do
   echo -n "."; sleep 1
 done
 curl -fs http://127.0.0.1:7878/health && echo
-echo "✓ daylog installed. Press ⌃⌥D to open it."
+echo "✓ daylog installed. Press ⌥L to open it."
 echo "  Logs: $LOGS"

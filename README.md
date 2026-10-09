@@ -5,7 +5,7 @@ not what you planned.
 
 ## Use it
 
-Keyboard only. Press **⌃⌥D** and a black capsule drops down from the top of the screen.
+Keyboard only. Press **⌥L** and a black capsule drops down from the top of the screen.
 
 - **Type what you're doing + ⏎** to start a timer. Typing something new switches timers.
 - **Add a time to log something that already happened:**
@@ -18,6 +18,8 @@ Keyboard only. Press **⌃⌥D** and a black capsule drops down from the top of 
   (your logs, Wispr meetings, and *untracked* gaps). ↑ earlier, ↓ later, across days.
   - ⏎ on an untracked gap: type what you were doing then, and it fills in.
   - ⌘⌫ deletes a logged block. Esc steps back.
+- **⌘N: note.** Jot a thought at this moment without switching tasks. It's tagged with
+  the running timer (blue ring), and notes show up when you scroll back.
 - **⌘.** stops the running timer.
 - The bar closes itself after ⏎. Esc closes it too.
 - **Agents:** any Claude Code session has the `daylog` MCP tools:

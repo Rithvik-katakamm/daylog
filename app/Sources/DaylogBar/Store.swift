@@ -10,13 +10,13 @@ final class Store: ObservableObject {
     @Published var serverDown = false
     @Published var error: String?
     @Published var focusRequest = 0  // bump to focus the input field
-    @Published var input = "" { didSet { schedulePreview() } }
+    @Published var input = "" { didSet { if mode == .input { schedulePreview() } } }
     @Published var preview: LinePreview?
     @Published var flash: String?  // brief confirmation after an action
     @Published var isOpen = false   // drives the grow/shrink animation
 
     // Scrolling back through the past with ↑/↓.
-    enum Mode: Equatable { case input, browse, fill }
+    enum Mode: Equatable { case input, browse, fill, note }
     @Published var mode: Mode = .input
     @Published var history: [HistoryItem] = []
     @Published var index = 0
@@ -86,11 +86,37 @@ final class Store: ObservableObject {
 
     /// Esc steps back one level instead of closing.
     func back() {
-        if mode == .fill { mode = .browse; fillItem = nil; input = "" } else { mode = .input }
+        switch mode {
+        case .fill: mode = .browse; fillItem = nil; input = ""
+        case .note: mode = .input; input = ""
+        default: mode = .input
+        }
+    }
+
+    /// ⌘N: jot a thought at this moment, tagged with the running task. Doesn't switch tasks.
+    func beginNote() {
+        input = ""
+        preview = nil
+        mode = .note
+        focusRequest += 1
+    }
+
+    private func submitNote() {
+        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        input = ""
+        flash = "Noted"
+        Task {
+            do { try await API.post("notes", ["text": text, "source": "button"]) }
+            catch { self.error = error.localizedDescription }
+            try? await Task.sleep(for: .seconds(0.9))
+            onSubmitted?()
+            flash = nil
+        }
     }
 
     func deleteCurrent() {
-        guard let c = current, let id = c.id, c.kind == "entry" || c.kind == "timer" else { return }
+        guard let c = current, let id = c.id, ["entry", "timer", "note"].contains(c.kind) else { return }
         Task {
             do { try await API.delete("entries/\(id)") } catch { self.error = error.localizedDescription }
             await reloadKeepingPlace()
@@ -154,6 +180,7 @@ final class Store: ObservableObject {
     /// ⏎: a time in the text logs it; otherwise starts a timer. ⇧⏎ forces a timer.
     func submit(forceTimer: Bool = false) {
         if mode == .fill { submitFill(); return }
+        if mode == .note { submitNote(); return }
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         let willLog = !forceTimer && preview?.action == "log"

@@ -27,7 +27,8 @@ mcp = MCPServer(
         "daylog is Rithvik's record of what he actually did and when. "
         "'claims' are what he logged himself (ground truth). 'meetings' come from his "
         "Wispr notetaker (ground truth). 'activity' is which Mac app was in front "
-        "(an observation, not proof of the task). Times are UTC; convert to his local "
+        "(an observation, not proof of the task). 'notes' are thoughts he jotted at a "
+        "moment, tagged with the task running then. Times are UTC; convert to his local "
         "time (America/New_York) before showing them. Gaps mean unknown, not idle."
     ),
 )

@@ -215,3 +215,17 @@ def test_history_running_timer_fills_time_but_is_not_a_stop(client, clock):
     items = client.get("/history").json()["items"]
     assert all(i["label"] != "coding" for i in items)
     assert not any(i["kind"] == "gap" and i["end"] == db.iso(clock.t) for i in items)
+
+
+# ---------- notes ----------
+
+def test_note_attaches_to_running_timer_without_changing_it(client, clock):
+    client.post("/timer/start", json={"label": "building daylog"})
+    clock.advance(minutes=5)
+    r = client.post("/notes", json={"text": "history view should show notes"})
+    assert r.status_code == 201
+    assert client.get("/now").json()["timer"]["label"] == "building daylog"
+    notes = client.get("/timeline").json()["notes"]
+    assert [(n["text"], n["during"]) for n in notes] == [("history view should show notes", "building daylog")]
+    kinds = [i["kind"] for i in client.get("/history").json()["items"]]
+    assert "note" in kinds

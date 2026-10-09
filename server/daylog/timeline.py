@@ -143,6 +143,13 @@ def dictations(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dic
     ]
 
 
+def notes(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[str, Any]]:
+    events = db.query(conn, types=["note"], since=lo, until=hi)
+    deleted = db.refs_to(conn, "entry.delete", [e["id"] for e in events])
+    return [{"id": e["id"], "at": e["start"], "text": e["label"], "during": e["data"].get("during")}
+            for e in events if e["id"] not in deleted]
+
+
 def timeline(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> dict[str, Any]:
     return {
         "from": db.iso(lo),
@@ -151,6 +158,7 @@ def timeline(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> dict[str, 
         "meetings": meetings(conn, lo, hi),
         "activity": activity(conn, lo, hi),
         "dictations": dictations(conn, lo, hi),
+        "notes": notes(conn, lo, hi),
     }
 
 
@@ -180,6 +188,10 @@ def history(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[s
         items.append({"kind": "meeting", "id": m["id"], "label": m["label"], "start": m["start"],
                       "end": m["end"], "minutes": _minutes(min(e, hi) - max(s, lo))})
         known.append((max(s, lo), min(e, hi)))
+
+    for n in notes(conn, lo, hi + timedelta(seconds=1)):  # moments, not spans: never fill or split gaps
+        items.append({"kind": "note", "id": n["id"], "label": n["text"], "start": n["at"],
+                      "end": n["at"], "minutes": 0, "during": n["during"]})
 
     cursor = lo
     for s, e in sorted(known) + [(hi, hi)]:
