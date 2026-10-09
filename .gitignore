@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.sqlite*
+.build/
+build/
+.DS_Store
