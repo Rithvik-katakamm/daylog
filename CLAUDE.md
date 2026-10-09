@@ -3,9 +3,13 @@
 A personal time-truth system: **what was Rithvik actually doing, and when?**
 Built for Rithvik first. Possible portfolio piece later.
 
-> Status: **design phase** (brainstorming, started 2026-10-06). No product code
-> until the written spec in `docs/specs/` is approved. Ideation source of truth:
-> Notion → Journal → "2026-10-06 — Agentic Ideation Sticky Pad".
+> Status: **v1 shipped 2026-10-09** (`docs/specs/2026-10-09-v1.md`), installed and
+> running via launchd. Next: refine from real use. See `README.md` for how it's
+> built. Ideation source: Notion → Journal → "2026-10-06 — Agentic Ideation Sticky Pad".
+>
+> Build note: build Swift with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`
+> (Command Line Tools SwiftPM can't link manifests on this Mac). `scripts/install.sh`
+> sets it.
 
 ## The problem
 
