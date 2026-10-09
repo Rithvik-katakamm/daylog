@@ -13,6 +13,7 @@ final class Store: ObservableObject {
     @Published var input = "" { didSet { schedulePreview() } }
     @Published var preview: LinePreview?
     @Published var flash: String?  // brief confirmation after an action
+    @Published var isOpen = false   // drives the grow/shrink animation
 
     private var previewTask: Task<Void, Never>?
     var onSubmitted: (() -> Void)?  // the window closes itself after a submit
