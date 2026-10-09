@@ -22,10 +22,11 @@ struct HandleView: View {
     var body: some View {
         ZStack {
             Capsule().fill(.ultraThinMaterial)
-            Capsule().strokeBorder(store.timer != nil ? Theme.accent.opacity(0.7) : Color.white.opacity(0.15), lineWidth: 1)
+            Capsule().fill(Color.black.opacity(0.35))
+            Capsule().strokeBorder(store.timer != nil ? Theme.accent.opacity(0.8) : Theme.accent.opacity(0.35), lineWidth: 1)
             VStack(spacing: 4) {
                 Circle()
-                    .fill(store.serverDown ? Color.red.opacity(0.8) : (store.timer != nil ? Theme.accent : Color.white.opacity(0.35)))
+                    .fill(store.serverDown ? Color.red.opacity(0.8) : (store.timer != nil ? Theme.accent : Theme.accent.opacity(0.5)))
                     .frame(width: 8, height: 8)
                     .shadow(color: store.timer != nil ? Theme.accent : .clear, radius: 4)
                 if let t = store.timer {

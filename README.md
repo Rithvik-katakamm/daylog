@@ -5,7 +5,7 @@ not what you planned.
 
 ## Use it
 
-- **The pill** on the right edge of your screen. Click it, or press **⌃⌥D**.
+- **The pill** on the right edge of your screen. Click it, or press **⌥ + fn** (needs Accessibility for Daylog) or **⌃⌥D**.
   Drag it up or down to move it.
 - **Type what you're doing + ⏎** to start a timer. Typing something new switches
   (the old timer stops).

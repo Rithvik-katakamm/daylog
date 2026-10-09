@@ -56,6 +56,8 @@ write_agent() {  # label, program args (xml), extra keys
 </dict></plist>
 PLIST
   launchctl bootout "$DOMAIN/$1" 2>/dev/null || true
+  # bootout is asynchronous; bootstrapping before it finishes fails with error 5.
+  for _ in $(seq 1 50); do launchctl print "$DOMAIN/$1" >/dev/null 2>&1 || break; sleep 0.2; done
   launchctl bootstrap "$DOMAIN" "$AGENTS/$1.plist"
 }
 
@@ -73,5 +75,5 @@ for _ in $(seq 1 30); do
   echo -n "."; sleep 1
 done
 curl -fs http://127.0.0.1:7878/health && echo
-echo "✓ daylog installed. Pill on the right edge of your screen; ⌃⌥D toggles the panel."
+echo "✓ daylog installed. Pill on the right edge of your screen; ⌥+fn (or ⌃⌥D) toggles the panel."
 echo "  Logs: $LOGS"

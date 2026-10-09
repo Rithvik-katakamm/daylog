@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import SwiftUI
 
 /// A borderless panel that can still take keyboard input (like Spotlight), without
@@ -31,11 +32,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         makeHandle()
         makePanel()
         hotKey = HotKey { [weak self] in MainActor.assumeIsolated { self?.toggle() } }
+        watchOptionFn()
         recorder.start()
         store.startPolling()
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
                                                object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.placeHandle() }
+        }
+    }
+
+    // MARK: ⌥ + fn (like Wispr Flow's fn key)
+
+    private var optionFnDown = false
+    private var flagMonitors: [Any] = []
+
+    /// fn can't be a Carbon hotkey, so watch modifier changes directly. Seeing keys
+    /// in other apps needs Accessibility permission for Daylog; we ask once.
+    private func watchOptionFn() {
+        let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        _ = AXIsProcessTrustedWithOptions(opts)
+        let handler: (NSEvent) -> Void = { [weak self] e in
+            let mods = e.modifierFlags.intersection([.command, .option, .control, .shift, .function])
+            let down = mods == [.option, .function]
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if down && !self.optionFnDown { self.toggle() }  // fire once per press
+                self.optionFnDown = down
+            }
+        }
+        if let m = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged, handler: handler) { flagMonitors.append(m) }
+        if let m = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged, handler: { handler($0); return $0 }) {
+            flagMonitors.append(m)
         }
     }
 
