@@ -191,3 +191,27 @@ def test_parse_preview_does_not_write(client):
     r = client.get("/parse", params={"text": "client call 30m"})
     assert r.json()["action"] == "log" and r.json()["minutes"] == 30
     assert client.get("/timeline").json()["claims"] == []
+
+
+# ---------- history (scroll back) ----------
+
+def test_history_lists_entries_meetings_and_gaps_newest_first(conn, clock):
+    base = clock.t - timedelta(hours=3)
+    lo, hi = base, clock.t
+    db.append(conn, kind="claim", type="entry.log", source="t", start=base + timedelta(minutes=30),
+              end=base + timedelta(minutes=90), label="deep work")
+    db.append(conn, kind="observation", type="meeting", source="wispr",
+              start=base + timedelta(minutes=95), end=base + timedelta(minutes=120), label="client")
+    items = timeline.history(conn, lo, hi)
+    got = [(i["kind"], i["label"], i["minutes"]) for i in items]
+    # 0-30 gap, 30-90 work, 90-95 too short to be a gap, 95-120 meeting, 120-180 gap
+    assert got == [("gap", None, 60), ("meeting", "client", 25), ("entry", "deep work", 60),
+                   ("gap", None, 30)]
+
+
+def test_history_running_timer_fills_time_but_is_not_a_stop(client, clock):
+    client.post("/timer/start", json={"label": "coding"})
+    clock.advance(minutes=40)
+    items = client.get("/history").json()["items"]
+    assert all(i["label"] != "coding" for i in items)
+    assert not any(i["kind"] == "gap" and i["end"] == db.iso(clock.t) for i in items)

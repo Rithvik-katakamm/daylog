@@ -15,6 +15,18 @@ final class Store: ObservableObject {
     @Published var flash: String?  // brief confirmation after an action
     @Published var isOpen = false   // drives the grow/shrink animation
 
+    // Scrolling back through the past with ↑/↓.
+    enum Mode: Equatable { case input, browse, fill }
+    @Published var mode: Mode = .input
+    @Published var history: [HistoryItem] = []
+    @Published var index = 0
+    @Published var movedOlder = true  // direction of the last move, for the slide animation
+    @Published var fillItem: HistoryItem?
+    private var oldestDay: Date?
+    private let maxDaysBack = 30
+
+    var current: HistoryItem? { history.indices.contains(index) ? history[index] : nil }
+
     private var previewTask: Task<Void, Never>?
     var onSubmitted: (() -> Void)?  // the window closes itself after a submit
 
@@ -31,8 +43,117 @@ final class Store: ObservableObject {
         }
     }
 
+    // MARK: scroll back
+
+    func enterBrowse() {
+        Task {
+            let today = Calendar.current.startOfDay(for: Date())
+            oldestDay = nil
+            history = []
+            await loadDay(today)
+            while history.isEmpty, await loadOlderDay() {}
+            guard !history.isEmpty else { flashBriefly("nothing logged yet"); return }
+            index = 0
+            movedOlder = true
+            mode = .browse
+        }
+    }
+
+    func older() {
+        if index + 1 < history.count {
+            movedOlder = true; index += 1
+        } else {
+            Task {
+                let before = history.count
+                while history.count == before, await loadOlderDay() {}
+                if index + 1 < history.count { movedOlder = true; index += 1 }
+            }
+        }
+    }
+
+    func newer() {
+        if index > 0 { movedOlder = false; index -= 1 } else { mode = .input }
+    }
+
+    /// ⏎ on a gap: type what you were doing then.
+    func beginFill() {
+        guard let c = current, c.isGap else { return }
+        fillItem = c
+        input = ""
+        mode = .fill
+        focusRequest += 1
+    }
+
+    /// Esc steps back one level instead of closing.
+    func back() {
+        if mode == .fill { mode = .browse; fillItem = nil; input = "" } else { mode = .input }
+    }
+
+    func deleteCurrent() {
+        guard let c = current, let id = c.id, c.kind == "entry" || c.kind == "timer" else { return }
+        Task {
+            do { try await API.delete("entries/\(id)") } catch { self.error = error.localizedDescription }
+            await reloadKeepingPlace()
+        }
+    }
+
+    func resetMode() {
+        mode = .input; fillItem = nil; history = []; index = 0; input = ""; preview = nil
+    }
+
+    private func submitFill() {
+        guard let gap = fillItem else { return }
+        let label = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !label.isEmpty else { return }
+        input = ""
+        Task {
+            do {
+                try await API.post("entries", ["label": label, "start": gap.start, "end": gap.end, "source": "button"])
+                flashBriefly("Logged “\(label)”  \(gap.range)")
+            } catch {
+                self.error = error.localizedDescription
+            }
+            fillItem = nil
+            await reloadKeepingPlace()
+            mode = .browse
+            await refreshAll()
+        }
+    }
+
+    private func reloadKeepingPlace() async {
+        let keepUntil = oldestDay ?? Calendar.current.startOfDay(for: Date())
+        history = []
+        oldestDay = nil
+        await loadDay(Calendar.current.startOfDay(for: Date()))
+        while let d = oldestDay, d > keepUntil, await loadOlderDay() {}
+        index = min(index, max(history.count - 1, 0))
+    }
+
+    private func loadDay(_ day: Date) async {
+        if let page: HistoryPage = try? await API.get("history", query: ["date": Time.dayString(day)]) {
+            history += page.items
+            oldestDay = day
+        }
+    }
+
+    /// Returns false when there's nothing older left to load.
+    private func loadOlderDay() async -> Bool {
+        let from = oldestDay ?? Calendar.current.startOfDay(for: Date())
+        guard let prev = Calendar.current.date(byAdding: .day, value: -1, to: from),
+              let limit = Calendar.current.date(byAdding: .day, value: -maxDaysBack, to: Date()),
+              prev > limit else { return false }
+        await loadDay(prev)
+        return true
+    }
+
+    private func flashBriefly(_ text: String) {
+        flash = text
+        Task { try? await Task.sleep(for: .seconds(1.6)); if flash == text { flash = nil } }
+    }
+
     /// ⏎: a time in the text logs it; otherwise starts a timer. ⇧⏎ forces a timer.
     func submit(forceTimer: Bool = false) {
+        if mode == .fill { submitFill(); return }
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         let willLog = !forceTimer && preview?.action == "log"
@@ -40,7 +161,7 @@ final class Store: ObservableObject {
             let label = forceTimer ? (preview?.label ?? text) : text
             timer = TimerInfo(id: "pending", label: label, start: Time.string(Date()))
         }
-        flash = willLog ? describe(preview) : nil
+        flash = willLog ? describe(preview).map { "Logged \($0)" } : nil
         input = ""
         preview = nil
         run { try await API.post("log", ["text": text, "timer": forceTimer, "source": "button"]) }

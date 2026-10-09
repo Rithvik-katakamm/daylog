@@ -49,13 +49,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.contentView = host
     }
 
-    // MARK: placement: bottom-center, above the Dock, on the screen your cursor is on
+    // MARK: placement: top-center, just under the menu bar, on the screen your cursor is on
 
     private func placePanel() {
         let screen = (NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
                       ?? NSScreen.screens[0]).visibleFrame
         let size = Self.windowSize
-        panel.setFrame(NSRect(x: screen.midX - size.width / 2, y: screen.minY + 14,
+        panel.setFrame(NSRect(x: screen.midX - size.width / 2, y: screen.maxY - size.height - 8,
                               width: size.width, height: size.height), display: true)
     }
 
@@ -77,13 +77,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         // Esc dismisses (unless a field is handling it).
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
-            if e.keyCode == 53 { MainActor.assumeIsolated { self?.hide() }; return nil }
+            guard let self else { return e }
+            let store = self.store
+            let cmd = e.modifierFlags.contains(.command)
+            switch (e.keyCode, store.mode) {
+            case (53, .input): MainActor.assumeIsolated { self.hide() }; return nil      // esc: close
+            case (53, _): MainActor.assumeIsolated { store.back() }; return nil         // esc: step back
+            case (126, .browse): MainActor.assumeIsolated { store.older() }; return nil // ↑ earlier
+            case (125, .browse): MainActor.assumeIsolated { store.newer() }; return nil // ↓ later
+            case (126, .input) where store.input.isEmpty:
+                MainActor.assumeIsolated { store.enterBrowse() }; return nil             // ↑ start looking back
+            case (36, .browse): MainActor.assumeIsolated { store.beginFill() }; return nil
+            case (51, .browse) where cmd: MainActor.assumeIsolated { store.deleteCurrent() }; return nil
+            default: break
+            }
             if e.keyCode == 47 && e.modifierFlags.contains(.command) {  // ⌘.: stop the timer
-                MainActor.assumeIsolated { self?.store.stop() }
+                MainActor.assumeIsolated { store.stop() }
                 return nil
             }
-            if e.keyCode == 36 && e.modifierFlags.contains(.shift) {  // ⇧⏎: force a timer
-                MainActor.assumeIsolated { self?.store.submit(forceTimer: true) }
+            if e.keyCode == 36 && e.modifierFlags.contains(.shift) && store.mode == .input {  // ⇧⏎: force a timer
+                MainActor.assumeIsolated { store.submit(forceTimer: true) }
                 return nil
             }
             return e
@@ -96,6 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             guard let self, !self.store.isOpen else { return }
             self.panel.orderOut(nil)
+            self.store.resetMode()  // next open starts fresh: typing mode, empty field
         }
         if let m = clickMonitor { NSEvent.removeMonitor(m); clickMonitor = nil }
         if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil }

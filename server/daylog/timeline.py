@@ -154,6 +154,42 @@ def timeline(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> dict[str, 
     }
 
 
+# Untracked stretches shorter than this aren't worth a stop when scrolling back.
+GAP_MIN = timedelta(minutes=10)
+
+
+def history(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[str, Any]]:
+    """Everything that fills [lo, hi), newest first: logged blocks, meetings, and the
+    untracked gaps between them (so he can fill those in). The running timer is left out,
+    because the bar already shows it."""
+    now = db.utcnow()
+    hi = min(hi, now)
+    items: list[dict[str, Any]] = []
+    known: list[tuple[datetime, datetime]] = []
+    for c in claims(conn, lo, hi):
+        s = db.parse(c["start"])
+        if c["running"]:
+            known.append((max(s, lo), hi))  # still counts as accounted-for time
+            continue
+        e = db.parse(c["end"])
+        items.append({"kind": c["type"], "id": c["id"], "label": c["label"], "start": c["start"],
+                      "end": c["end"], "minutes": _minutes(min(e, hi) - max(s, lo))})
+        known.append((max(s, lo), min(e, hi)))
+    for m in meetings(conn, lo, hi):
+        s, e = db.parse(m["start"]), db.parse(m["end"])
+        items.append({"kind": "meeting", "id": m["id"], "label": m["label"], "start": m["start"],
+                      "end": m["end"], "minutes": _minutes(min(e, hi) - max(s, lo))})
+        known.append((max(s, lo), min(e, hi)))
+
+    cursor = lo
+    for s, e in sorted(known) + [(hi, hi)]:
+        if s - cursor >= GAP_MIN:
+            items.append({"kind": "gap", "id": None, "label": None, "start": db.iso(cursor),
+                          "end": db.iso(s), "minutes": _minutes(s - cursor)})
+        cursor = max(cursor, e)
+    return sorted(items, key=lambda i: i["start"], reverse=True)
+
+
 def _minutes(td: timedelta) -> int:
     return round(td.total_seconds() / 60)
 

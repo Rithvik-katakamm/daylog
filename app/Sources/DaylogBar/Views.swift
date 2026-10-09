@@ -5,7 +5,9 @@ import SwiftUI
 /// than windows that open.
 enum Theme {
     static let accent = Color(red: 0.36, green: 0.96, blue: 0.78)  // neon mint: a running timer
-    static let chrome = Color.black.opacity(0.92)
+    static let ring = Color(red: 1.0, green: 0.84, blue: 0.32)     // yellow: you're looking at the past
+    static let meeting = Color(red: 0.70, green: 0.55, blue: 1.0)  // violet: Wispr meetings
+    static let chrome = Color(white: 0.035)  // solid, like Wispr: nothing bleeds through
     static let edge = Color.white.opacity(0.09)
     static let text = Color.white.opacity(0.94)
     static let muted = Color.white.opacity(0.48)
@@ -21,14 +23,14 @@ struct BarView: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            Spacer(minLength: 0)
+            bar
             hintChip
                 .opacity(store.isOpen ? 1 : 0)
-                .offset(y: store.isOpen ? 0 : 10)
+                .offset(y: store.isOpen ? 0 : -10)
                 .animation(Theme.open.delay(store.isOpen ? 0.06 : 0), value: store.isOpen)
-            bar
+            Spacer(minLength: 0)
         }
-        .frame(width: AppDelegate.windowSize.width, height: AppDelegate.windowSize.height, alignment: .bottom)
+        .frame(width: AppDelegate.windowSize.width, height: AppDelegate.windowSize.height, alignment: .top)
         .environment(\.colorScheme, .dark)
         .onChange(of: store.focusRequest) { inputFocused = true }
     }
@@ -37,26 +39,78 @@ struct BarView: View {
 
     private var bar: some View {
         let size = store.isOpen ? Theme.barSize : Theme.restSize
-        return HStack(spacing: 10) {
-            if let t = store.timer { timerChip(t) }
-            TextField("", text: $store.input,
-                      prompt: Text(store.timer == nil ? "What are you doing?" : "Switch, or log: client call 3:10-3:25")
-                        .foregroundStyle(Theme.muted))
-                .textFieldStyle(.plain)
-                .font(.system(size: 15))
-                .foregroundStyle(Theme.text)
-                .focused($inputFocused)
-                .onSubmit { store.submit() }
+        let past = store.mode != .input
+        return ZStack {
+            switch store.mode {
+            case .input:
+                HStack(spacing: 10) {
+                    if let t = store.timer { timerChip(t) }
+                    field(store.timer == nil ? "What are you doing?" : "Switch, or log: client call 3:10-3:25")
+                }
+            case .browse:
+                if let item = store.current {
+                    stop(item)
+                        .id(item.key)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: store.movedOlder ? .top : .bottom).combined(with: .opacity),
+                            removal: .move(edge: store.movedOlder ? .bottom : .top).combined(with: .opacity)))
+                }
+            case .fill:
+                HStack(spacing: 10) {
+                    if let gap = store.fillItem {
+                        Text(gap.range)
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Theme.ring)
+                            .padding(.horizontal, 10).frame(height: 30)
+                            .background(Capsule().fill(Theme.ring.opacity(0.13)))
+                    }
+                    field("What were you doing then?")
+                }
+            }
         }
+        .animation(.spring(response: 0.26, dampingFraction: 0.86), value: store.index)
         .padding(.horizontal, 16)
         .opacity(store.isOpen ? 1 : 0)
         .frame(width: size.width, height: size.height)
+        .clipShape(Capsule())
         .background(Capsule().fill(Theme.chrome))
-        .overlay(Capsule().strokeBorder(Theme.edge, lineWidth: 1))
+        .overlay(Capsule().strokeBorder(past ? Theme.ring.opacity(0.9) : Theme.edge, lineWidth: past ? 1.5 : 1))
+        .shadow(color: past ? Theme.ring.opacity(0.18) : .clear, radius: 10)
         .shadow(color: .black.opacity(store.isOpen ? 0.45 : 0), radius: 22, y: 8)
-        .scaleEffect(store.isOpen ? 1 : 0.85, anchor: .bottom)
+        .animation(.easeOut(duration: 0.15), value: store.mode)
+        .scaleEffect(store.isOpen ? 1 : 0.85, anchor: .top)
         .opacity(store.isOpen ? 1 : 0)
         .animation(Theme.open, value: store.isOpen)
+    }
+
+    private func field(_ prompt: String) -> some View {
+        TextField("", text: $store.input, prompt: Text(prompt).foregroundStyle(Theme.muted))
+            .textFieldStyle(.plain)
+            .font(.system(size: 15))
+            .foregroundStyle(Theme.text)
+            .focused($inputFocused)
+            .onSubmit { store.submit() }
+    }
+
+    /// One stop in the past, shown inside the oval.
+    private func stop(_ item: HistoryItem) -> some View {
+        let color: Color = item.isGap ? Theme.muted : item.kind == "meeting" ? Theme.meeting : Theme.accent
+        return HStack(spacing: 12) {
+            Circle().fill(item.isGap ? .clear : color).overlay(Circle().strokeBorder(color, lineWidth: 1))
+                .frame(width: 7, height: 7)
+            Text(item.range)
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundStyle(Theme.muted)
+            Text(item.isGap ? "untracked" : (item.label ?? ""))
+                .font(.system(size: 15, weight: item.isGap ? .regular : .medium))
+                .italic(item.isGap)
+                .foregroundStyle(item.isGap ? Theme.muted : Theme.text)
+                .lineLimit(1).truncationMode(.tail)
+            Spacer(minLength: 8)
+            Text(Time.minutes(item.minutes))
+                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                .foregroundStyle(item.isGap ? Theme.muted : Theme.text)
+        }
     }
 
     private func timerChip(_ t: TimerInfo) -> some View {
@@ -97,9 +151,21 @@ struct BarView: View {
             Text("daylog server isn’t running").foregroundStyle(Theme.text)
         } else if let flash = store.flash {
             Image(systemName: "checkmark").foregroundStyle(Theme.accent).fontWeight(.bold)
-            Text("Logged \(flash)").foregroundStyle(Theme.text)
+            Text(flash).foregroundStyle(Theme.text)
         } else if let err = store.error {
             Text(err).foregroundStyle(.red.opacity(0.9))
+        } else if store.mode == .fill {
+            Text("⏎ log it").foregroundStyle(Theme.text)
+            Text("· esc back").foregroundStyle(Theme.muted)
+        } else if store.mode == .browse, let item = store.current {
+            Text(item.startDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                .foregroundStyle(Theme.ring)
+            Text("· ↑ earlier  ↓ later").foregroundStyle(Theme.muted)
+            switch item.kind {
+            case "gap": Text("· ⏎ fill in").foregroundStyle(Theme.text)
+            case "meeting": Text("· from Wispr").foregroundStyle(Theme.muted)
+            default: Text("· ⌘⌫ delete").foregroundStyle(Theme.muted)
+            }
         } else if typed, let p = store.preview, p.action == "log", let d = store.describe(p) {
             Text("log").foregroundStyle(Theme.accent).fontWeight(.semibold)
             Text(d).foregroundStyle(Theme.text)
@@ -107,12 +173,13 @@ struct BarView: View {
         } else if typed {
             Text(store.timer == nil ? "⏎ start timer" : "⏎ switch timer").foregroundStyle(Theme.text)
             Text("· add 15m or 3:10-3:25 to log past time").foregroundStyle(Theme.muted)
-        } else if let s = store.summary {
-            Text("today").foregroundStyle(Theme.muted)
-            Text("\(Time.minutes(s.trackedMinutes)) logged").foregroundStyle(Theme.text)
-            if store.timer != nil { Text("· ⌘. stop").foregroundStyle(Theme.muted) }
         } else {
-            Text("what are you doing?").foregroundStyle(Theme.muted)
+            if let s = store.summary {
+                Text("today").foregroundStyle(Theme.muted)
+                Text("\(Time.minutes(s.trackedMinutes)) logged").foregroundStyle(Theme.text)
+            }
+            Text("· ↑ look back").foregroundStyle(Theme.muted)
+            if store.timer != nil { Text("· ⌘. stop").foregroundStyle(Theme.muted) }
         }
     }
 }

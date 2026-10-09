@@ -112,6 +112,26 @@ struct LinePreview: Decodable, Equatable {
     let untilNow: Bool?
 }
 
+/// One stop when scrolling back: a logged block, a meeting, or an untracked gap.
+struct HistoryItem: Decodable, Equatable {
+    let kind: String  // "entry", "timer", "meeting", "gap"
+    let id: String?
+    let label: String?
+    let start: String
+    let end: String
+    let minutes: Int
+
+    var key: String { "\(kind)-\(start)" }
+    var isGap: Bool { kind == "gap" }
+    var startDate: Date { Time.parse(start) }
+    var endDate: Date { Time.parse(end) }
+    var range: String { "\(Time.clockString(startDate)) – \(Time.clockString(endDate))" }
+}
+
+struct HistoryPage: Decodable {
+    let items: [HistoryItem]
+}
+
 struct Summary: Decodable {
     let trackedMinutes: Int
     let untrackedMinutes: Int

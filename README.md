@@ -5,7 +5,7 @@ not what you planned.
 
 ## Use it
 
-Keyboard only. Press **⌥ + fn** (or **⌃⌥D**) and a small panel opens at the top of the screen.
+Keyboard only. Press **⌃⌥D** and a black capsule drops down from the top of the screen.
 
 - **Type what you're doing + ⏎** to start a timer. Typing something new switches timers.
 - **Add a time to log something that already happened:**
@@ -14,7 +14,12 @@ Keyboard only. Press **⌥ + fn** (or **⌃⌥D**) and a small panel opens at th
 
   The line under the field shows what daylog understood before you press ⏎.
   **⇧⏎** forces a timer even when there's a time in the text.
-- The panel closes itself after ⏎. Esc closes it too.
+- **↑ looks back.** The oval gets a yellow ring and shows one past block at a time
+  (your logs, Wispr meetings, and *untracked* gaps). ↑ earlier, ↓ later, across days.
+  - ⏎ on an untracked gap: type what you were doing then, and it fills in.
+  - ⌘⌫ deletes a logged block. Esc steps back.
+- **⌘.** stops the running timer.
+- The bar closes itself after ⏎. Esc closes it too.
 - **Agents:** any Claude Code session has the `daylog` MCP tools:
   `what_is_rithvik_doing`, `timeline`, `day_summary`, `log_activity`.
 - **Phone/scripts:** `POST /log {"text": "client call 15m"}` uses the same parser.

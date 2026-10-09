@@ -214,6 +214,14 @@ async def get_timeline(date: date | None = None, start: datetime | None = None,
     return timeline.timeline(conn(), lo, hi)
 
 
+@app.get("/history")
+async def get_history(date: date | None = None, start: datetime | None = None,
+                      end: datetime | None = None):
+    """Newest-first stops for scrolling back: logs, meetings, and untracked gaps."""
+    lo, hi = _window(date, start, end)
+    return {"from": db.iso(lo), "to": db.iso(hi), "items": timeline.history(conn(), lo, hi)}
+
+
 @app.get("/summary")
 async def get_summary(date: date | None = None, start: datetime | None = None,
                       end: datetime | None = None):
