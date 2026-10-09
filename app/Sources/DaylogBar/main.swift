@@ -62,7 +62,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: show / hide
 
     func toggle() {
-        store.isOpen ? hide() : show()
+        // Trust what's on screen, not just our flag, so the two can never drift apart.
+        let open = store.isOpen && panel.isVisible
+        print("toggle: \(open ? "close" : "open")"); fflush(stdout)
+        open ? hide() : show()
     }
 
     private func show() {
