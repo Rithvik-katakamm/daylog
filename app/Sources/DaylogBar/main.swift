@@ -110,6 +110,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case (126, .input) where store.input.isEmpty:
                 MainActor.assumeIsolated { store.enterBrowse() }; return nil             // ↑ start looking back
             case (36, .browse): MainActor.assumeIsolated { store.beginFill() }; return nil
+            // ⏎ in the non-typing modes is handled here, not by the text field, so it works
+            // even if the field hasn't taken focus yet.
+            case (36, .edit), (36, .note), (36, .ghost), (36, .fill):
+                MainActor.assumeIsolated { store.submit() }; return nil
             case (45, .input) where cmd: MainActor.assumeIsolated { store.beginNote() }; return nil  // ⌘N
             case (31, .input) where cmd: MainActor.assumeIsolated { store.ghostKey() }; return nil   // ⌘O
             case (51, .browse) where cmd: MainActor.assumeIsolated { store.deleteCurrent() }; return nil

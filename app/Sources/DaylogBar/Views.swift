@@ -35,6 +35,8 @@ struct BarView: View {
         .frame(width: AppDelegate.windowSize.width, height: AppDelegate.windowSize.height, alignment: .top)
         .environment(\.colorScheme, .dark)
         .onChange(of: store.focusRequest) { inputFocused = true }
+        // Each mode swaps in a new field; give it the keyboard straight away.
+        .onChange(of: store.mode) { DispatchQueue.main.async { inputFocused = true } }
     }
 
     // MARK: the bar
