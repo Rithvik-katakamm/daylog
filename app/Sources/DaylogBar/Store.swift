@@ -206,7 +206,7 @@ final class Store: ObservableObject {
         let snapped = minutes < 0 ? (ceil(t0 / step) - 1) * step : (floor(t0 / step) + 1) * step
         let earliest = t.start.addingTimeInterval(60)
         editEnd = min(max(Date(timeIntervalSinceReferenceDate: snapped), earliest), Date())
-        Sound.mode.play()
+        Sound.watchStep()  // tick, tock: you're winding the clock back
     }
 
     private func submitEdit() {
