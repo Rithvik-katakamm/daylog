@@ -5,6 +5,8 @@ Built for Rithvik first. Possible portfolio piece later.
 
 > **Work is tracked in Linear** (team RIT, project "Day Log"): pick issues there, move
 > status as you go. New ideas go to Linear Triage, not into the current issue.
+> **Labels:** follow the Linear doc "How we use labels" (team RIT): one Type, at most one
+> Area, plus flags, and **always `agent-filed`** on issues you create.
 > **Vision lives in `docs/vision.md`** (consolidated; sources in `docs/vision-sources/`).
 > Notion is read-only context unless he says otherwise.
 >
