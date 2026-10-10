@@ -3,6 +3,11 @@
 A personal time-truth system: **what was Rithvik actually doing, and when?**
 Built for Rithvik first. Possible portfolio piece later.
 
+> **Work is tracked in Linear** (team RIT, project "Day Log"): pick issues there, move
+> status as you go. New ideas go to Linear Triage, not into the current issue.
+> **Vision lives in `docs/vision.md`** (consolidated; sources in `docs/vision-sources/`).
+> Notion is read-only context unless he says otherwise.
+>
 > Status: **v1 shipped 2026-10-09** (`docs/specs/2026-10-09-v1.md`), installed and
 > running via launchd. Next: refine from real use. See `README.md` for how it's
 > built. Ideation source: Notion → Journal → "2026-10-06 — Agentic Ideation Sticky Pad".
