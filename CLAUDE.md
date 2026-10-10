@@ -7,10 +7,12 @@ Built for Rithvik first. Possible portfolio piece later.
 > status as you go. New ideas go to Linear Triage, not into the current issue.
 > **Labels:** follow the Linear doc "How we use labels" (team RIT): one Type, at most one
 > Area, plus flags, and **always `agent-filed`** on issues you create.
-> **Vision lives in `docs/vision.md`** (consolidated; sources in `docs/vision-sources/`).
+> **Vision lives in `docs/product/vision.md`** (consolidated; sources in `docs/product/vision-sources/`).
 > Notion is read-only context unless he says otherwise.
+> **Docs map: `docs/README.md`** (product / ui / backend / infra). Before adding a key, color
+> or sound, update `docs/ui/keys.md`, `colors.md` or `sounds.md` in the same commit.
 >
-> Status: **v1 shipped 2026-10-09** (`docs/specs/2026-10-09-v1.md`), installed and
+> Status: **v1 shipped 2026-10-09** (`docs/product/specs/2026-10-09-v1.md`), installed and
 > running via launchd. Next: refine from real use. See `README.md` for how it's
 > built. Ideation source: Notion → Journal → "2026-10-06 — Agentic Ideation Sticky Pad".
 >

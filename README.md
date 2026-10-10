@@ -91,8 +91,7 @@ server/daylog/api.py         HTTP routes + background Wispr import
 server/daylog/wispr.py       Wispr Flow importer (read-only)
 server/daylog/mcp_server.py  MCP tools for agents
 app/Sources/DaylogBar/       Swift app: main (windows), Views, Store, API, ActivityRecorder, HotKey
-docs/vision.md               where this is going
-docs/specs/                  what each version commits to
+docs/                        start at docs/README.md (product, ui, backend, infra)
 ```
 
 Tests: `cd server && uv run pytest`
