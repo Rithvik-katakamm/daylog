@@ -144,8 +144,10 @@ def query(
     return [to_dict(r) for r in rows]
 
 
-def refs_to(conn: sqlite3.Connection, type: str, ids: list[str]) -> dict[str, dict[str, Any]]:
-    """Map target id -> the first event of `type` that references it (stops, deletes)."""
+def refs_to(conn: sqlite3.Connection, type: str, ids: list[str],
+            latest: bool = False) -> dict[str, dict[str, Any]]:
+    """Map target id -> the event of `type` that references it: the first one (stops,
+    deletes) or, with latest=True, the most recent one (amends: the newest edit wins)."""
     if not ids:
         return {}
     out: dict[str, dict[str, Any]] = {}
@@ -157,5 +159,8 @@ def refs_to(conn: sqlite3.Connection, type: str, ids: list[str]) -> dict[str, di
             (type, *chunk),
         ).fetchall()
         for r in rows:
-            out.setdefault(r["ref"], to_dict(r))
+            if latest:
+                out[r["ref"]] = to_dict(r)
+            else:
+                out.setdefault(r["ref"], to_dict(r))
     return out

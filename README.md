@@ -23,6 +23,10 @@ Keyboard only. Press **⌥L** and a black capsule drops down from the top of the
 - **⌘O: ghost mode.** Go offline with an optional status ("dinner with family"). It stops
   your timer, and the server refuses all Mac activity until you're back. ⌘O again or
   starting a task brings you back.
+- **↓: edit.** Opens the running task (or the last one): the title is editable and ↓↑ move
+  the end time in 5-minute steps (⇧ for 15). ⏎ saves. Use it when a timer ran too long.
+  Edits are `entry.amend` events; the original stays in the log.
+- **Tab** closes the bar and hands the keyboard back to the app you were in.
 - **⌘.** stops the running timer.
 
 **One input line; the ring tells you the mode:** green = task · blue = note (⌘N) ·

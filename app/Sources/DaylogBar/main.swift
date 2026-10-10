@@ -68,16 +68,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         open ? hide() : show()
     }
 
+    /// The app you were in when you pressed ⌥L. Closing hands the keyboard back to it.
+    private var previousApp: NSRunningApplication?
+
     private func show() {
+        removeMonitors()  // never stack monitors if show() runs twice
+        let front = NSWorkspace.shared.frontmostApplication
+        if front?.bundleIdentifier != Bundle.main.bundleIdentifier { previousApp = front }
         placePanel()
+        // Take the keyboard so you can type immediately (no click needed).
+        NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         store.isOpen = true  // SwiftUI grows the bar down from the top of the screen
         Sound.open.play()
-        store.focusRequest += 1
+        // Focus the field once SwiftUI has laid it out.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in self?.store.focusRequest += 1 }
         Task { await store.refreshAll() }
-        // Click anywhere outside daylog to dismiss.
+        // Click anywhere outside daylog to dismiss. The click already picked the app you
+        // want, so don't hand focus back to the old one.
         clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            MainActor.assumeIsolated { self?.hide() }
+            MainActor.assumeIsolated { self?.hide(restoreFocus: false) }
         }
         // Esc dismisses (unless a field is handling it).
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
@@ -86,6 +96,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let cmd = e.modifierFlags.contains(.command)
             switch (e.keyCode, store.mode) {
             case (53, .input): MainActor.assumeIsolated { self.hide() }; return nil      // esc: close
+            case (48, _):                                                                // tab: back to work
+                MainActor.assumeIsolated { self.hide() }; return nil
+            case (125, .input) where store.input.isEmpty:                                // ↓ edit last block
+                MainActor.assumeIsolated { store.beginEdit() }; return nil
+            case (125, .edit), (126, .edit):                                             // ↓↑ move the end
+                let step = e.modifierFlags.contains(.shift) ? 15 : 5
+                MainActor.assumeIsolated { store.nudgeEnd(minutes: e.keyCode == 126 ? step : -step) }
+                return nil
             case (53, _): MainActor.assumeIsolated { store.back() }; return nil         // esc: step back
             case (126, .browse): MainActor.assumeIsolated { store.older() }; return nil // ↑ earlier
             case (125, .browse): MainActor.assumeIsolated { store.newer() }; return nil // ↓ later
@@ -109,14 +127,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func hide() {
+    private func hide(restoreFocus: Bool = true) {
         store.isOpen = false
+        removeMonitors()
+        // Give the keyboard back to whatever you were doing before ⌥L.
+        if restoreFocus, let app = previousApp { app.activate() }
         // Let the shrink animation play, then take the window away.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             guard let self, !self.store.isOpen else { return }
             self.panel.orderOut(nil)
             self.store.resetMode()  // next open starts fresh: typing mode, empty field
         }
+    }
+
+    private func removeMonitors() {
         if let m = clickMonitor { NSEvent.removeMonitor(m); clickMonitor = nil }
         if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil }
     }

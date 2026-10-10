@@ -46,7 +46,7 @@ struct BarView: View {
             case .input: store.ghost != nil ? Theme.ghost : Theme.accent  // green: tasks
             case .note: Theme.note
             case .ghost: Theme.ghost
-            case .browse, .fill: Theme.ring
+            case .browse, .fill, .edit: Theme.ring
         }
         return ZStack {
             switch store.mode {
@@ -88,6 +88,23 @@ struct BarView: View {
                     .padding(.horizontal, 10).frame(height: 30)
                     .background(Capsule().fill(Theme.ghost.opacity(0.14)))
                     field("Status (optional): dinner with family, deep reset…")
+                }
+            case .edit:
+                HStack(spacing: 10) {
+                    if let t = store.editTarget {
+                        HStack(spacing: 5) {
+                            Text(Time.clockString(t.start))
+                            Text("–")
+                            Text(Time.clockString(store.editEnd)).fontWeight(.bold)
+                            Text("· " + Time.duration(store.editEnd.timeIntervalSince(t.start)))
+                        }
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Theme.ring)
+                        .padding(.horizontal, 10).frame(height: 30)
+                        .background(Capsule().fill(Theme.ring.opacity(0.13)))
+                        .animation(.easeOut(duration: 0.1), value: store.editEnd)
+                    }
+                    field("Title")
                 }
             case .fill:
                 HStack(spacing: 10) {
@@ -214,6 +231,9 @@ struct BarView: View {
         } else if store.mode == .note {
             Text("⏎ save note").foregroundStyle(Theme.text)
             Text(store.timer == nil ? "· esc back" : "· your timer keeps running · esc back").foregroundStyle(Theme.muted)
+        } else if store.mode == .edit {
+            Text("↓↑ move the end · ⇧ 15m").foregroundStyle(Theme.text)
+            Text("· edit the title · ⏎ save · esc cancel").foregroundStyle(Theme.muted)
         } else if store.mode == .fill {
             Text("⏎ log it").foregroundStyle(Theme.text)
             Text("· esc back").foregroundStyle(Theme.muted)
@@ -241,11 +261,7 @@ struct BarView: View {
             Text("ghost since \(Time.clockString(Time.parse(g.start)))").foregroundStyle(Theme.ghost)
             Text("· ⌘O back online · or type a task").foregroundStyle(Theme.muted)
         } else {
-            if let s = store.summary {
-                Text("today").foregroundStyle(Theme.muted)
-                Text("\(Time.minutes(s.trackedMinutes)) logged").foregroundStyle(Theme.text)
-            }
-            Text("· ↑ look back · ⌘N note · ⌘O ghost").foregroundStyle(Theme.muted)
+            Text("↑ look back · ↓ edit · ⌘N note · ⌘O ghost · tab back").foregroundStyle(Theme.muted)
             if store.timer != nil { Text("· ⌘. stop").foregroundStyle(Theme.muted) }
         }
     }

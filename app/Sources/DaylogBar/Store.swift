@@ -17,7 +17,18 @@ final class Store: ObservableObject {
     @Published var isOpen = false   // drives the grow/shrink animation
 
     // Scrolling back through the past with ↑/↓.
-    enum Mode: Equatable { case input, browse, fill, note, ghost }
+    enum Mode: Equatable { case input, browse, fill, note, ghost, edit }
+
+    /// ↓ edit: the block being fixed (usually the running timer), and its new end.
+    struct EditTarget: Equatable {
+        let id: String
+        let label: String
+        let start: Date
+        let originalEnd: Date
+        let running: Bool
+    }
+    @Published var editTarget: EditTarget?
+    @Published var editEnd = Date()
     @Published var mode: Mode = .input
     @Published var history: [HistoryItem] = []
     @Published var index = 0
@@ -90,7 +101,7 @@ final class Store: ObservableObject {
     func back() {
         switch mode {
         case .fill: mode = .browse; fillItem = nil; input = ""
-        case .note, .ghost: mode = .input; input = ""
+        case .note, .ghost, .edit: mode = .input; input = ""; editTarget = nil
         default: mode = .input
         }
     }
@@ -163,7 +174,63 @@ final class Store: ObservableObject {
         }
     }
 
+    // MARK: edit (↓): rename a block or cut it back to when it really ended
+
+    func beginEdit() {
+        Task {
+            var target: EditTarget?
+            if let t = timer, t.id != "pending" {
+                target = EditTarget(id: t.id, label: t.label, start: Time.parse(t.start),
+                                    originalEnd: Date(), running: true)
+            } else if let page: HistoryPage = try? await API.get("history"),
+                      let last = page.items.first(where: { $0.kind == "entry" || $0.kind == "timer" }),
+                      let id = last.id {
+                target = EditTarget(id: id, label: last.label ?? "", start: last.startDate,
+                                    originalEnd: last.endDate, running: false)
+            }
+            guard let target else { flashBriefly("nothing to edit yet"); return }
+            editTarget = target
+            editEnd = target.originalEnd
+            mode = .edit
+            input = target.label
+            Sound.mode.play()
+            focusRequest += 1
+        }
+    }
+
+    /// Move the end in steps, snapping to the step grid, never before the start or past now.
+    func nudgeEnd(minutes: Int) {
+        guard let t = editTarget else { return }
+        let step = TimeInterval(abs(minutes) * 60)
+        let t0 = editEnd.timeIntervalSinceReferenceDate
+        let snapped = minutes < 0 ? (ceil(t0 / step) - 1) * step : (floor(t0 / step) + 1) * step
+        let earliest = t.start.addingTimeInterval(60)
+        editEnd = min(max(Date(timeIntervalSinceReferenceDate: snapped), earliest), Date())
+        Sound.mode.play()
+    }
+
+    private func submitEdit() {
+        guard let t = editTarget else { return }
+        let label = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        var body: [String: Any] = ["source": "button"]
+        if !label.isEmpty && label != t.label { body["label"] = label }
+        if abs(editEnd.timeIntervalSince(t.originalEnd)) >= 30 { body["end"] = Time.string(editEnd) }
+        guard body.count > 1 else { back(); return }  // nothing changed
+        if body["end"] != nil && t.running { timer = nil }  // optimistic: cutting back stops it
+        flash = "Updated “\(label.isEmpty ? t.label : label)” · \(Time.clockString(t.start))–\(Time.clockString(editEnd))"
+        Sound.saved.play()
+        input = ""
+        Task {
+            do { try await API.post("entries/\(t.id)/amend", body) }
+            catch { self.error = error.localizedDescription }
+            await refreshAll()
+            try? await Task.sleep(for: .seconds(1.2))
+            onSubmitted?(); flash = nil
+        }
+    }
+
     func resetMode() {
+        editTarget = nil
         mode = .input; fillItem = nil; history = []; index = 0; input = ""; preview = nil
     }
 
@@ -223,6 +290,7 @@ final class Store: ObservableObject {
         if mode == .fill { submitFill(); return }
         if mode == .note { submitNote(); return }
         if mode == .ghost { submitGhost(); return }
+        if mode == .edit { submitEdit(); return }
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         let willLog = !forceTimer && preview?.action == "log"

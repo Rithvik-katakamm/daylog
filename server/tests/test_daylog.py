@@ -255,3 +255,37 @@ def test_ghost_off(client):
     assert client.delete("/ghost").status_code == 200
     assert client.get("/now").json()["ghost"] is None
     assert client.delete("/ghost").status_code == 409
+
+
+# ---------- amend (edit a block after the fact) ----------
+
+def test_amend_cuts_a_running_timer_back(client, clock):
+    client.post("/timer/start", json={"label": "daylog"})
+    tid = client.get("/now").json()["timer"]["id"]
+    started = clock.t
+    clock.advance(hours=5)  # left running far too long
+    cut = started + timedelta(minutes=50)
+    r = client.post(f"/entries/{tid}/amend", json={"end": cut.isoformat()})
+    assert r.status_code == 200
+    assert client.get("/now").json()["timer"] is None  # cutting it back also stops it
+    claim = client.get("/timeline").json()["claims"][0]
+    assert claim["end"] == db.iso(cut) and claim["running"] is False
+    assert client.get("/summary").json()["by_label"]["daylog"] == 50
+
+
+def test_amend_renames_and_keeps_the_original(client, clock):
+    e = client.post("/entries", json={"label": "client cal", "minutes": 20}).json()
+    client.post(f"/entries/{e['id']}/amend", json={"label": "client call"})
+    assert client.get("/timeline").json()["claims"][0]["label"] == "client call"
+    from daylog.api import app
+    assert db.get(app.state.conn, e["id"])["label"] == "client cal"  # history kept
+
+
+def test_latest_amend_wins_and_bad_ranges_rejected(client, clock):
+    e = client.post("/entries", json={"label": "x", "minutes": 60}).json()
+    start = db.parse(e["start"])
+    client.post(f"/entries/{e['id']}/amend", json={"end": (start + timedelta(minutes=40)).isoformat()})
+    client.post(f"/entries/{e['id']}/amend", json={"end": (start + timedelta(minutes=30)).isoformat()})
+    assert client.get("/summary").json()["by_label"]["x"] == 30
+    bad = client.post(f"/entries/{e['id']}/amend", json={"end": (start - timedelta(minutes=1)).isoformat()})
+    assert bad.status_code == 422

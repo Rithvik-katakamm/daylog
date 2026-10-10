@@ -85,6 +85,13 @@ class Line(BaseModel):
     source: str = "api"
 
 
+class Amend(BaseModel):
+    label: str | None = Field(default=None, min_length=1, max_length=500)
+    start: datetime | None = None
+    end: datetime | None = None
+    source: str = "api"
+
+
 class Ghost(BaseModel):
     status: str = Field(default="", max_length=500)
     source: str = "api"
@@ -189,6 +196,42 @@ async def delete_entry(event_id: str, source: str = "api"):
     tombstone = db.append(conn(), kind="claim", type="entry.delete", source=source,
                           start=db.utcnow(), ref=event_id)
     return {"deleted": event_id, "tombstone": tombstone["id"]}
+
+
+@app.post("/entries/{event_id}/amend")
+async def amend_entry(event_id: str, body: Amend):
+    """Edit a block after the fact: rename it, or move its start/end (e.g. cut back a timer
+    that was left running). Appends an `entry.amend` event; the original is never touched."""
+    target = db.get(conn(), event_id)
+    if not target or target["type"] not in ("entry.log", "timer.start"):
+        raise HTTPException(404, "no entry or timer with that id")
+    current = next((c for c in timeline.claims(conn(), db.parse(target["start"]) - timedelta(days=1),
+                                               db.utcnow() + timedelta(seconds=1))
+                    if c["id"] == event_id), None)
+    if current is None:
+        raise HTTPException(404, "that entry was deleted")
+    start = db.parse(body.start.isoformat()) if body.start else db.parse(current["start"])
+    end = db.parse(body.end.isoformat()) if body.end else (
+        db.parse(current["end"]) if current["end"] else None)
+    if end is not None:
+        if end <= start:
+            raise HTTPException(422, "end must be after start")
+        if end > db.utcnow() + timedelta(minutes=1):
+            raise HTTPException(422, "end is in the future")
+    fields = {k: v for k, v in {
+        "label": body.label.strip() if body.label else None,
+        "start": db.iso(start) if body.start else None,
+        "end": db.iso(end) if body.end else None,
+    }.items() if v}
+    if not fields:
+        raise HTTPException(422, "nothing to change: pass label, start or end")
+    row = db.append(conn(), kind="claim", type="entry.amend", source=body.source,
+                    start=db.utcnow(), ref=event_id, data=fields)
+    # Cutting back a running timer means it's over: record the stop too, so "now" agrees.
+    if body.end and target["type"] == "timer.start" and current["running"]:
+        db.append(conn(), kind="claim", type="timer.stop", source=body.source,
+                  start=db.utcnow(), ref=event_id)
+    return {"amended": event_id, "amend": row["id"], **fields}
 
 
 @app.post("/observations", status_code=201)

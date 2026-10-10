@@ -70,14 +70,19 @@ def claims(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[st
     ids = [e["id"] for e in events]
     deleted = db.refs_to(conn, "entry.delete", ids)
     stops = db.refs_to(conn, "timer.stop", ids)
+    amends = db.refs_to(conn, "entry.amend", ids, latest=True)
 
     out = []
     for e in events:
         if e["id"] in deleted:
             continue
-        start = db.parse(e["start"])
+        fix = amends.get(e["id"], {}).get("data", {})  # the newest edit, if any
+        start = db.parse(fix.get("start") or e["start"])
+        label = fix.get("label") or e["label"]
         running = False
-        if e["type"] in ("timer.start", "ghost.start"):
+        if fix.get("end"):
+            end = db.parse(fix["end"])
+        elif e["type"] in ("timer.start", "ghost.start"):
             stop = stops.get(e["id"])
             if stop:
                 end = db.parse(stop["start"])
@@ -94,7 +99,7 @@ def claims(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[st
                 start,
                 None if running else end,
                 id=e["id"],
-                label=e["label"],
+                label=label,
                 source=e["source"],
                 type={"timer.start": "timer", "ghost.start": "ghost"}.get(e["type"], "entry"),
                 running=running,
