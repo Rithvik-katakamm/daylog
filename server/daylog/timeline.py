@@ -22,6 +22,25 @@ ACTIVITY_CAP = timedelta(minutes=10)
 CLAIM_LOOKBACK = timedelta(hours=24)
 
 CLAIM_TYPES = ["timer.start", "entry.log", "ghost.start"]
+
+# Focus is a layer on a task: focus.set events reference the task and carry a tier.
+FOCUS_NAMES = {1: "focused", 2: "deep", 3: "hyperfocus"}
+
+
+def focus_events(conn: sqlite3.Connection, ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+    """Map task id -> its focus.set events, oldest first."""
+    out: dict[str, list[dict[str, Any]]] = {}
+    for i in range(0, len(ids), 500):
+        chunk = ids[i : i + 500]
+        marks = ",".join("?" * len(chunk))
+        rows = conn.execute(
+            f"SELECT * FROM events WHERE type = 'focus.set' AND ref IN ({marks}) ORDER BY start, recorded_at",
+            chunk,
+        ).fetchall()
+        for r in rows:
+            e = db.to_dict(r)
+            out.setdefault(e["ref"], []).append({"at": e["start"], "tier": e["data"].get("tier", 0)})
+    return out
 ACTIVITY_TYPES = ["app.focus", "away.start"]
 
 
@@ -71,6 +90,7 @@ def claims(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[st
     deleted = db.refs_to(conn, "entry.delete", ids)
     stops = db.refs_to(conn, "timer.stop", ids)
     amends = db.refs_to(conn, "entry.amend", ids, latest=True)
+    focus = focus_events(conn, ids)
 
     out = []
     for e in events:
@@ -103,6 +123,7 @@ def claims(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[st
                 source=e["source"],
                 type={"timer.start": "timer", "ghost.start": "ghost"}.get(e["type"], "entry"),
                 running=running,
+                focus=focus.get(e["id"], []),
             )
         )
     return out
@@ -197,7 +218,8 @@ def history(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[s
             continue
         e = db.parse(c["end"])
         items.append({"kind": c["type"], "id": c["id"], "label": c["label"], "start": c["start"],
-                      "end": c["end"], "minutes": _minutes(min(e, hi) - max(s, lo))})
+                      "end": c["end"], "minutes": _minutes(min(e, hi) - max(s, lo)),
+                      "focus_peak": max((f["tier"] for f in c.get("focus", [])), default=0)})
         known.append((max(s, lo), min(e, hi)))
     for m in meetings(conn, lo, hi):
         s, e = db.parse(m["start"]), db.parse(m["end"])
@@ -251,6 +273,22 @@ def summary(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> dict[str, A
         by_label[seg["label"]] = by_label.get(seg["label"], timedelta()) + (clipped[1] - clipped[0])
         known.append(clipped)
 
+    # Minutes spent at each focus tier, from each task's focus.set events up to the next
+    # change or the task's end.
+    by_focus: dict[str, timedelta] = {}
+    for c in tl["claims"]:
+        c_end = db.parse(c["end"]) if c["end"] else now
+        marks = c.get("focus", [])
+        for i, f in enumerate(marks):
+            if not f["tier"]:
+                continue
+            f_start = db.parse(f["at"])
+            f_end = db.parse(marks[i + 1]["at"]) if i + 1 < len(marks) else c_end
+            clipped = _clip(f_start, min(f_end, c_end), lo, hi)
+            if clipped:
+                name = FOCUS_NAMES[f["tier"]]
+                by_focus[name] = by_focus.get(name, timedelta()) + (clipped[1] - clipped[0])
+
     by_app: dict[str, timedelta] = {}
     for seg in tl["activity"]:
         d = db.parse(seg["end"]) - db.parse(seg["start"])
@@ -266,6 +304,7 @@ def summary(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> dict[str, A
         "computer_active_minutes": _minutes(sum(by_app.values(), timedelta())),
         "by_label": {k: _minutes(v) for k, v in sorted(by_label.items(), key=lambda kv: -kv[1])},
         "by_app": {k: _minutes(v) for k, v in sorted(by_app.items(), key=lambda kv: -kv[1])},
+        "by_focus": {k: _minutes(by_focus[k]) for k in FOCUS_NAMES.values() if k in by_focus},
     }
 
 
@@ -293,7 +332,8 @@ def now_state(conn: sqlite3.Connection) -> dict[str, Any]:
         "now": db.iso(now),
         "timer": (
             {"id": timer["id"], "label": timer["label"], "start": timer["start"],
-             "elapsed_minutes": _minutes(now - db.parse(timer["start"]))}
+             "elapsed_minutes": _minutes(now - db.parse(timer["start"])),
+             "focus": (focus_events(conn, [timer["id"]]).get(timer["id"]) or [{"tier": 0}])[-1]["tier"]}
             if timer else None
         ),
         "activity": current_app,

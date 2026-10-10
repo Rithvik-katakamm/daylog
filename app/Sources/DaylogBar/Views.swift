@@ -127,14 +127,18 @@ struct BarView: View {
         .frame(width: size.width, height: size.height)
         .clipShape(Capsule())
         .background(Capsule().fill(Theme.chrome))
-        .overlay(Capsule().strokeBorder(ring.opacity(0.85), lineWidth: 1.5))
-        .shadow(color: ring.opacity(0.18), radius: 10)
+        .overlay(Capsule().strokeBorder(ring.opacity(0.85), lineWidth: 1.5 + CGFloat(focusTier) * 0.5))
+        // Focus glows: the deeper you are, the brighter the ring.
+        .shadow(color: ring.opacity(0.18 + Double(focusTier) * 0.14), radius: 10 + CGFloat(focusTier) * 7)
+        .animation(.easeInOut(duration: 0.35), value: focusTier)
         .shadow(color: .black.opacity(store.isOpen ? 0.45 : 0), radius: 22, y: 8)
         .animation(.easeOut(duration: 0.15), value: store.mode)
         .scaleEffect(store.isOpen ? 1 : 0.85, anchor: .top)
         .opacity(store.isOpen ? 1 : 0)
         .animation(Theme.open, value: store.isOpen)
     }
+
+    private var focusTier: Int { store.mode == .input && store.ghost == nil ? (store.timer?.focus ?? 0) : 0 }
 
     private func field(_ prompt: String) -> some View {
         TextField("", text: $store.input, prompt: Text(prompt).foregroundStyle(Theme.muted))
@@ -164,6 +168,10 @@ struct BarView: View {
                 .italic(item.isGap)
                 .foregroundStyle(item.isGap ? Theme.muted : Theme.text)
                 .lineLimit(1).truncationMode(.tail)
+            if let f = item.focusPeak, f > 0 {
+                Text(String(repeating: "▲", count: f))
+                    .font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.accent)
+            }
             Spacer(minLength: 8)
             Text(item.isNote ? "" : Time.minutes(item.minutes))
                 .font(.system(size: 13, weight: .semibold, design: .monospaced))
@@ -191,6 +199,12 @@ struct BarView: View {
             Circle().fill(Theme.accent).frame(width: 7, height: 7)
                 .shadow(color: Theme.accent, radius: 3)
             Text(t.label).lineLimit(1).truncationMode(.tail).frame(maxWidth: 170, alignment: .leading)
+            if let f = t.focus, f > 0 {
+                Text(String(repeating: "▲", count: f))
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Theme.accent)
+                    .help(Store.focusNames[f])
+            }
             TimelineView(.periodic(from: .now, by: 1)) { ctx in
                 Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(t.start)), withSeconds: true))
                     .font(.system(size: 12, weight: .semibold, design: .monospaced))
@@ -263,7 +277,12 @@ struct BarView: View {
             Text("ghost since \(Time.clockString(Time.parse(g.start)))").foregroundStyle(Theme.ghost)
             Text("· ⌘O back online · or type a task").foregroundStyle(Theme.muted)
         } else {
-            Text("↑ look back · ↓ edit · ⌘N note · ⌘O ghost · tab back").foregroundStyle(Theme.muted)
+            if let f = store.timer?.focus, f > 0 {
+                Text(Store.focusNames[f]).foregroundStyle(Theme.accent).fontWeight(.semibold)
+                Text("·").foregroundStyle(Theme.muted)
+            }
+            Text(store.timer != nil ? "⌘F focus · ↑ look back · ↓ edit · ⌘N note · ⌘O ghost · tab back"
+                                    : "↑ look back · ↓ edit · ⌘N note · ⌘O ghost · tab back").foregroundStyle(Theme.muted)
             if store.timer != nil { Text("· ⌘. stop").foregroundStyle(Theme.muted) }
         }
     }

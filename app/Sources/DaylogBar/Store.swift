@@ -142,6 +142,22 @@ final class Store: ObservableObject {
         }
     }
 
+    /// ⌘F: step focus up a tier on the running task (focused → deep → hyperfocus → off).
+    static let focusNames = ["", "focused", "deep focus", "hyperfocus"]
+
+    func cycleFocus() {
+        guard var t = timer, t.id != "pending" else { flashBriefly("start a task first, then ⌘F"); return }
+        let next = ((t.focus ?? 0) + 1) % 4
+        t.focus = next
+        timer = t  // optimistic: the ring changes on the keypress
+        Sound.mode.play()
+        flashBriefly(next == 0 ? "focus off" : "\(Store.focusNames[next])  " + String(repeating: "▲", count: next))
+        Task {
+            do { try await API.post("focus", ["tier": next, "source": "button"]) }
+            catch { self.error = error.localizedDescription }
+        }
+    }
+
     /// ⌘N: jot a thought at this moment, tagged with the running task. Doesn't switch tasks.
     func beginNote() {
         input = ""
@@ -280,7 +296,7 @@ final class Store: ObservableObject {
         return true
     }
 
-    private func flashBriefly(_ text: String) {
+    func flashBriefly(_ text: String) {
         flash = text
         Task { try? await Task.sleep(for: .seconds(1.6)); if flash == text { flash = nil } }
     }

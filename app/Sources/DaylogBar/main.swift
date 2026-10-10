@@ -116,6 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 MainActor.assumeIsolated { store.submit() }; return nil
             case (45, .input) where cmd: MainActor.assumeIsolated { store.beginNote() }; return nil  // ⌘N
             case (31, .input) where cmd: MainActor.assumeIsolated { store.ghostKey() }; return nil   // ⌘O
+            case (3, .input) where cmd: MainActor.assumeIsolated { store.cycleFocus() }; return nil  // ⌘F
             case (51, .browse) where cmd: MainActor.assumeIsolated { store.deleteCurrent() }; return nil
             default: break
             }

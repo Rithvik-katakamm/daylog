@@ -289,3 +289,38 @@ def test_latest_amend_wins_and_bad_ranges_rejected(client, clock):
     assert client.get("/summary").json()["by_label"]["x"] == 30
     bad = client.post(f"/entries/{e['id']}/amend", json={"end": (start - timedelta(minutes=1)).isoformat()})
     assert bad.status_code == 422
+
+
+# ---------- focus tiers (RIT-38) ----------
+
+def test_focus_layers_on_the_running_task(client, clock):
+    assert client.post("/focus", json={"tier": 1}).status_code == 409  # no task yet
+    client.post("/timer/start", json={"label": "building daylog"})
+    clock.advance(minutes=10)
+    client.post("/focus", json={"tier": 1})
+    clock.advance(minutes=20)
+    client.post("/focus", json={"tier": 3})
+    clock.advance(minutes=30)
+    now = client.get("/now").json()
+    assert now["timer"]["focus"] == 3 and now["timer"]["label"] == "building daylog"
+
+    claim = client.get("/timeline").json()["claims"][0]
+    assert [f["tier"] for f in claim["focus"]] == [1, 3]
+    s = client.get("/summary").json()
+    assert s["by_focus"] == {"focused": 20, "hyperfocus": 30}
+    client.post("/timer/stop")
+    item = next(i for i in client.get("/history").json()["items"] if i["label"] == "building daylog")
+    assert item["focus_peak"] == 3
+
+
+def test_switching_tasks_resets_focus(client, clock):
+    client.post("/timer/start", json={"label": "a"})
+    client.post("/focus", json={"tier": 2})
+    clock.advance(minutes=5)
+    client.post("/timer/start", json={"label": "b"})
+    assert client.get("/now").json()["timer"]["focus"] == 0
+
+
+def test_focus_tier_validated(client):
+    client.post("/timer/start", json={"label": "a"})
+    assert client.post("/focus", json={"tier": 4}).status_code == 422

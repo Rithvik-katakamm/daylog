@@ -27,6 +27,9 @@ Keyboard only. Press **⌥L** and a black capsule drops down from the top of the
   the end time in 5-minute steps (⇧ for 15). ⏎ saves. Use it when a timer ran too long.
   Edits are `entry.amend` events; the original stays in the log.
 - **Tab** closes the bar and hands the keyboard back to the app you were in.
+- **⌘F: focus.** Steps the running task up a tier: focused ▲ → deep ▲▲ → hyperfocus ▲▲▲ → off.
+  The ring glows brighter the deeper you are. It's a layer on the task (`focus.set` events),
+  so you can later ask which tasks get you to hyperfocus. The summary has minutes per tier.
 - **⌘.** stops the running timer.
 
 **One input line; the ring tells you the mode:** green = task · blue = note (⌘N) ·

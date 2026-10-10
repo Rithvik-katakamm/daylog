@@ -79,6 +79,7 @@ struct TimerInfo: Decodable, Equatable {
     let id: String
     let label: String
     let start: String
+    var focus: Int? = nil  // 0 off · 1 focused · 2 deep · 3 hyperfocus
 }
 
 struct ActivityInfo: Decodable {
@@ -128,6 +129,7 @@ struct HistoryItem: Decodable, Equatable {
     let end: String
     let minutes: Int
     let during: String?  // notes: the task running when it was written
+    var focusPeak: Int? = nil  // deepest focus tier reached during this block
 
     var key: String { "\(kind)-\(start)" }
     var isGap: Bool { kind == "gap" }

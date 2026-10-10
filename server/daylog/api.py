@@ -92,6 +92,11 @@ class Amend(BaseModel):
     source: str = "api"
 
 
+class Focus(BaseModel):
+    tier: int = Field(ge=0, le=3)  # 0 off · 1 focused · 2 deep · 3 hyperfocus
+    source: str = "api"
+
+
 class Ghost(BaseModel):
     status: str = Field(default="", max_length=500)
     source: str = "api"
@@ -251,6 +256,18 @@ def _describe(p: parse.Parsed) -> dict:
         return {"action": "timer", "label": p.label}
     return {"action": "log", "label": p.label, "start": db.iso(p.start), "end": db.iso(p.end),
             "minutes": round((p.end - p.start).total_seconds() / 60), "until_now": p.open_ended}
+
+
+@app.post("/focus")
+async def set_focus(body: Focus):
+    """Mark how deep he is in the running task right now. A layer on the task, not a new
+    task: it lasts until he changes it or switches tasks."""
+    running = timeline.running_timer(conn())
+    if not running:
+        raise HTTPException(409, "start a task first: focus is a layer on the running task")
+    db.append(conn(), kind="claim", type="focus.set", source=body.source, start=db.utcnow(),
+              ref=running["id"], data={"tier": body.tier})
+    return timeline.now_state(conn())
 
 
 @app.post("/ghost", status_code=201)

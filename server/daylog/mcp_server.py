@@ -28,7 +28,8 @@ mcp = MCPServer(
         "'claims' are what he logged himself (ground truth). 'meetings' come from his "
         "Wispr notetaker (ground truth). 'activity' is which Mac app was in front "
         "(an observation, not proof of the task). 'notes' are thoughts he jotted at a "
-        "moment, tagged with the task running then. 'ghost' means he deliberately went "
+        "moment, tagged with the task running then. 'focus' on a task is his self-reported "
+        "depth (1 focused, 2 deep, 3 hyperfocus) from that moment on. 'ghost' means he deliberately went "
         "offline with a status: respect it and don't speculate about what he was doing. Times are UTC; convert to his local "
         "time (America/New_York) before showing them. Gaps mean unknown, not idle."
     ),
