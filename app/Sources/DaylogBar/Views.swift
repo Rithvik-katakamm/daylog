@@ -89,83 +89,22 @@ struct BarView: View {
         }
         let dashed = [.browse, .fill, .edit].contains(store.mode)  // the past is dashed
         return ZStack {
-            switch store.mode {
-            case .input:
-                HStack(spacing: 10) {
-                    if let g = store.ghost { ghostChip(g) } else if let t = store.timer { timerChip(t) }
-                    field(store.ghost != nil ? "Type a task to come back"
-                          : store.timer == nil ? "What are you doing?" : "Switch, or log: client call 3:10-3:25")
-                }
-            case .browse:
-                if let item = store.current {
-                    stop(item)
-                        .id(item.key)
-                        .transition(.asymmetric(
-                            insertion: .move(edge: store.movedOlder ? .top : .bottom).combined(with: .opacity),
-                            removal: .move(edge: store.movedOlder ? .bottom : .top).combined(with: .opacity)))
-                }
-            case .note:
-                HStack(spacing: 10) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "note.text")
-                        Text(store.timer.map { "note · \($0.label)" } ?? "note")
-                            .lineLimit(1).truncationMode(.tail).frame(maxWidth: 170, alignment: .leading)
-                    }
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Theme.note)
-                    .padding(.horizontal, 10).frame(height: 30)
-                    .background(Capsule().fill(Theme.note.opacity(0.13)))
-                    field("What’s on your mind?")
-                }
-            case .ghost:
-                HStack(spacing: 10) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "moon.zzz.fill")
-                        Text("ghost")
-                    }
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Theme.ghost)
-                    .padding(.horizontal, 10).frame(height: 30)
-                    .background(Capsule().fill(Theme.ghost.opacity(0.14)))
-                    field("Status (optional): dinner with family, deep reset…")
-                }
-            case .menu:
-                HStack(spacing: 10) {
-                    Text("⌘K").font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Theme.text)
-                        .padding(.horizontal, 9).frame(height: 26)
-                        .background(Capsule().fill(Color.white.opacity(0.1)))
-                    field("Type a command… (↑↓ ⏎, esc)")
-                }
-            case .edit:
-                HStack(spacing: 10) {
-                    if let t = store.editTarget {
-                        HStack(spacing: 5) {
-                            Text(Time.clockString(t.start))
-                            Text("–")
-                            Text(Time.clockString(store.editEnd)).fontWeight(.bold)
-                            Text("· " + Time.duration(store.editEnd.timeIntervalSince(t.start)))
-                        }
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundStyle(Theme.past)
-                        .padding(.horizontal, 10).frame(height: 30)
-                        .background(Capsule().fill(Theme.past.opacity(0.13)))
-                        .animation(.easeOut(duration: 0.1), value: store.editEnd)
-                    }
-                    field("Title")
-                }
-            case .fill:
-                HStack(spacing: 10) {
-                    if let gap = store.fillItem {
-                        Text(gap.range)
-                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(Theme.past)
-                            .padding(.horizontal, 10).frame(height: 30)
-                            .background(Capsule().fill(Theme.past.opacity(0.13)))
-                    }
-                    field("What were you doing then?")
-                }
+            // Looking back shows one stop at a time instead of the input line.
+            if store.mode == .browse, let item = store.current {
+                stop(item)
+                    .id(item.key)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: store.movedOlder ? .top : .bottom).combined(with: .opacity),
+                        removal: .move(edge: store.movedOlder ? .bottom : .top).combined(with: .opacity)))
             }
+            // ONE text field for every mode. Only the chip and the prompt change, so the field
+            // never gets rebuilt and keyboard focus can't get lost on a fast mode switch.
+            HStack(spacing: 10) {
+                leadingChip
+                field(prompt)
+            }
+            .opacity(store.mode == .browse ? 0 : 1)
+            .allowsHitTesting(store.mode != .browse)
         }
         .animation(.spring(response: 0.26, dampingFraction: 0.86), value: store.index)
         .padding(.horizontal, 16)
@@ -183,6 +122,77 @@ struct BarView: View {
         .scaleEffect(store.isOpen ? 1 : 0.85, anchor: .top)
         .opacity(store.isOpen ? 1 : 0)
         .animation(Theme.open, value: store.isOpen)
+    }
+
+    /// What the single input line asks for, per mode.
+    private var prompt: String {
+        switch store.mode {
+        case .input:
+            store.ghost != nil ? "Type a task to come back"
+                : store.timer == nil ? "What are you doing?" : "Switch, or log: client call 3:10-3:25"
+        case .note: "What’s on your mind?"
+        case .ghost: "Status (optional): dinner with family, deep reset…"
+        case .menu: "Type a command… (↑↓ ⏎, esc)"
+        case .edit: "Title"
+        case .fill: "What were you doing then?"
+        case .browse: ""
+        }
+    }
+
+    /// The chip to the left of the input line: what mode you're in, or what's running.
+    @ViewBuilder private var leadingChip: some View {
+        switch store.mode {
+        case .input:
+            if let g = store.ghost { ghostChip(g) } else if let t = store.timer { timerChip(t) }
+        case .note:
+            HStack(spacing: 6) {
+                Image(systemName: "note.text")
+                Text(store.timer.map { "note · \($0.label)" } ?? "note")
+                    .lineLimit(1).truncationMode(.tail).frame(maxWidth: 170, alignment: .leading)
+            }
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(Theme.note)
+            .padding(.horizontal, 10).frame(height: 30)
+            .background(Capsule().fill(Theme.note.opacity(0.13)))
+        case .ghost:
+            HStack(spacing: 6) {
+                Image(systemName: "moon.zzz.fill")
+                Text("ghost")
+            }
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(Theme.ghost)
+            .padding(.horizontal, 10).frame(height: 30)
+            .background(Capsule().fill(Theme.ghost.opacity(0.14)))
+        case .menu:
+            Text("⌘K").font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundStyle(Theme.text)
+                .padding(.horizontal, 9).frame(height: 26)
+                .background(Capsule().fill(Color.white.opacity(0.1)))
+        case .edit:
+            if let t = store.editTarget {
+                HStack(spacing: 5) {
+                    Text(Time.clockString(t.start))
+                    Text("–")
+                    Text(Time.clockString(store.editEnd)).fontWeight(.bold)
+                    Text("· " + Time.duration(store.editEnd.timeIntervalSince(t.start)))
+                }
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundStyle(Theme.past)
+                .padding(.horizontal, 10).frame(height: 30)
+                .background(Capsule().fill(Theme.past.opacity(0.13)))
+                .animation(.easeOut(duration: 0.1), value: store.editEnd)
+            }
+        case .fill:
+            if let gap = store.fillItem {
+                Text(gap.range)
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Theme.past)
+                    .padding(.horizontal, 10).frame(height: 30)
+                    .background(Capsule().fill(Theme.past.opacity(0.13)))
+            }
+        case .browse:
+            EmptyView()
+        }
     }
 
     private var focusTier: Int { store.mode == .input && store.ghost == nil ? (store.timer?.focus ?? 0) : 0 }

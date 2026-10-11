@@ -5,6 +5,10 @@ one becomes work, it gets a Linear issue (linked here). Add to this freely.
 
 ## Principles
 
+### "How would Apple design this?"
+The north-star question for every UI decision. Restraint, one obvious action, motion that
+explains what changed, nothing on screen that doesn't need to be there.
+
 ### The knuckle test
 The best Apple Watch apps can be used with one knuckle. Day Log should be that simple. **If
 it's hard to use, it won't get used**, and then the data doesn't matter. Every interaction
