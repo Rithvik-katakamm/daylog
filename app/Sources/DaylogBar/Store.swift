@@ -11,7 +11,12 @@ final class Store: ObservableObject {
     @Published var serverDown = false
     @Published var error: String?
     @Published var focusRequest = 0  // bump to focus the input field
-    @Published var input = "" { didSet { if mode == .input { schedulePreview() } } }
+    @Published var input = "" {
+        didSet {
+            if mode == .input { schedulePreview() }
+            if mode == .menu { menuIndex = 0 }  // filtering resets the selection
+        }
+    }
     @Published var preview: LinePreview?
     @Published var flash: String?  // brief confirmation after an action
     @Published var isOpen = false   // drives the grow/shrink animation
@@ -19,7 +24,49 @@ final class Store: ObservableObject {
     @Published var env: API.Env = .real { didSet { API.env = env } }
 
     // Scrolling back through the past with ↑/↓.
-    enum Mode: Equatable { case input, browse, fill, note, ghost, edit }
+    enum Mode: Equatable { case input, browse, fill, note, ghost, edit, menu }
+
+    // MARK: command menu (⌘K or /): the field becomes a filter over `commands`
+    var commands: [Command] = []
+    @Published var menuIndex = 0
+
+    var menuItems: [Command] {
+        let q = input.trimmingCharacters(in: .whitespaces).lowercased()
+        return commands.filter { c in
+            c.isAvailable(self) && (q.isEmpty || c.title.lowercased().contains(q)
+                                    || c.group.rawValue.lowercased().contains(q))
+        }
+    }
+
+    func openMenu() {
+        input = ""; preview = nil; menuIndex = 0
+        mode = .menu
+        Sound.mode.play()
+        focusRequest += 1
+    }
+
+    func menuMove(_ delta: Int) {
+        let n = menuItems.count
+        guard n > 0 else { return }
+        menuIndex = (menuIndex + delta + n) % n
+    }
+
+    func runSelectedCommand() {
+        let items = menuItems
+        guard items.indices.contains(menuIndex) else { return }
+        let cmd = items[menuIndex]
+        mode = .input; input = ""
+        cmd.run()
+    }
+
+    func resetDevData() {
+        guard env == .dev else { return }
+        Task {
+            do { try await API.post("dev/reset", env: .dev); flashBriefly("dev data reset") }
+            catch { self.error = error.localizedDescription }
+            await refreshAll()
+        }
+    }
 
     /// ↓ edit: the block being fixed (usually the running timer), and its new end.
     struct EditTarget: Equatable {
@@ -103,7 +150,7 @@ final class Store: ObservableObject {
     func back() {
         switch mode {
         case .fill: mode = .browse; fillItem = nil; input = ""
-        case .note, .ghost, .edit: mode = .input; input = ""; editTarget = nil
+        case .note, .ghost, .edit, .menu: mode = .input; input = ""; editTarget = nil
         default: mode = .input
         }
     }

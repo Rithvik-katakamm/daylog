@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import Carbon.HIToolbox
 import SwiftUI
 
@@ -20,11 +21,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var keyMonitor: Any?
 
     /// A transparent stage; the visible capsules are drawn inside it by SwiftUI.
+    /// A transparent stage; SwiftUI draws the capsules inside it. It only grows tall while
+    /// the command menu is open, so it never sits over the screen when it doesn't need to.
     static let windowSize = NSSize(width: 620, height: 150)
+    static let menuWindowSize = NSSize(width: 620, height: 470)
+    private var modeWatch: AnyCancellable?
 
     func applicationDidFinishLaunching(_ note: Notification) {
         makePanel()
         store.onSubmitted = { [weak self] in self?.hide() }
+        modeWatch = store.$mode.removeDuplicates().sink { [weak self] m in
+            DispatchQueue.main.async { self?.placePanel(menu: m == .menu) }
+        }
+        store.commands = Commands.all(
+            store: store,
+            hide: { [weak self] in self?.hide() },
+            switchEnv: { [weak self] env in self?.toggle(env: env) })
         hotKey = HotKey(id: 1) { [weak self] in MainActor.assumeIsolated { self?.toggle(env: .real) } }
         devHotKey = HotKey(keyCode: UInt32(kVK_ANSI_D), id: 2) { [weak self] in
             MainActor.assumeIsolated { self?.toggle(env: .dev) }
@@ -56,10 +68,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: placement: top-center, just under the menu bar, on the screen your cursor is on
 
-    private func placePanel() {
+    private func placePanel(menu: Bool = false) {
         let screen = (NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
                       ?? NSScreen.screens[0]).visibleFrame
-        let size = Self.windowSize
+        let size = menu ? Self.menuWindowSize : Self.windowSize
         panel.setFrame(NSRect(x: screen.midX - size.width / 2, y: screen.maxY - size.height - 8,
                               width: size.width, height: size.height), display: true)
     }
@@ -107,7 +119,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return e }
             let store = self.store
             let cmd = e.modifierFlags.contains(.command)
+            let noMods = e.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty
             switch (e.keyCode, store.mode) {
+            // Command menu: ⌘K anywhere, or / on an empty line.
+            case (40, let m) where cmd && m != .menu: MainActor.assumeIsolated { store.openMenu() }; return nil
+            case (44, .input) where noMods && store.input.isEmpty:
+                MainActor.assumeIsolated { store.openMenu() }; return nil
+            case (126, .menu): MainActor.assumeIsolated { store.menuMove(-1) }; return nil
+            case (125, .menu): MainActor.assumeIsolated { store.menuMove(1) }; return nil
+            case (36, .menu): MainActor.assumeIsolated { store.runSelectedCommand() }; return nil
             case (53, .input): MainActor.assumeIsolated { self.hide() }; return nil      // esc: close
             case (48, _):                                                                // tab: back to work
                 MainActor.assumeIsolated { self.hide() }; return nil

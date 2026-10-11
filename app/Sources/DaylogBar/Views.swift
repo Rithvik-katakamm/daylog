@@ -41,13 +41,17 @@ struct BarView: View {
         VStack(spacing: 6) {
             if store.env == .dev { devTag }
             bar
-            hintChip
-                .opacity(store.isOpen ? 1 : 0)
-                .offset(y: store.isOpen ? 0 : -10)
-                .animation(Theme.open.delay(store.isOpen ? 0.06 : 0), value: store.isOpen)
+            Group {
+                if store.mode == .menu { menuList } else { hintChip }
+            }
+            .opacity(store.isOpen ? 1 : 0)
+            .offset(y: store.isOpen ? 0 : -10)
+            .animation(Theme.open.delay(store.isOpen ? 0.06 : 0), value: store.isOpen)
             Spacer(minLength: 0)
         }
-        .frame(width: AppDelegate.windowSize.width, height: AppDelegate.windowSize.height, alignment: .top)
+        .frame(width: AppDelegate.windowSize.width,
+               height: store.mode == .menu ? AppDelegate.menuWindowSize.height : AppDelegate.windowSize.height,
+               alignment: .top)
         .environment(\.colorScheme, .dark)
         .onChange(of: store.focusRequest) { inputFocused = true }
         // Each mode swaps in a new field; give it the keyboard straight away.
@@ -81,6 +85,7 @@ struct BarView: View {
             case .note: Theme.note
             case .ghost: Theme.ghost
             case .browse, .fill, .edit: Theme.past
+            case .menu: Theme.task
         }
         let dashed = [.browse, .fill, .edit].contains(store.mode)  // the past is dashed
         return ZStack {
@@ -123,6 +128,14 @@ struct BarView: View {
                     .padding(.horizontal, 10).frame(height: 30)
                     .background(Capsule().fill(Theme.ghost.opacity(0.14)))
                     field("Status (optional): dinner with family, deep reset…")
+                }
+            case .menu:
+                HStack(spacing: 10) {
+                    Text("⌘K").font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Theme.text)
+                        .padding(.horizontal, 9).frame(height: 26)
+                        .background(Capsule().fill(Color.white.opacity(0.1)))
+                    field("Type a command… (↑↓ ⏎, esc)")
                 }
             case .edit:
                 HStack(spacing: 10) {
@@ -254,6 +267,43 @@ struct BarView: View {
         .help("Running. ⌘. stops it")
     }
 
+    // MARK: the command menu (⌘K / "/"): every command, grouped, with its shortcut
+
+    private var menuList: some View {
+        let items = store.menuItems
+        return VStack(alignment: .leading, spacing: 1) {
+            if items.isEmpty {
+                Text("No matching command").font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+            }
+            ForEach(Array(items.enumerated()), id: \.element.id) { i, cmd in
+                if i == 0 || items[i - 1].group != cmd.group {
+                    Text(cmd.group.rawValue)
+                        .font(.system(size: 9, weight: .bold)).tracking(1.2)
+                        .foregroundStyle(Theme.muted)
+                        .padding(.horizontal, 12).padding(.top, i == 0 ? 4 : 8).padding(.bottom, 2)
+                }
+                HStack {
+                    Text(cmd.title).font(.system(size: 13)).foregroundStyle(Theme.text)
+                    Spacer()
+                    Text(cmd.shortcut).font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Theme.muted)
+                }
+                .padding(.horizontal, 12).frame(height: 28)
+                .background(RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.white.opacity(i == store.menuIndex ? 0.1 : 0)))
+                .contentShape(Rectangle())
+                .onTapGesture { store.menuIndex = i; store.runSelectedCommand() }
+            }
+        }
+        .padding(8)
+        .frame(width: Theme.barSize.width - 40)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.chrome))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.edge, lineWidth: 1))
+        .shadow(color: .black.opacity(0.4), radius: 18, y: 6)
+        .animation(.easeOut(duration: 0.1), value: store.menuIndex)
+    }
+
     // MARK: the floating chip above the bar
 
     private var hintChip: some View {
@@ -317,8 +367,8 @@ struct BarView: View {
                 Text(Store.focusNames[f]).foregroundStyle(Theme.taskColor(focus: f)).fontWeight(.semibold)
                 Text("·").foregroundStyle(Theme.muted)
             }
-            Text(store.timer != nil ? "⌘F focus · ↑ look back · ↓ edit · ⌘N note · ⌘O ghost · tab back"
-                                    : "↑ look back · ↓ edit · ⌘N note · ⌘O ghost · tab back").foregroundStyle(Theme.muted)
+            Text(store.timer != nil ? "⌘K all commands · ⌘F focus · ↑ look back · ↓ edit · ⌘N note"
+                                    : "⌘K all commands · ↑ look back · ↓ edit · ⌘N note · ⌘O ghost").foregroundStyle(Theme.muted)
             if store.timer != nil { Text("· ⌘. stop").foregroundStyle(Theme.muted) }
         }
     }
