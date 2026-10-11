@@ -523,7 +523,9 @@ final class Store: ObservableObject {
         poller = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refreshNow()
-                try? await Task.sleep(for: .seconds(15))
+                // Every 4s, so a change an agent makes (MCP set_status) shows up almost live. /now
+                // answers in ~3 ms locally, so this costs nothing noticeable.
+                try? await Task.sleep(for: .seconds(4))
             }
         }
     }

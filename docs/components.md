@@ -39,4 +39,5 @@ Technical work → Linear (team RIT). Product/design questions → Notion.
 | Component | Layer | What it is | Code | State | Open problems |
 |---|---|---|---|---|---|
 | **Channels** | infra | Stable (frozen tag) + Dev; for now stable = dev | `scripts/release.sh`, `dev.sh` | Auto-ship each checked build | Building on the Mac he uses: one instance rule; maybe a test user/VM later |
-| **Launch agents** | infra | launchd keeps server + app alive | `scripts/lib.sh write_agent` | Idempotent (no repeat "Background Items Added") | — |
+| **Launch agents** | infra | launchd keeps server + app alive | `scripts/lib.sh write_agent` | Idempotent (no repeat "Background Items Added"). App runs as `ProcessType Interactive` (v0.7): unspecified = CPU-throttled, which made stable stutter while Dev was smooth | — |
+| **Agent status** | backend, ai | Agents set his status in plain words via MCP `set_status` (source `agent:<name>`); the pill polls every 4s | `mcp_server.py`, `Store.startPolling` | MVP v0.7 | Push instead of poll; agent-set status is a claim *on his behalf*, show it differently? |

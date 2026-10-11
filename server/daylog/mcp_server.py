@@ -79,6 +79,15 @@ def log_activity(label: str, start: str, end: str) -> dict:
                                            "source": "mcp"})
 
 
+@mcp.tool()
+def set_status(line: str, agent: str) -> dict:
+    """Change what Rithvik's status pill shows, in plain words, exactly as he'd type it in his bar:
+    "locked in", "deep focus", "smoke break", "back", "high", "ghost: dinner", or a task name
+    ("reviewing the agent board"). `agent` is your name (it's recorded as the source).
+    Only do this when he asked you to, or told you plainly what he's doing right now. Never guess."""
+    return _call("POST", "/log", json={"text": line, "source": f"agent:{agent}"})
+
+
 def main() -> None:
     mcp.run()
 

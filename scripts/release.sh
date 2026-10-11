@@ -32,7 +32,10 @@ write_agent com.rithvik.daylog.server "$(server_args "$DATA/releases/current/ser
   "<key>WorkingDirectory</key><string>$DATA/releases/current/server</string>"
 echo "→ app"
 write_agent com.rithvik.daylog.app "<string>$HOME/Applications/Daylog.app/Contents/MacOS/Daylog</string>" app \
-  "<key>LimitLoadToSessionType</key><string>Aqua</string>"
+  "<key>LimitLoadToSessionType</key><string>Aqua</string><key>ProcessType</key><string>Interactive</string>"
+# Interactive = the same priority as an app you open yourself. Without it, launchd applies "light
+# resource limits… throttling its CPU usage" (man launchd.plist), which made the drop stutter in
+# the everyday app while the Dev app (opened normally) was smooth (Oct 11).
 
 wait_health 7878
 git push -q origin "$VERSION" 2>/dev/null && echo "→ pushed tag $VERSION" || echo "  (tag not pushed)"
