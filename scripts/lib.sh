@@ -32,8 +32,11 @@ PLIST
 }
 
 # write_agent <label> <program-args-xml> <log-name> [extra-plist-keys]
+# Re-registering a launch agent makes macOS announce "Background Items Added" again, so an
+# unchanged plist is only restarted (kickstart), never rewritten and re-registered.
 write_agent() {
-  cat > "$AGENTS/$1.plist" <<PLIST
+  local tmp; tmp="$(mktemp)"
+  cat > "$tmp" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -47,6 +50,12 @@ write_agent() {
   ${4:-}
 </dict></plist>
 PLIST
+  if cmp -s "$tmp" "$AGENTS/$1.plist" && launchctl print "$DOMAIN/$1" >/dev/null 2>&1; then
+    rm -f "$tmp"
+    launchctl kickstart -k "$DOMAIN/$1"
+    return
+  fi
+  mv "$tmp" "$AGENTS/$1.plist"
   launchctl bootout "$DOMAIN/$1" 2>/dev/null || true
   # bootout is asynchronous; bootstrapping before it finishes fails with error 5.
   for _ in $(seq 1 50); do launchctl print "$DOMAIN/$1" >/dev/null 2>&1 || break; sleep 0.2; done

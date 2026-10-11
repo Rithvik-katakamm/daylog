@@ -21,7 +21,18 @@ ACTIVITY_CAP = timedelta(minutes=10)
 # Claims can start before the window they overlap (a timer started last night).
 CLAIM_LOOKBACK = timedelta(hours=24)
 
-CLAIM_TYPES = ["timer.start", "entry.log", "ghost.start"]
+CLAIM_TYPES = ["timer.start", "entry.log", "ghost.start", "break.start"]
+
+# Substances: global layers ("how am I"), not tied to a task. A state.set event turns one on
+# or off; the latest event per state wins.
+STATES = ("intoxicated", "high", "caffeinated")
+
+# Breaks (⌘B walk, ⌘⇧B smoke): the task pauses and resumes when he's back. If he isn't back
+# after BREAK_GHOST_AFTER, the break was really only ~BREAK_ASSUMED long and he went dark
+# after that, so the log says exactly that. (Smart capture can learn these numbers later.)
+BREAK_GHOST_AFTER = timedelta(hours=1)
+BREAK_ASSUMED = timedelta(minutes=15)
+BREAK_LABELS = {"walk": "walk", "smoke": "smoke break"}
 
 # Focus is a layer on a task: focus.set events reference the task and carry a tier.
 FOCUS_NAMES = {1: "focused", 2: "deep", 3: "hyperfocus"}
@@ -82,6 +93,68 @@ def ghost(conn: sqlite3.Connection) -> dict[str, Any] | None:
     return _open_span(conn, "ghost.start")
 
 
+def on_break(conn: sqlite3.Connection) -> dict[str, Any] | None:
+    return _open_span(conn, "break.start")
+
+
+def state_events(conn: sqlite3.Connection, until: datetime | None = None) -> list[dict[str, Any]]:
+    q = "SELECT * FROM events WHERE type = 'state.set'"
+    args: tuple = ()
+    if until is not None:
+        q += " AND start < ?"
+        args = (db.iso(until),)
+    return [db.to_dict(r) for r in conn.execute(q + " ORDER BY start, recorded_at", args).fetchall()]
+
+
+def active_states(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Which substances are on right now, and since when."""
+    since: dict[str, str] = {}
+    for e in state_events(conn):
+        name = e["data"].get("state")
+        if e["data"].get("on"):
+            since.setdefault(name, e["start"])
+        else:
+            since.pop(name, None)
+    return [{"state": k, "since": v} for k, v in since.items() if k in STATES]
+
+
+def state_spans(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[str, Any]]:
+    """Each substance as on-spans overlapping [lo, hi). An open span ends now."""
+    now = db.utcnow()
+    open_at: dict[str, datetime] = {}
+    spans = []
+    for e in state_events(conn, until=hi):
+        name, at = e["data"].get("state"), db.parse(e["start"])
+        if e["data"].get("on"):
+            open_at.setdefault(name, at)
+        elif name in open_at:
+            spans.append((name, open_at.pop(name), at))
+    spans += [(n, s, min(now, hi)) for n, s in open_at.items()]
+    out = []
+    for name, s, e in spans:
+        c = _clip(s, e, lo, hi)
+        if c:
+            out.append(_seg(c[0], c[1], state=name))
+    return out
+
+
+def expire_break(conn: sqlite3.Connection) -> dict[str, Any] | None:
+    """A break nobody came back from: end it BREAK_ASSUMED after it began and go ghost from
+    there, remembering the paused task so ⌘B can still resume it. Returns the ghost, if any."""
+    b = on_break(conn)
+    if not b:
+        return None
+    start = db.parse(b["start"])
+    if db.utcnow() - start < BREAK_GHOST_AFTER:
+        return None
+    end = start + BREAK_ASSUMED
+    db.append(conn, kind="claim", type="timer.stop", source="auto", start=end, ref=b["id"])
+    return db.append(conn, kind="claim", type="ghost.start", source="auto", start=end,
+                     label=f"away after a {b['label']}",
+                     data={"from_break": b["id"], "kind": b["data"].get("kind"),
+                           "resume": b["data"].get("resume")})
+
+
 def claims(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[str, Any]]:
     """What he said he did, as segments overlapping [lo, hi). Running timer has end=None."""
     now = db.utcnow()
@@ -102,7 +175,7 @@ def claims(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[st
         running = False
         if fix.get("end"):
             end = db.parse(fix["end"])
-        elif e["type"] in ("timer.start", "ghost.start"):
+        elif e["type"] in ("timer.start", "ghost.start", "break.start"):
             stop = stops.get(e["id"])
             if stop:
                 end = db.parse(stop["start"])
@@ -121,7 +194,8 @@ def claims(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[st
                 id=e["id"],
                 label=label,
                 source=e["source"],
-                type={"timer.start": "timer", "ghost.start": "ghost"}.get(e["type"], "entry"),
+                type={"timer.start": "timer", "ghost.start": "ghost",
+                      "break.start": "break"}.get(e["type"], "entry"),
                 running=running,
                 focus=focus.get(e["id"], []),
             )
@@ -183,7 +257,9 @@ def dictations(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dic
 def notes(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[str, Any]]:
     events = db.query(conn, types=["note"], since=lo, until=hi)
     deleted = db.refs_to(conn, "entry.delete", [e["id"] for e in events])
-    return [{"id": e["id"], "at": e["start"], "text": e["label"], "during": e["data"].get("during")}
+    return [{"id": e["id"], "at": e["start"],
+             "at_local": db.parse(e["start"]).astimezone().strftime("%-I:%M %p"),
+             "text": e["label"], "during": e["data"].get("during")}
             for e in events if e["id"] not in deleted]
 
 
@@ -196,6 +272,7 @@ def timeline(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> dict[str, 
         "activity": activity(conn, lo, hi),
         "dictations": dictations(conn, lo, hi),
         "notes": notes(conn, lo, hi),
+        "states": state_spans(conn, lo, hi),
     }
 
 
@@ -289,6 +366,11 @@ def summary(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> dict[str, A
                 name = FOCUS_NAMES[f["tier"]]
                 by_focus[name] = by_focus.get(name, timedelta()) + (clipped[1] - clipped[0])
 
+    by_state: dict[str, timedelta] = {}
+    for sp in state_spans(conn, lo, hi):
+        d = db.parse(sp["end"]) - db.parse(sp["start"])
+        by_state[sp["state"]] = by_state.get(sp["state"], timedelta()) + d
+
     by_app: dict[str, timedelta] = {}
     for seg in tl["activity"]:
         d = db.parse(seg["end"]) - db.parse(seg["start"])
@@ -305,6 +387,7 @@ def summary(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> dict[str, A
         "by_label": {k: _minutes(v) for k, v in sorted(by_label.items(), key=lambda kv: -kv[1])},
         "by_app": {k: _minutes(v) for k, v in sorted(by_app.items(), key=lambda kv: -kv[1])},
         "by_focus": {k: _minutes(by_focus[k]) for k in FOCUS_NAMES.values() if k in by_focus},
+        "by_state": {k: _minutes(by_state[k]) for k in STATES if k in by_state},
     }
 
 
@@ -312,6 +395,7 @@ def now_state(conn: sqlite3.Connection) -> dict[str, Any]:
     now = db.utcnow()
     timer = running_timer(conn)
     g = ghost(conn)
+    b = on_break(conn)
     last_act = conn.execute(
         "SELECT * FROM events WHERE type IN ('app.focus', 'away.start') ORDER BY start DESC LIMIT 1"
     ).fetchone()
@@ -340,7 +424,14 @@ def now_state(conn: sqlite3.Connection) -> dict[str, Any]:
         "meeting": meeting,
         "ghost": (
             {"id": g["id"], "status": g["label"], "start": g["start"],
-             "elapsed_minutes": _minutes(now - db.parse(g["start"]))}
+             "elapsed_minutes": _minutes(now - db.parse(g["start"])),
+             "resume": g["data"].get("resume")}
             if g else None
         ),
+        "on_break": (
+            {"id": b["id"], "kind": b["data"].get("kind"), "label": b["label"], "start": b["start"],
+             "resume": b["data"].get("resume"), "elapsed_minutes": _minutes(now - db.parse(b["start"]))}
+            if b else None
+        ),
+        "states": active_states(conn),
     }

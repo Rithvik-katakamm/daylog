@@ -12,6 +12,8 @@ enum Theme {
     static let focusHeat = [task, hex(0xFFD652), hex(0xFF9A3C), hex(0xFF4D4D)]  // 2: ▲ yellow ▲▲ orange ▲▲▲ red
     static let intoxicated = hex(0xFF6FA5) // 2: outer ring
     static let high = hex(0x7CFF6B)        // 2: outer ring
+    static let caffeinated = hex(0x5CE1E6) // 2: outer ring (aqua: kept clear of the focus heat)
+    static let away = hex(0x8FA3B8)        // 1: on a break (⌘B walk / ⌘⇧B smoke)
     static let note = hex(0x8CC2FF)        // 3: typing a note
     static let past = hex(0xC9CED6)        // 3: looking back / editing / filling (dashed ring)
     static let meeting = hex(0x7A8CFF)     // a Wispr meeting when looking back
@@ -22,6 +24,17 @@ enum Theme {
 
     /// The task color for a focus tier: pearl, then heating up to red.
     static func taskColor(focus: Int) -> Color { focusHeat[max(0, min(focus, 3))] }
+
+    /// Substance rings, innermost first. Order is fixed so the rings never shuffle.
+    static let stateOrder: [(name: String, color: Color)] =
+        [("high", high), ("intoxicated", intoxicated), ("caffeinated", caffeinated)]
+    static func stateColors(_ on: Set<String>) -> [Color] { stateOrder.filter { on.contains($0.name) }.map(\.color) }
+
+    /// Dimension 1 for what's going on right now (used by the bar, the pill and the side ring).
+    @MainActor static func statusColor(_ s: Store) -> Color {
+        s.onBreak != nil ? away : s.ghost != nil ? ghost
+            : s.timer != nil ? taskColor(focus: s.timer?.focus ?? 0) : idle
+    }
 
     static func hex(_ v: UInt32) -> Color {
         Color(red: Double((v >> 16) & 0xFF) / 255, green: Double((v >> 8) & 0xFF) / 255,
@@ -40,7 +53,17 @@ struct BarView: View {
     var body: some View {
         VStack(spacing: 6) {
             if store.env == .dev { devTag }
-            bar
+            ZStack(alignment: .top) {
+                // Closed: the dimmed pill stays (if on). Opening fades it as the bar grows out of it.
+                if store.showsPill {
+                    RestPill(store: store)
+                        .padding(.top, 3)
+                        .opacity(store.isOpen ? 0 : 1)
+                        .scaleEffect(store.isOpen ? 1.2 : 1, anchor: .top)
+                        .animation(Theme.open, value: store.isOpen)
+                }
+                bar
+            }
             Group {
                 if store.mode == .menu { menuList } else { hintChip }
             }
@@ -79,9 +102,7 @@ struct BarView: View {
         let size = store.isOpen ? Theme.barSize : Theme.restSize
         // One input line; the ring says which mode you're in.
         let ring: Color = switch store.mode {
-            case .input:
-                store.ghost != nil ? Theme.ghost
-                    : store.timer != nil ? Theme.taskColor(focus: store.timer?.focus ?? 0) : Theme.idle
+            case .input: Theme.statusColor(store)
             case .note: Theme.note
             case .ghost: Theme.ghost
             case .browse, .fill, .edit: Theme.past
@@ -114,6 +135,9 @@ struct BarView: View {
         .background(Capsule().fill(Theme.chrome))
         .overlay(Capsule().strokeBorder(ring.opacity(0.85), style: StrokeStyle(
             lineWidth: 1.5 + CGFloat(focusTier) * 0.5, dash: dashed ? [6, 4] : [])))
+        // Substances: outer rings that stack outside the main ring (high, intoxicated, caffeinated).
+        .overlay(OuterRings(colors: Theme.stateColors(store.states), shape: Capsule(), opacity: 0.8)
+            .opacity(store.isOpen ? 1 : 0))
         // Focus glows: the deeper you are, the brighter the ring.
         .shadow(color: ring.opacity(0.18 + Double(focusTier) * 0.14), radius: 10 + CGFloat(focusTier) * 7)
         .animation(.easeInOut(duration: 0.35), value: focusTier)
@@ -128,7 +152,8 @@ struct BarView: View {
     private var prompt: String {
         switch store.mode {
         case .input:
-            store.ghost != nil ? "Type a task to come back"
+            store.onBreak != nil ? "On a \(store.onBreak!.label) · ⌘B when you're back"
+                : store.ghost != nil ? "Type a task to come back"
                 : store.timer == nil ? "What are you doing?" : "Switch, or log: client call 3:10-3:25"
         case .note: "What’s on your mind?"
         case .ghost: "Status (optional): dinner with family, deep reset…"
@@ -143,7 +168,8 @@ struct BarView: View {
     @ViewBuilder private var leadingChip: some View {
         switch store.mode {
         case .input:
-            if let g = store.ghost { ghostChip(g) } else if let t = store.timer { timerChip(t) }
+            if let b = store.onBreak { breakChip(b) }
+            else if let g = store.ghost { ghostChip(g) } else if let t = store.timer { timerChip(t) }
         case .note:
             HStack(spacing: 6) {
                 Image(systemName: "note.text")
@@ -209,7 +235,7 @@ struct BarView: View {
     /// One stop in the past, shown inside the oval.
     private func stop(_ item: HistoryItem) -> some View {
         let color: Color = item.isGap ? Theme.muted : item.kind == "meeting" ? Theme.meeting
-            : item.isNote ? Theme.note : item.kind == "ghost" ? Theme.ghost
+            : item.isNote ? Theme.note : item.kind == "ghost" ? Theme.ghost : item.kind == "break" ? Theme.away
             : Theme.taskColor(focus: item.focusPeak ?? 0)
         return HStack(spacing: 12) {
             if item.isNote {
@@ -235,6 +261,21 @@ struct BarView: View {
                 .font(.system(size: 13, weight: .semibold, design: .monospaced))
                 .foregroundStyle(item.isGap ? Theme.muted : Theme.text)
         }
+    }
+
+    private func breakChip(_ b: BreakInfo) -> some View {
+        HStack(spacing: 7) {
+            Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").font(.system(size: 10))
+            Text(b.label)
+            TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(b.start)), withSeconds: true))
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+            }
+        }
+        .font(.system(size: 12, weight: .medium))
+        .foregroundStyle(Theme.away)
+        .padding(.horizontal, 10).frame(height: 30)
+        .background(Capsule().fill(Theme.away.opacity(0.14)))
     }
 
     private func ghostChip(_ g: GhostInfo) -> some View {
@@ -369,6 +410,13 @@ struct BarView: View {
         } else if typed {
             Text(store.timer == nil ? "⏎ start timer" : "⏎ switch timer").foregroundStyle(Theme.text)
             Text("· add 15m or 3:10-3:25 to log past time").foregroundStyle(Theme.muted)
+        } else if let b = store.onBreak {
+            Text("⌘B back").foregroundStyle(Theme.text)
+            Text(b.resume.map { "· resumes “\($0)”" } ?? "· nothing to resume").foregroundStyle(Theme.muted).lineLimit(1)
+            if b.kind == "smoke" { Text("· comes back high").foregroundStyle(Theme.high) }
+        } else if let g = store.ghost, let r = g.resume {
+            Text("⌘B back").foregroundStyle(Theme.text)
+            Text("· resumes “\(r)” · gone since \(Time.clockString(Time.parse(g.start)))").foregroundStyle(Theme.muted).lineLimit(1)
         } else if let g = store.ghost {
             Text("ghost since \(Time.clockString(Time.parse(g.start)))").foregroundStyle(Theme.ghost)
             Text("· ⌘O back online · or type a task").foregroundStyle(Theme.muted)
@@ -377,9 +425,144 @@ struct BarView: View {
                 Text(Store.focusNames[f]).foregroundStyle(Theme.taskColor(focus: f)).fontWeight(.semibold)
                 Text("·").foregroundStyle(Theme.muted)
             }
-            Text(store.timer != nil ? "⌘K all commands · ⌘F focus · ↑ look back · ↓ edit · ⌘N note"
+            Text(store.timer != nil ? "⌘K all commands · ⌘F focus · ⌘B break · ↑ look back · ⌘N note"
                                     : "⌘K all commands · ↑ look back · ↓ edit · ⌘N note · ⌘O ghost").foregroundStyle(Theme.muted)
             if store.timer != nil { Text("· ⌘. stop").foregroundStyle(Theme.muted) }
+        }
+    }
+}
+
+// MARK: - substances: one blended glow outside the main ring
+
+/// Substances as a single soft halo, not separate lines (his call, Oct 11: "a blend and glow").
+/// Several at once blend around the shape (high's green flowing into caffeinated's aqua);
+/// one alone is a plain colored glow. The crisp main ring stays the task/focus.
+struct OuterRings<S: InsettableShape>: View {
+    let colors: [Color]
+    let shape: S
+    var opacity: Double = 0.8
+    var spacing: CGFloat = 3.5
+
+    var body: some View {
+        if colors.isEmpty { EmptyView() } else {
+            let style: AnyShapeStyle = colors.count == 1 ? AnyShapeStyle(colors[0])
+                : AnyShapeStyle(AngularGradient(colors: colors + [colors[0]], center: .center))
+            ZStack {
+                // A wide, very soft aura…
+                shape.inset(by: -spacing * 1.6).stroke(style, lineWidth: spacing * 2.6)
+                    .blur(radius: spacing * 2.6).opacity(opacity * 0.6)
+                // …and a tighter bright edge, still blurred so it never reads as a line.
+                shape.inset(by: -spacing * 0.6).stroke(style, lineWidth: spacing * 0.9)
+                    .blur(radius: spacing * 0.9).opacity(opacity)
+            }
+            .allowsHitTesting(false)
+        }
+    }
+}
+
+/// A slow breath for glows while the bar is closed: focus and substances feel "on" without
+/// moving anything. Core Animation runs it, so it costs nothing per frame on our side.
+struct Breathing: ViewModifier {
+    let active: Bool
+    @State private var phase = false
+    func body(content: Content) -> some View {
+        content
+            .opacity(active ? (phase ? 1 : 0.55) : 0.8)
+            .onAppear { withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) { phase = true } }
+    }
+}
+
+// MARK: - always-on, while the bar is closed (Oct 11: try both, then pick)
+
+/// Center pill: a dimmed, smaller version of the bar showing what you're on and for how long.
+/// The bar grows out of this same spot when you open it.
+struct RestPill: View {
+    @ObservedObject var store: Store
+
+    var body: some View {
+        let color = Theme.statusColor(store)
+        let tier = store.onBreak == nil && store.ghost == nil ? (store.timer?.focus ?? 0) : 0
+        let lively = tier > 0 || !store.states.isEmpty
+        HStack(spacing: 7) {
+            content(color)
+        }
+        .font(.system(size: 11, weight: .medium))
+        .foregroundStyle(Theme.text.opacity(0.85))
+        .lineLimit(1)
+        .padding(.horizontal, 11).frame(height: 24)
+        .background(Capsule().fill(Theme.chrome.opacity(0.82)))
+        .overlay(Capsule().strokeBorder(color.opacity(0.75), lineWidth: 1 + CGFloat(tier) * 0.4))
+        .overlay(OuterRings(colors: Theme.stateColors(store.states), shape: Capsule(), opacity: 0.7, spacing: 3))
+        .background(Capsule().fill(.clear).shadow(color: color.opacity(lively ? 0.25 + Double(tier) * 0.12 : 0),
+                                                   radius: 6 + CGFloat(tier) * 4)
+            .modifier(Breathing(active: lively)))
+        .opacity(0.6)
+        .frame(maxWidth: 300)
+    }
+
+    @ViewBuilder private func content(_ color: Color) -> some View {
+        if let b = store.onBreak {
+            Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").foregroundStyle(color)
+            Text(b.label)
+            elapsed(b.start, color)
+        } else if let g = store.ghost {
+            Image(systemName: "moon.zzz.fill").foregroundStyle(color)
+            Text(g.status).frame(maxWidth: 170, alignment: .leading)
+            elapsed(g.start, color)
+        } else if let t = store.timer {
+            Circle().fill(color).frame(width: 6, height: 6)
+            Text(t.label).truncationMode(.tail).frame(maxWidth: 170, alignment: .leading)
+            if let f = t.focus, f > 0 {
+                Text(String(repeating: "▲", count: f)).font(.system(size: 8, weight: .bold)).foregroundStyle(color)
+            }
+            elapsed(t.start, color)
+        } else {
+            Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
+            Text("nothing running").foregroundStyle(Theme.muted)
+        }
+    }
+
+    private func elapsed(_ start: String, _ color: Color) -> some View {
+        TimelineView(.periodic(from: .now, by: 30)) { ctx in
+            Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(start))))
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundStyle(color)
+        }
+    }
+}
+
+/// Side ring: just the status as a ring on the screen edge, with substance rings around it
+/// and minutes in the middle. Glance, don't read.
+struct SideRing: View {
+    @ObservedObject var store: Store
+
+    var body: some View {
+        let color = Theme.statusColor(store)
+        let tier = store.onBreak == nil && store.ghost == nil ? (store.timer?.focus ?? 0) : 0
+        let lively = tier > 0 || !store.states.isEmpty
+        ZStack {
+            OuterRings(colors: Theme.stateColors(store.states), shape: Circle(), opacity: 1, spacing: 4)
+            Circle().fill(Theme.chrome.opacity(0.92))
+            Circle().strokeBorder(color.opacity(0.9), lineWidth: 2 + CGFloat(tier) * 0.6)
+            minutes(color)
+        }
+        .frame(width: 30, height: 30)
+        .background(Circle().fill(.clear).shadow(color: color.opacity(lively ? 0.3 + Double(tier) * 0.12 : 0),
+                                                  radius: 6 + CGFloat(tier) * 4)
+            .modifier(Breathing(active: lively)))
+        .opacity(0.85)
+        .frame(width: 96, height: 96)
+    }
+
+    @ViewBuilder private func minutes(_ color: Color) -> some View {
+        let start = store.onBreak?.start ?? store.ghost?.start ?? store.timer?.start
+        if let start {
+            TimelineView(.periodic(from: .now, by: 30)) { ctx in
+                let m = Int(ctx.date.timeIntervalSince(Time.parse(start)) / 60)
+                Text(m >= 60 ? "\(m / 60)h" : "\(m)")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundStyle(color)
+            }
         }
     }
 }

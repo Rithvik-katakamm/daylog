@@ -17,6 +17,10 @@ Oct 10). Every color in the app is a token in `enum Theme`
 | 1 | Nothing running | grey | `#6B7280` | `idle` |
 | 1 | Task | pearl white | `#ECEEF2` | `task` |
 | 1 | Ghost (⌘O), off the clock | purple | `#B87AFF` | `ghost` |
+| 1 | On a break (⌘B walk, ⌘⇧B smoke) | blue-grey | `#8FA3B8` | `away` |
+| 2 | High (⌘G) | green | `#7CFF6B` | `high` |
+| 2 | Intoxicated (⌘I) | rose | `#FF6FA5` | `intoxicated` |
+| 2 | Caffeinated (⌘E) | aqua | `#5CE1E6` | `caffeinated` |
 | 2 | Task + focused ▲ (⌘F) | yellow | `#FFD652` | `focusHeat[1]` |
 | 2 | Task + deep focus ▲▲ | orange | `#FF9A3C` | `focusHeat[2]` |
 | 2 | Task + hyperfocus ▲▲▲ | red | `#FF4D4D` | `focusHeat[3]` |
@@ -32,21 +36,23 @@ radius and ring width grow with the tier.
 
 **Dev mode** (⌥D) changes no colors: a `DEV` tag floats above the bar instead.
 
-## Defined, not used yet
+## Substances: one blended glow, not lines
 
-| Dimension | Meaning | Color | Hex | Token | Ships with |
-|---|---|---|---|---|---|
-| 2 | Intoxicated (outer ring) | rose | `#FF6FA5` | `intoxicated` | RIT-68 |
-| 2 | High (outer ring) | green | `#7CFF6B` | `high` | RIT-68, smoke break RIT-69 |
+Substances (dimension 2) are a **soft halo outside the main ring**, never separate outlines
+(his call, Oct 11: "more of a blend and glow than 3 distinct lines"). One substance is a plain
+colored glow; several blend into each other around the shape (an angular gradient, blurred).
+The crisp main ring stays dimension 1 + focus heat. Component: `OuterRings` in `Views.swift`.
 
-```
- deep focus + high:            ╭──────────────────────────────╮   ← green (high)
-                              ╭┴──────────────────────────────┴╮  ← orange (deep focus)
-                              │ ● building daylog ▲▲   1:12:40 │
-                              ╰────────────────────────────────╯
-```
+## Always on (while the bar is closed)
+
+- **Center pill**: a dimmed (60%) small bar at the top center: dot, task, ▲s, minutes. The bar
+  grows out of the same spot when opened.
+- **Side ring**: a 30pt ring on the right edge: status color, minutes inside, the substance glow.
+- When focus or a substance is on, the glow **breathes** slowly (2.2s), so it feels "on".
 
 ## History
+- Oct 11: substances shipped as a blended glow (not stacked rings); caffeinated (aqua) and
+  break (blue-grey) added; always-on pill and side ring.
 - Oct 9: mint green task ring, yellow for the past.
 - Oct 10: green replaced by pearl (he didn't like it); yellow moved to focus; the past became
   dashed silver; meetings moved off violet (it was too close to ghost).

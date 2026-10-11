@@ -9,9 +9,9 @@ All sounds are macOS built-ins from `/System/Library/Sounds`, at 35% volume.
 | Action | Sound |
 |---|---|
 | Bar opens | Pop |
-| Switch mode (note, ghost, look back, edit, focus) | Tink |
-| Saved (log, note, edit, stop, back online) | Bottle |
-| Go ghost | Submarine |
+| Switch mode (note, ghost, look back, edit, focus, a substance) | Tink |
+| Saved (log, note, edit, stop, back online, back from a break) | Bottle |
+| Go ghost, or step away on a break | Submarine |
 | Edit arrows (↓↑ moving the end) | silent |
 
 ## Rules (learned the hard way)

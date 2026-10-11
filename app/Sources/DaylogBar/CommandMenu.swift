@@ -32,9 +32,24 @@ enum Commands {
             Command(id: "online", group: .what, title: "Back online", shortcut: "⌘O",
                     isAvailable: { $0.ghost != nil }, run: { store.ghostKey() }),
 
+            Command(id: "walk", group: .what, title: "Walk break (task pauses)", shortcut: "⌘B",
+                    isAvailable: { !$0.canComeBack && $0.ghost == nil }, run: { store.breakKey(smoke: false) }),
+            Command(id: "smoke", group: .what, title: "Smoke break (come back high)", shortcut: "⌘⇧B",
+                    isAvailable: { !$0.canComeBack && $0.ghost == nil }, run: { store.breakKey(smoke: true) }),
+            Command(id: "unbreak", group: .what, title: "Back from break (resume the task)", shortcut: "⌘B",
+                    isAvailable: { $0.canComeBack }, run: { store.breakKey(smoke: false) }),
+
             // HOW am I
             Command(id: "focus", group: .how, title: "Focus: step up a tier", shortcut: "⌘F",
                     isAvailable: { $0.timer != nil }, run: { store.cycleFocus() }),
+            Command(id: "focus-off", group: .how, title: "Focus off", shortcut: "⌘⇧F",
+                    isAvailable: { ($0.timer?.focus ?? 0) > 0 }, run: { store.focusOff() }),
+            Command(id: "high", group: .how, title: "High (green ring)", shortcut: "⌘G",
+                    isAvailable: always, run: { store.toggleState("high") }),
+            Command(id: "intoxicated", group: .how, title: "Intoxicated (rose ring)", shortcut: "⌘I",
+                    isAvailable: always, run: { store.toggleState("intoxicated") }),
+            Command(id: "caffeinated", group: .how, title: "Caffeinated (aqua ring)", shortcut: "⌘E",
+                    isAvailable: always, run: { store.toggleState("caffeinated") }),
 
             // GO
             Command(id: "back", group: .go, title: "Look back through the day", shortcut: "↑",
@@ -45,6 +60,14 @@ enum Commands {
                     isAvailable: { _ in openDevApp != nil }, run: { openDevApp?() }),
             Command(id: "work", group: .go, title: "Back to work (close)", shortcut: "Tab",
                     isAvailable: always, run: { hide() }),
+            Command(id: "rest-pill", group: .go, title: "Always on: center pill", shortcut: "",
+                    isAvailable: { $0.restStyle != .pill }, run: { store.restStyle = .pill }),
+            Command(id: "rest-ring", group: .go, title: "Always on: side ring", shortcut: "",
+                    isAvailable: { $0.restStyle != .ring }, run: { store.restStyle = .ring }),
+            Command(id: "rest-both", group: .go, title: "Always on: pill + ring", shortcut: "",
+                    isAvailable: { $0.restStyle != .both }, run: { store.restStyle = .both }),
+            Command(id: "rest-off", group: .go, title: "Always on: off (hide when closed)", shortcut: "",
+                    isAvailable: { $0.restStyle != .off }, run: { store.restStyle = .off }),
 
             // DO
             Command(id: "stop", group: .act, title: "Stop the timer", shortcut: "⌘.",

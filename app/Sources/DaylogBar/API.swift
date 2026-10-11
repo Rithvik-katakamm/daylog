@@ -76,12 +76,30 @@ struct NowState: Decodable {
     let activity: ActivityInfo?
     let meeting: Segment?
     let ghost: GhostInfo?
+    var onBreak: BreakInfo? = nil
+    var states: [StateInfo]? = nil
 }
 
 struct GhostInfo: Decodable, Equatable {
     let id: String
     let status: String
     let start: String
+    var resume: String? = nil  // set when this ghost came from a break he didn't return from
+}
+
+/// ⌘B walk / ⌘⇧B smoke: the task is paused and resumes when he's back.
+struct BreakInfo: Decodable, Equatable {
+    let id: String
+    let kind: String   // "walk" or "smoke"
+    let label: String
+    let start: String
+    let resume: String?
+}
+
+/// A substance that's on (intoxicated, high, caffeinated). Global, not tied to a task.
+struct StateInfo: Decodable, Equatable {
+    let state: String
+    let since: String
 }
 
 struct TimerInfo: Decodable, Equatable {

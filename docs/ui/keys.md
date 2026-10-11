@@ -34,17 +34,27 @@ Keys are grouped by **what kind of thing they do**, so a new feature has an obvi
 | ⌘N | typing | Note mode |
 | ⌘O | typing | Ghost mode (or come back online) |
 | ⌘F | typing, task running | Focus: focused → deep → hyperfocus → off |
+| ⌘⇧F | typing, in focus | Focus off, straight away |
+| ⌘B | typing | Walk break: the task pauses. ⌘B again when you're back resumes it |
+| ⌘⇧B | typing | Smoke break: same, and you come back **high** |
+| ⌘G | typing | Toggle **high** (G for green) |
+| ⌘I | typing | Toggle **intoxicated** |
+| ⌘E | typing | Toggle **caffeinated** (E for espresso) |
 | ⌘. | typing | Stop the timer |
 | Tab | anywhere in the bar | Close and return to the app you were in |
 | Esc | anywhere | Step back one level; closes from the typing line |
 
-## PROPOSED (Oct 10)
+Not back from a break within an hour? It's logged as a ~15 min break, then ghost from there.
+⌘B still brings you back and resumes the task.
+
+Menu-only (⌘K): **Always on: center pill / side ring / pill + ring / off**: what stays on
+screen while the bar is closed.
+
+## Reserved
 
 | Key | Group | Does |
 |---|---|---|
-| **⌘I** | Layer | Toggle **intoxicated** |
-| **⌘G** | Layer | Toggle **high** ("G" for green) |
-| ← / → | Navigate | Reserved: flip ghost ↔ tracker (RIT-43) |
+| ← / → | Navigate | Flip ghost ↔ tracker (RIT-43) |
 
 ## Rules for picking new keys
 

@@ -47,7 +47,8 @@ importers (Wispr, Whoop,                                   ─▶ Notion dashboa
   Intelligence gets layered on top later; it never replaces the raw log.
 - **Fast, clean, local, keyboard-only, or he won't use it.** Wispr Flow-level latency.
   ⌥L drops a black capsule from the top of the screen: one input line whose ring color is
-  the mode. No always-visible button, no calendar view (both dropped Oct 9). See
+  the mode. No calendar view (dropped Oct 9). An always-on dimmed pill and/or side ring came
+  back Oct 11 as a glance (no clicks), switchable in ⌘K. See
   `docs/ui/keys.md` and `docs/ui/colors.md`.
 - **Greedy for ground truth.** If a system of record proves what he was doing, log it
   without asking: a Wispr Notetaker meeting, a phone call, a Whoop workout. Manual

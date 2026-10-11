@@ -19,6 +19,7 @@ import contextlib
 import logging
 import os
 from datetime import date, datetime, timedelta
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -28,6 +29,16 @@ from . import db, parse, timeline, wispr
 log = logging.getLogger("daylog")
 
 IMPORT_EVERY = timedelta(minutes=int(os.environ.get("DAYLOG_IMPORT_MINUTES", "10")))
+
+
+async def _break_loop(app: FastAPI) -> None:
+    """Once a minute: a break nobody came back from turns into ghost (see timeline.expire_break)."""
+    while True:
+        try:
+            timeline.expire_break(app.state.conn)
+        except Exception:
+            log.exception("break check failed")
+        await asyncio.sleep(60)
 
 
 async def _import_loop(app: FastAPI) -> None:
@@ -44,12 +55,12 @@ async def _import_loop(app: FastAPI) -> None:
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.conn = db.connect()
-    task = None
+    tasks = [asyncio.create_task(_break_loop(app))]
     if os.environ.get("DAYLOG_IMPORTERS", "1") == "1":
-        task = asyncio.create_task(_import_loop(app))
+        tasks.append(asyncio.create_task(_import_loop(app)))
     yield
-    if task:
-        task.cancel()
+    for t in tasks:
+        t.cancel()
     app.state.conn.close()
 
 
@@ -102,6 +113,17 @@ class Ghost(BaseModel):
     source: str = "api"
 
 
+class StateSet(BaseModel):
+    state: Literal["intoxicated", "high", "caffeinated"]
+    on: bool | None = None  # None = toggle
+    source: str = "api"
+
+
+class Break(BaseModel):
+    kind: Literal["walk", "smoke"] = "walk"
+    source: str = "api"
+
+
 class Note(BaseModel):
     text: str = Field(min_length=1, max_length=5000)
     source: str = "api"
@@ -147,6 +169,19 @@ def _end_ghost(source: str):
                      start=db.utcnow(), ref=g["id"])
 
 
+def _end_break(source: str):
+    b = timeline.on_break(conn())
+    if not b:
+        return None
+    return db.append(conn(), kind="claim", type="timer.stop", source=source,
+                     start=db.utcnow(), ref=b["id"])
+
+
+def _set_state(name: str, on: bool, source: str):
+    db.append(conn(), kind="claim", type="state.set", source=source, start=db.utcnow(),
+              data={"state": name, "on": on})
+
+
 # ---------- routes ----------
 
 def is_dev() -> bool:
@@ -177,6 +212,7 @@ async def dev_reset():
 
 @app.get("/now")
 async def now():
+    timeline.expire_break(conn())  # never show a break that should already be ghost
     return timeline.now_state(conn())
 
 
@@ -184,6 +220,7 @@ async def now():
 async def timer_start(body: TimerStart):
     _stop_running(body.source)  # one timer at a time: starting X ends Y
     _end_ghost(body.source)     # starting a task means you're back
+    _end_break(body.source)
     db.append(conn(), kind="claim", type="timer.start", source=body.source,
               start=db.utcnow(), label=body.label.strip())
     return timeline.now_state(conn())
@@ -295,6 +332,7 @@ async def set_focus(body: Focus):
 async def ghost_on(body: Ghost):
     """Go dark: stop the timer, leave a status, and log nothing about him until he's back."""
     _stop_running(body.source)
+    _end_break(body.source)
     _end_ghost(body.source)  # a new status replaces the old one
     db.append(conn(), kind="claim", type="ghost.start", source=body.source,
               start=db.utcnow(), label=body.status.strip() or "offline")
@@ -306,6 +344,56 @@ async def ghost_off(source: str = "api"):
     if not _end_ghost(source):
         raise HTTPException(409, "not in ghost mode")
     return timeline.now_state(conn())
+
+
+@app.post("/state")
+async def set_state(body: StateSet):
+    """Substances (intoxicated, high, caffeinated): global layers on *him*, not on a task.
+    `on` omitted = toggle."""
+    active = {s["state"] for s in timeline.active_states(conn())}
+    on = (body.state not in active) if body.on is None else body.on
+    _set_state(body.state, on, body.source)
+    return timeline.now_state(conn())
+
+
+@app.post("/break", status_code=201)
+async def break_start(body: Break):
+    """⌘B: step away. The running task pauses (its timer stops) and is remembered, so coming
+    back resumes it. A smoke break comes back high."""
+    timeline.expire_break(conn())
+    if timeline.on_break(conn()):
+        raise HTTPException(409, "already on a break")
+    if timeline.ghost(conn()):
+        raise HTTPException(409, "you're in ghost mode")
+    running = timeline.running_timer(conn())
+    _stop_running(body.source)
+    resume = running["label"] if running else None
+    db.append(conn(), kind="claim", type="break.start", source=body.source, start=db.utcnow(),
+              label=timeline.BREAK_LABELS[body.kind], data={"kind": body.kind, "resume": resume})
+    return timeline.now_state(conn())
+
+
+@app.delete("/break")
+async def break_end(source: str = "api"):
+    """Back from a break: end it, resume the paused task, and turn high on after a smoke.
+    Also works after the break already turned into ghost (he was gone over an hour)."""
+    timeline.expire_break(conn())
+    b = timeline.on_break(conn())
+    g = timeline.ghost(conn())
+    if b:
+        kind, resume = b["data"].get("kind"), b["data"].get("resume")
+        _end_break(source)
+    elif g and g["data"].get("from_break"):
+        kind, resume = g["data"].get("kind"), g["data"].get("resume")
+        _end_ghost(source)
+    else:
+        raise HTTPException(409, "not on a break")
+    if kind == "smoke":
+        _set_state("high", True, source)
+    if resume:
+        db.append(conn(), kind="claim", type="timer.start", source=source,
+                  start=db.utcnow(), label=resume)
+    return {"resumed": resume, **timeline.now_state(conn())}
 
 
 @app.post("/notes", status_code=201)

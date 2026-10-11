@@ -7,6 +7,17 @@ import SwiftUI
 final class Store: ObservableObject {
     @Published var timer: TimerInfo?
     @Published var ghost: GhostInfo?  // ghost mode: offline, logging nothing
+    @Published var onBreak: BreakInfo?  // ⌘B walk / ⌘⇧B smoke
+    @Published var states: Set<String> = []  // substances that are on: outer rings
+
+    /// What stays on screen while the bar is closed (his call, Oct 11: try both, then pick).
+    enum RestStyle: String, CaseIterable { case pill, ring, both, off }
+    @Published var restStyle: RestStyle = RestStyle(rawValue: UserDefaults.standard.string(forKey: "restStyle") ?? "")
+        ?? .both {
+        didSet { UserDefaults.standard.set(restStyle.rawValue, forKey: "restStyle") }
+    }
+    var showsPill: Bool { restStyle == .pill || restStyle == .both }
+    var showsRing: Bool { restStyle == .ring || restStyle == .both }
     @Published var summary: Summary?
     @Published var serverDown = false
     @Published var error: String?
@@ -210,6 +221,71 @@ final class Store: ObservableObject {
         }
     }
 
+    /// ⌘⇧F: straight to focus off, without cycling through the tiers.
+    func focusOff() {
+        guard var t = timer, t.id != "pending", (t.focus ?? 0) > 0 else { flashBriefly("focus is already off"); return }
+        t.focus = 0
+        timer = t
+        Sound.mode.play()
+        flashBriefly("focus off")
+        Task {
+            do { try await API.post("focus", ["tier": 0, "source": "button"]) }
+            catch { self.error = error.localizedDescription }
+        }
+    }
+
+    /// ⌘G high · ⌘I intoxicated · ⌘E caffeinated: toggle a substance ring. They stack.
+    static let stateNames = ["high": "high", "intoxicated": "intoxicated", "caffeinated": "caffeinated"]
+
+    func toggleState(_ name: String) {
+        let on = !states.contains(name)
+        if on { states.insert(name) } else { states.remove(name) }  // optimistic
+        Sound.mode.play()
+        flashBriefly(on ? "\(name) on" : "\(name) off")
+        Task {
+            do { try await API.post("state", ["state": name, "on": on, "source": "button"]) }
+            catch { self.error = error.localizedDescription }
+        }
+    }
+
+    /// ⌘B: step away on a walk (⌘⇧B: a smoke break). The task pauses. Press ⌘B (either) again
+    /// when you're back: the task resumes, and a smoke break comes back high.
+    var canComeBack: Bool { onBreak != nil || ghost?.resume != nil }
+
+    func breakKey(smoke: Bool) {
+        if canComeBack {
+            let resume = onBreak?.resume ?? ghost?.resume
+            let wasSmoke = (onBreak?.kind ?? "") == "smoke"
+            onBreak = nil
+            if ghost?.resume != nil { ghost = nil }
+            if wasSmoke { states.insert("high") }
+            if let resume { timer = TimerInfo(id: "pending", label: resume, start: Time.string(Date())) }
+            Sound.saved.play()
+            flash = resume.map { "Back · resuming “\($0)”" } ?? "Back"
+            Task {
+                do { try await API.delete("break") } catch { self.error = error.localizedDescription }
+                await refreshAll()
+                try? await Task.sleep(for: .seconds(1.0))
+                onSubmitted?(); flash = nil
+            }
+            return
+        }
+        if ghost != nil { flashBriefly("you're a ghost: ⌘O to come back first"); return }
+        let kind = smoke ? "smoke" : "walk"
+        onBreak = BreakInfo(id: "pending", kind: kind, label: smoke ? "smoke break" : "walk",
+                            start: Time.string(Date()), resume: timer?.label)
+        timer = nil
+        Sound.ghost.play()
+        flash = smoke ? "Smoke break · ⌘B when you're back (comes back high)" : "Walk · ⌘B when you're back"
+        Task {
+            do { try await API.post("break", ["kind": kind, "source": "button"]) }
+            catch { self.error = error.localizedDescription }
+            await refreshAll()
+            try? await Task.sleep(for: .seconds(1.1))
+            onSubmitted?(); flash = nil
+        }
+    }
+
     /// ⌘N: jot a thought at this moment, tagged with the running task. Doesn't switch tasks.
     func beginNote() {
         input = ""
@@ -223,7 +299,7 @@ final class Store: ObservableObject {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         input = ""
-        flash = "Noted"
+        flash = "Noted · \(Time.clockString(Date()))"
         Sound.saved.play()
         Task {
             do { try await API.post("notes", ["text": text, "source": "button"]) }
@@ -367,7 +443,7 @@ final class Store: ObservableObject {
             timer = TimerInfo(id: "pending", label: label, start: Time.string(Date()))
         }
         flash = willLog ? describe(preview).map { "Logged \($0)" } : nil
-        if !willLog { ghost = nil }  // starting a task brings you back from ghost mode
+        if !willLog { ghost = nil; onBreak = nil }  // starting a task brings you back
         Sound.saved.play()
         input = ""
         preview = nil
@@ -409,6 +485,9 @@ final class Store: ObservableObject {
             let now: NowState = try await API.get("now")
             if now.timer != timer { timer = now.timer }
             if now.ghost != ghost { ghost = now.ghost }
+            if now.onBreak != onBreak { onBreak = now.onBreak }
+            let on = Set((now.states ?? []).map(\.state))
+            if on != states { states = on }
             serverDown = false
         } catch {
             serverDown = true

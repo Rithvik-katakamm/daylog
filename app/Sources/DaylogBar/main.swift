@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var panel: KeyPanel!
     var hotKey: HotKey?
     var devHotKey: HotKey?
+    var ringPanel: NSPanel!
     var clickMonitor: Any?
     var keyMonitor: Any?
 
@@ -40,9 +41,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static let windowSize = NSSize(width: 620, height: 150)
     static let menuWindowSize = NSSize(width: 620, height: 470)
     private var modeWatch: AnyCancellable?
+    private var restWatch: AnyCancellable?
 
     func applicationDidFinishLaunching(_ note: Notification) {
         makePanel()
+        makeRingPanel()
+        restWatch = store.$restStyle.removeDuplicates().sink { [weak self] _ in
+            DispatchQueue.main.async { self?.applyRest() }
+        }
         store.onSubmitted = { [weak self] in self?.hide() }
         modeWatch = store.$mode.removeDuplicates().sink { [weak self] m in
             DispatchQueue.main.async { self?.placePanel(menu: m == .menu) }
@@ -122,7 +128,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let s = self?.store else { return }
             print("test-state mode=\(s.mode) input=\"\(s.input)\" open=\(s.isOpen) menuIndex=\(s.menuIndex) "
                   + "items=\(s.mode == .menu ? s.menuItems.map(\.id).joined(separator: ",") : "-") "
-                  + "timer=\(s.timer?.label ?? "-") focus=\(s.timer?.focus ?? 0)")
+                  + "timer=\(s.timer?.label ?? "-") focus=\(s.timer?.focus ?? 0) "
+                  + "break=\(s.onBreak?.kind ?? "-") states=\(s.states.sorted().joined(separator: ",")) "
+                  + "ghost=\(s.ghost?.status ?? "-") rest=\(s.restStyle.rawValue)")
             fflush(stdout)
         }
     }
@@ -146,6 +154,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let host = NSHostingView(rootView: BarView(store: store))
         host.layer?.backgroundColor = .clear
         panel.contentView = host
+    }
+
+    /// The side ring: its own tiny window on the right edge. It never takes clicks or the keyboard.
+    private func makeRingPanel() {
+        ringPanel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 96, height: 96),
+                            styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        floating(ringPanel)
+        ringPanel.ignoresMouseEvents = true
+        let host = NSHostingView(rootView: SideRing(store: store).environment(\.colorScheme, .dark))
+        host.layer?.backgroundColor = .clear
+        ringPanel.contentView = host
+    }
+
+    /// Always-on display while the bar is closed: the center pill, the side ring, both, or off.
+    private func applyRest() {
+        if store.showsRing {
+            let screen = (NSScreen.main ?? NSScreen.screens[0]).visibleFrame
+            ringPanel.setFrameOrigin(NSPoint(x: screen.maxX - 96 + 12, y: screen.midY - 48))
+            ringPanel.orderFrontRegardless()
+        } else {
+            ringPanel.orderOut(nil)
+        }
+        if !store.isOpen {
+            if store.showsPill {
+                placePanel()
+                panel.ignoresMouseEvents = true  // a glance, not a target: clicks go to the app below
+                panel.orderFrontRegardless()
+            } else {
+                panel.orderOut(nil)
+            }
+        }
     }
 
     // MARK: placement: top-center, just under the menu bar, on the screen your cursor is on
@@ -173,6 +212,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// `activate: false` shows the bar without taking focus (used by the test channel).
     private func show(activate: Bool = true) {
         removeMonitors()  // never stack monitors if show() runs twice
+        panel.ignoresMouseEvents = false
         placePanel()
         if activate {
             let front = NSWorkspace.shared.frontmostApplication
@@ -232,7 +272,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case (36, .input) where shift: store.submit(forceTimer: true)      // ⇧⏎ force a timer
         case (45, .input) where cmd: store.beginNote()                     // ⌘N
         case (31, .input) where cmd: store.ghostKey()                      // ⌘O
+        case (3, .input) where cmd && shift: store.focusOff()              // ⌘⇧F focus off
         case (3, .input) where cmd: store.cycleFocus()                     // ⌘F
+        case (11, .input) where cmd: store.breakKey(smoke: shift)          // ⌘B walk · ⌘⇧B smoke
+        case (5, .input) where cmd: store.toggleState("high")              // ⌘G high (green)
+        case (34, .input) where cmd: store.toggleState("intoxicated")      // ⌘I
+        case (14, .input) where cmd: store.toggleState("caffeinated")      // ⌘E (espresso)
         case (47, _) where cmd: store.stop()                               // ⌘. stop
         case (51, .browse) where cmd: store.deleteCurrent()                // ⌘⌫ delete
         default: return false
@@ -248,7 +293,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Let the shrink animation play, then take the window away.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             guard let self, !self.store.isOpen else { return }
-            self.panel.orderOut(nil)
+            if self.store.showsPill {
+                self.panel.ignoresMouseEvents = true  // stays as the dimmed pill
+            } else {
+                self.panel.orderOut(nil)
+            }
             self.store.resetMode()  // next open starts fresh: typing mode, empty field
         }
     }

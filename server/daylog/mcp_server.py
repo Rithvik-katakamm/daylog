@@ -30,7 +30,11 @@ mcp = MCPServer(
         "(an observation, not proof of the task). 'notes' are thoughts he jotted at a "
         "moment, tagged with the task running then. 'focus' on a task is his self-reported "
         "depth (1 focused, 2 deep, 3 hyperfocus) from that moment on. 'ghost' means he deliberately went "
-        "offline with a status: respect it and don't speculate about what he was doing. Times are UTC; convert to his local "
+        "offline with a status: respect it and don't speculate about what he was doing. "
+        "'states' are substances he marked on himself (intoxicated, high, caffeinated): global, "
+        "not tied to a task. 'on_break' / type 'break' is a walk or smoke break; the task resumes "
+        "when he's back. A ghost with 'resume' means a break he didn't return from within an hour "
+        "(the break is logged as ~15 min). Times are UTC; convert to his local "
         "time (America/New_York) before showing them. Gaps mean unknown, not idle."
     ),
 )
