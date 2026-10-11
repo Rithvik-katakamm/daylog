@@ -11,7 +11,7 @@ enum Theme {
     static let ghost = hex(0xB87AFF)       // 1: ghost, off the clock
     static let focusHeat = [task, hex(0xFFD652), hex(0xFF9A3C), hex(0xFF4D4D)]  // 2: ▲ yellow ▲▲ orange ▲▲▲ red
     static let intoxicated = hex(0xFF6FA5) // 2: outer ring
-    static let high = hex(0x7CFF6B)        // 2: outer ring
+    static let high = hex(0x39FF14)        // 2: halo, neon green (brighter, Oct 11)
     static let caffeinated = hex(0x5CE1E6) // 2: outer ring (aqua: kept clear of the focus heat)
     static let away = hex(0x8FA3B8)        // 1: on a break (⌘B walk / ⌘⇧B smoke)
     static let note = hex(0x8CC2FF)        // 3: typing a note
@@ -609,7 +609,7 @@ struct NotchShape: InsettableShape {
     var radius: CGFloat
     var closed = true
     var inset: CGFloat = 0
-    var shoulder: CGFloat = 7
+    var shoulder: CGFloat = 0  // Oct 11: the curvy bleed into the edge read as a dull smear; straight sides
 
     var animatableData: CGFloat {
         get { radius }

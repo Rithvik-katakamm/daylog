@@ -90,6 +90,8 @@ importers (Wispr, Whoop,                                   ─▶ Notion dashboa
   Dev, ship it with `scripts/release.sh <next tag>` without asking. He uses stable and wants its
   real data (messy data gets cleaned in the data talk, RIT-70). Dev is only for messing around.
   This lasts until he says otherwise.
+- **Quit the Dev app after testing** (`pkill -f "Daylog Dev.app"`): only one Day Log should ever be
+  running on his screen.
 
 - Explain the *why* of every architectural choice. He wants to understand the build
   well enough to improve it himself (learning HTTP and backend craft through it).

@@ -8,7 +8,7 @@ Code: `NeonTube`, `OuterRings`, `NotchShape`, `Breathing` in `app/Sources/Daylog
 
 | Name | What it is | Tells you | Lives in |
 |---|---|---|---|
-| **Body** | The black shape hanging from the notch. Flat top, shoulders into the screen edge, continuous ("squircle") corners | Day Log is there | `NotchShape` |
+| **Body** | The black shape hanging from the notch. Flat top, straight sides into the screen edge, continuous ("squircle") corners | Day Log is there | `NotchShape` |
 | **Tube** | The neon outline: bloom + colored glass + hot core | **What** you're doing (pearl task, purple ghost, blue-grey break, silver past) | `NeonTube` |
 | **Heat** | The tube getting hotter: yellow → orange → red, thicker and brighter | **How deep** your focus is (⌘F tiers) | `NeonTube(heat:)` + the bloom |
 | **Halo** | A soft colored aura just outside the tube; several blend into one gradient | **Substances**: high (green), intoxicated (rose), caffeinated (aqua) | `OuterRings` |
