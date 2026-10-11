@@ -11,7 +11,7 @@ VERSION="${1:?usage: scripts/release.sh <tag, e.g. v0.2>}"
 
 cd "$ROOT"
 if ! git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
-  [ -z "$(git status --porcelain)" ] || { echo "✗ working tree not clean; commit first"; exit 1; }
+  [ -z "$(git status --porcelain --untracked-files=no)" ] || { echo "✗ working tree not clean; commit first"; exit 1; }
   git tag -a "$VERSION" -m "Day Log $VERSION"
   echo "→ tagged $VERSION at $(git rev-parse --short HEAD)"
 fi

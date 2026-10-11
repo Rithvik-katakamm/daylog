@@ -85,8 +85,11 @@ importers (Wispr, Whoop,                                   ─▶ Notion dashboa
 ## Working rules
 
 - **Never disturb the stable app he's using.** Build with `scripts/dev.sh` and test the Dev app
-  through `.build/devctl` (no keyboard, no focus). Ship to stable with `scripts/release.sh <tag>`
-  only when he says so. See `docs/infra/install.md`.
+  through `.build/devctl` (no keyboard, no focus). See `docs/infra/install.md`.
+- **For now (his call, Oct 11): stable = dev, always.** After a change is built and checked in
+  Dev, ship it with `scripts/release.sh <next tag>` without asking. He uses stable and wants its
+  real data (messy data gets cleaned in the data talk, RIT-70). Dev is only for messing around.
+  This lasts until he says otherwise.
 
 - Explain the *why* of every architectural choice. He wants to understand the build
   well enough to improve it himself (learning HTTP and backend craft through it).

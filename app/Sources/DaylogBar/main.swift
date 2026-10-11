@@ -151,7 +151,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel = KeyPanel(contentRect: NSRect(origin: .zero, size: Self.windowSize),
                          styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         floating(panel)
-        panel.level = .statusBar  // above the menu bar, so it can sit in the notch
+        // At the menu bar's own level: macOS keeps that layer still when you swipe between
+        // desktops (three-finger swipe), so the pill stays put on the notch instead of sliding
+        // away with the old desktop and redrawing on the new one.
+        panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.mainMenuWindow)) + 1)
         let host = NSHostingView(rootView: BarView(store: store))
         host.layer?.backgroundColor = .clear
         panel.contentView = host
