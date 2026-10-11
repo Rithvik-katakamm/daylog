@@ -18,9 +18,10 @@ struct Command: Identifiable {
 
 @MainActor
 enum Commands {
-    /// Built once at launch. `hide` and `switchEnv` come from the window owner.
+    /// Built once at launch. `hide` and `openDevApp` come from the window owner;
+    /// `openDevApp` is nil inside the Dev app itself.
     static func all(store: Store, hide: @escaping () -> Void,
-                    switchEnv: @escaping (API.Env) -> Void) -> [Command] {
+                    openDevApp: (() -> Void)?) -> [Command] {
         let always: @MainActor (Store) -> Bool = { _ in true }
         return [
             // WHAT am I doing / typing
@@ -40,10 +41,8 @@ enum Commands {
                     isAvailable: always, run: { store.enterBrowse() }),
             Command(id: "edit", group: .go, title: "Edit the running or last block", shortcut: "↓",
                     isAvailable: always, run: { store.beginEdit() }),
-            Command(id: "dev", group: .go, title: "Switch to dev mode", shortcut: "⌥D",
-                    isAvailable: { $0.env == .real }, run: { switchEnv(.dev) }),
-            Command(id: "real", group: .go, title: "Switch to real mode", shortcut: "⌥L",
-                    isAvailable: { $0.env == .dev }, run: { switchEnv(.real) }),
+            Command(id: "dev", group: .go, title: "Open the Dev app (latest build)", shortcut: "⌥D",
+                    isAvailable: { _ in openDevApp != nil }, run: { openDevApp?() }),
             Command(id: "work", group: .go, title: "Back to work (close)", shortcut: "Tab",
                     isAvailable: always, run: { hide() }),
 

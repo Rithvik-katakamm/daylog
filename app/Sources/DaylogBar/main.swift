@@ -3,11 +3,26 @@ import Combine
 import Carbon.HIToolbox
 import SwiftUI
 
-/// A borderless panel that can still take keyboard input (like Spotlight), without
-/// activating the app, so whatever you were working in stays frontmost.
+/// A borderless panel that can still take keyboard input (like Spotlight).
 final class KeyPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+}
+
+/// Two channels, one codebase (see docs/infra/install.md):
+/// - **Stable** `Daylog.app` (com.rithvik.daylog): what he uses. ⌥L opens it; ⌥D hands off to Dev.
+///   Built from a tagged release, talks to the real server, records Mac activity.
+/// - **Dev** `Daylog Dev.app` (com.rithvik.daylog.dev): the latest build, for trying and testing
+///   new work. Dev database only, DEV tag, no global hotkeys, no activity recording, and a
+///   private test channel so an agent can drive it without touching his keyboard or focus.
+enum Flavor {
+    static let stableID = "com.rithvik.daylog"
+    static let devID = "com.rithvik.daylog.dev"
+    static let isDev = Bundle.main.bundleIdentifier == devID
+
+    /// Stable → Dev: "toggle your bar". Dev ← agent: test commands.
+    static let devToggle = Notification.Name("com.rithvik.daylog.dev.toggle")
+    static let devTest = Notification.Name("com.rithvik.daylog.dev.test")
 }
 
 @MainActor
@@ -20,7 +35,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var clickMonitor: Any?
     var keyMonitor: Any?
 
-    /// A transparent stage; the visible capsules are drawn inside it by SwiftUI.
     /// A transparent stage; SwiftUI draws the capsules inside it. It only grows tall while
     /// the command menu is open, so it never sits over the screen when it doesn't need to.
     static let windowSize = NSSize(width: 620, height: 150)
@@ -36,13 +50,80 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store.commands = Commands.all(
             store: store,
             hide: { [weak self] in self?.hide() },
-            switchEnv: { [weak self] env in self?.toggle(env: env) })
-        hotKey = HotKey(id: 1) { [weak self] in MainActor.assumeIsolated { self?.toggle(env: .real) } }
-        devHotKey = HotKey(keyCode: UInt32(kVK_ANSI_D), id: 2) { [weak self] in
-            MainActor.assumeIsolated { self?.toggle(env: .dev) }
+            openDevApp: Flavor.isDev ? nil : { [weak self] in self?.hide(); Self.openDevApp() })
+
+        if Flavor.isDev {
+            redirectLogs()
+            store.env = .dev
+            let dnc = DistributedNotificationCenter.default()
+            dnc.addObserver(forName: Flavor.devToggle, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.toggle() }
+            }
+            dnc.addObserver(forName: Flavor.devTest, object: nil, queue: .main) { [weak self] n in
+                let info = n.userInfo as? [String: String] ?? [:]
+                MainActor.assumeIsolated { self?.runTestCommand(info) }
+            }
+            print("dev app ready"); fflush(stdout)
+        } else {
+            hotKey = HotKey(id: 1) { [weak self] in MainActor.assumeIsolated { self?.toggle() } }
+            devHotKey = HotKey(keyCode: UInt32(kVK_ANSI_D), id: 2) { MainActor.assumeIsolated { Self.openDevApp() } }
+            recorder.start()  // only stable records what's in front of you
         }
-        recorder.start()
         store.startPolling()
+    }
+
+    // MARK: Dev app handoff (stable's ⌥D)
+
+    static func openDevApp() {
+        let devURL = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Applications/Daylog Dev.app")
+        let post = { DistributedNotificationCenter.default()
+            .postNotificationName(Flavor.devToggle, object: nil, userInfo: nil, deliverImmediately: true) }
+        if NSRunningApplication.runningApplications(withBundleIdentifier: Flavor.devID).isEmpty {
+            guard FileManager.default.fileExists(atPath: devURL.path) else {
+                print("dev app not built: run scripts/dev.sh"); fflush(stdout); return
+            }
+            NSWorkspace.shared.openApplication(at: devURL, configuration: .init()) { _, _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: post)
+            }
+        } else {
+            post()
+        }
+    }
+
+    private func redirectLogs() {
+        let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/daylog")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        freopen(dir.appendingPathComponent("app-dev.log").path, "a", stdout)
+    }
+
+    // MARK: test channel (Dev app only): drive the bar without the real keyboard or focus
+
+    /// Commands: open · close · key (code, mods) · type (text) · state.
+    /// Keys go through the same `handleKey` as real keypresses; text goes straight into the field.
+    private func runTestCommand(_ info: [String: String]) {
+        switch info["cmd"] {
+        case "open": if !(store.isOpen && panel.isVisible) { show(activate: false) }
+        case "close": hide(restoreFocus: false)
+        case "key":
+            let code = UInt16(info["code"] ?? "") ?? 0
+            var mods: NSEvent.ModifierFlags = []
+            for m in (info["mods"] ?? "").split(separator: ",") {
+                switch m { case "cmd": mods.insert(.command); case "shift": mods.insert(.shift)
+                           case "opt": mods.insert(.option); case "ctrl": mods.insert(.control); default: break }
+            }
+            if !handleKey(code, mods) && code == 36 { store.submit() }  // ⏎ in the typing line
+        case "type": store.input += info["text"] ?? ""
+        default: break
+        }
+        // Report state after every command, so tests can assert on it.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            guard let s = self?.store else { return }
+            print("test-state mode=\(s.mode) input=\"\(s.input)\" open=\(s.isOpen) menuIndex=\(s.menuIndex) "
+                  + "items=\(s.mode == .menu ? s.menuItems.map(\.id).joined(separator: ",") : "-") "
+                  + "timer=\(s.timer?.label ?? "-") focus=\(s.timer?.focus ?? 0)")
+            fflush(stdout)
+        }
     }
 
     // MARK: windows
@@ -78,97 +159,90 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: show / hide
 
-    /// ⌥L toggles the real bar, ⌥D the dev bar. Pressing the other one while open switches.
-    func toggle(env: API.Env) {
+    func toggle() {
         // Trust what's on screen, not just our flag, so the two can never drift apart.
         let open = store.isOpen && panel.isVisible
-        print("toggle(\(env)): \(open ? (store.env == env ? "close" : "switch") : "open")"); fflush(stdout)
-        if open && store.env == env { hide(); return }
-        store.env = env
-        if open {
-            store.resetMode()
-            Task { await store.refreshAll() }
-        } else {
-            show()
-        }
+        print("toggle: \(open ? "close" : "open")"); fflush(stdout)
+        open ? hide() : show()
     }
 
-    /// The app you were in when you pressed ⌥L. Closing hands the keyboard back to it.
+    /// The app you were in when you opened the bar. Closing hands the keyboard back to it.
     private var previousApp: NSRunningApplication?
 
-    private func show() {
+    /// `activate: false` shows the bar without taking focus (used by the test channel).
+    private func show(activate: Bool = true) {
         removeMonitors()  // never stack monitors if show() runs twice
-        let front = NSWorkspace.shared.frontmostApplication
-        if front?.bundleIdentifier != Bundle.main.bundleIdentifier { previousApp = front }
         placePanel()
-        // Take the keyboard so you can type immediately (no click needed).
-        NSApp.activate(ignoringOtherApps: true)
-        panel.makeKeyAndOrderFront(nil)
+        if activate {
+            let front = NSWorkspace.shared.frontmostApplication
+            if front?.bundleIdentifier != Bundle.main.bundleIdentifier { previousApp = front }
+            // Take the keyboard so you can type immediately (no click needed).
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKeyAndOrderFront(nil)
+        } else {
+            panel.orderFrontRegardless()
+        }
         store.isOpen = true  // SwiftUI grows the bar down from the top of the screen
-        Sound.open.play()
+        if activate { Sound.open.play() }
         // Focus the field once SwiftUI has laid it out.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in self?.store.focusRequest += 1 }
         Task { await store.refreshAll() }
+        guard activate else { return }
         // Click anywhere outside daylog to dismiss. The click already picked the app you
         // want, so don't hand focus back to the old one.
         clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             MainActor.assumeIsolated { self?.hide(restoreFocus: false) }
         }
-        // Esc dismisses (unless a field is handling it).
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
             guard let self else { return e }
-            let store = self.store
-            let cmd = e.modifierFlags.contains(.command)
-            let noMods = e.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty
-            switch (e.keyCode, store.mode) {
-            // Command menu: ⌘K anywhere, or / on an empty line.
-            case (40, let m) where cmd && m != .menu: MainActor.assumeIsolated { store.openMenu() }; return nil
-            case (44, .input) where noMods && store.input.isEmpty:
-                MainActor.assumeIsolated { store.openMenu() }; return nil
-            case (126, .menu): MainActor.assumeIsolated { store.menuMove(-1) }; return nil
-            case (125, .menu): MainActor.assumeIsolated { store.menuMove(1) }; return nil
-            case (36, .menu): MainActor.assumeIsolated { store.runSelectedCommand() }; return nil
-            case (53, .input): MainActor.assumeIsolated { self.hide() }; return nil      // esc: close
-            case (48, _):                                                                // tab: back to work
-                MainActor.assumeIsolated { self.hide() }; return nil
-            case (125, .input) where store.input.isEmpty:                                // ↓ edit last block
-                MainActor.assumeIsolated { store.beginEdit() }; return nil
-            case (125, .edit), (126, .edit):                                             // ↓↑ move the end
-                let step = e.modifierFlags.contains(.shift) ? 15 : 5
-                MainActor.assumeIsolated { store.nudgeEnd(minutes: e.keyCode == 126 ? step : -step) }
-                return nil
-            case (53, _): MainActor.assumeIsolated { store.back() }; return nil         // esc: step back
-            case (126, .browse): MainActor.assumeIsolated { store.older() }; return nil // ↑ earlier
-            case (125, .browse): MainActor.assumeIsolated { store.newer() }; return nil // ↓ later
-            case (126, .input) where store.input.isEmpty:
-                MainActor.assumeIsolated { store.enterBrowse() }; return nil             // ↑ start looking back
-            case (36, .browse): MainActor.assumeIsolated { store.beginFill() }; return nil
-            // ⏎ in the non-typing modes is handled here, not by the text field, so it works
-            // even if the field hasn't taken focus yet.
-            case (36, .edit), (36, .note), (36, .ghost), (36, .fill):
-                MainActor.assumeIsolated { store.submit() }; return nil
-            case (45, .input) where cmd: MainActor.assumeIsolated { store.beginNote() }; return nil  // ⌘N
-            case (31, .input) where cmd: MainActor.assumeIsolated { store.ghostKey() }; return nil   // ⌘O
-            case (3, .input) where cmd: MainActor.assumeIsolated { store.cycleFocus() }; return nil  // ⌘F
-            case (51, .browse) where cmd: MainActor.assumeIsolated { store.deleteCurrent() }; return nil
-            default: break
-            }
-            if e.keyCode == 47 && e.modifierFlags.contains(.command) {  // ⌘.: stop the timer
-                MainActor.assumeIsolated { store.stop() }
-                return nil
-            }
-            if e.keyCode == 36 && e.modifierFlags.contains(.shift) && store.mode == .input {  // ⇧⏎: force a timer
-                MainActor.assumeIsolated { store.submit(forceTimer: true) }
-                return nil
-            }
-            return e
+            return MainActor.assumeIsolated { self.handleKey(e.keyCode, e.modifierFlags) } ? nil : e
         }
+    }
+
+    /// Every bar shortcut, in one place. Returns true if the key was handled.
+    /// Real keypresses and the Dev app's test channel both come through here.
+    @discardableResult
+    func handleKey(_ code: UInt16, _ flags: NSEvent.ModifierFlags) -> Bool {
+        let store = self.store
+        let cmd = flags.contains(.command)
+        let shift = flags.contains(.shift)
+        let noMods = flags.intersection([.command, .option, .control, .shift]).isEmpty
+        switch (code, store.mode) {
+        // Command menu: ⌘K anywhere, or / on an empty line.
+        case (40, let m) where cmd && m != .menu: store.openMenu()
+        case (44, .input) where noMods && store.input.isEmpty: store.openMenu()
+        case (126, .menu): store.menuMove(-1)
+        case (125, .menu): store.menuMove(1)
+        case (36, .menu): store.runSelectedCommand()
+        case (53, .input): hide()                                          // esc: close
+        case (48, _): hide()                                               // tab: back to work
+        case (125, .input) where store.input.isEmpty: store.beginEdit()    // ↓ edit last block
+        case (125, .edit), (126, .edit):                                   // ↓↑ move the end
+            let step = shift ? 15 : 5
+            store.nudgeEnd(minutes: code == 126 ? step : -step)
+        case (53, _): store.back()                                         // esc: step back
+        case (126, .browse): store.older()                                 // ↑ earlier
+        case (125, .browse): store.newer()                                 // ↓ later
+        case (126, .input) where store.input.isEmpty: store.enterBrowse()  // ↑ look back
+        case (36, .browse): store.beginFill()
+        // ⏎ in the non-typing modes is handled here, not by the text field, so it works
+        // even if the field hasn't taken focus yet.
+        case (36, .edit), (36, .note), (36, .ghost), (36, .fill): store.submit()
+        case (36, .input) where shift: store.submit(forceTimer: true)      // ⇧⏎ force a timer
+        case (45, .input) where cmd: store.beginNote()                     // ⌘N
+        case (31, .input) where cmd: store.ghostKey()                      // ⌘O
+        case (3, .input) where cmd: store.cycleFocus()                     // ⌘F
+        case (47, _) where cmd: store.stop()                               // ⌘. stop
+        case (51, .browse) where cmd: store.deleteCurrent()                // ⌘⌫ delete
+        default: return false
+        }
+        return true
     }
 
     private func hide(restoreFocus: Bool = true) {
         store.isOpen = false
         removeMonitors()
-        // Give the keyboard back to whatever you were doing before ⌥L.
+        // Give the keyboard back to whatever you were doing before opening the bar.
         if restoreFocus, let app = previousApp { app.activate() }
         // Let the shrink animation play, then take the window away.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
