@@ -61,6 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             dnc.addObserver(forName: Flavor.devTest, object: nil, queue: .main) { [weak self] n in
                 let info = n.userInfo as? [String: String] ?? [:]
+                print("test-recv raw=\(String(describing: n.userInfo)) parsed=\(info)"); fflush(stdout)
                 MainActor.assumeIsolated { self?.runTestCommand(info) }
             }
             print("dev app ready"); fflush(stdout)

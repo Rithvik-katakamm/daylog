@@ -13,6 +13,7 @@ final class Store: ObservableObject {
     @Published var focusRequest = 0  // bump to focus the input field
     @Published var input = "" {
         didSet {
+            if Flavor.isDev, input != oldValue { debugTrace("input \"\(oldValue)\"->\"\(input)\"") }
             if mode == .input { schedulePreview() }
             if mode == .menu { menuIndex = 0 }  // filtering resets the selection
         }
@@ -78,7 +79,9 @@ final class Store: ObservableObject {
     }
     @Published var editTarget: EditTarget?
     @Published var editEnd = Date()
-    @Published var mode: Mode = .input
+    @Published var mode: Mode = .input {
+        didSet { if Flavor.isDev, mode != oldValue { debugTrace("mode \(oldValue)->\(mode)") } }
+    }
     @Published var history: [HistoryItem] = []
     @Published var index = 0
     @Published var movedOlder = true  // direction of the last move, for the slide animation
@@ -383,6 +386,13 @@ final class Store: ObservableObject {
     }
 
     private var poller: Task<Void, Never>?
+
+    /// Dev-build-only: who changed state (first app frames of the call stack).
+    private func debugTrace(_ what: String) {
+        let frames = Thread.callStackSymbols.dropFirst(2).filter { $0.contains("Daylog") }.prefix(4)
+            .map { $0.split(separator: " ").dropFirst(3).prefix(1).joined() }
+        print("trace \(what) <- \(frames.joined(separator: " < "))"); fflush(stdout)
+    }
 
     func startPolling() {
         poller?.cancel()
