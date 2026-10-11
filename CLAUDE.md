@@ -7,12 +7,13 @@ Built for Rithvik first. Possible portfolio piece later.
 > status as you go. New ideas go to Linear Triage, not into the current issue.
 > **Labels:** follow the Linear doc "How we use labels" (team RIT): one Type, at most one
 > Area, plus flags, and **always `agent-filed`** on issues you create.
-> **Vision lives in `docs/product/vision.md`** (consolidated; sources in `docs/product/vision-sources/`).
+> **Vision lives in `docs/product/vision.md`** (public). Personal context and the original
+> vision sources live outside the repo (in the brain: `docs/daylog-private/`).
 > Notion is read-only context unless he says otherwise.
 > **Docs map: `docs/README.md`** (product / ui / backend / infra). Before adding a key, color
 > or sound, update `docs/ui/keys.md`, `colors.md` or `sounds.md` in the same commit.
 >
-> Status: **v1 shipped 2026-10-09** (`docs/product/specs/2026-10-09-v1.md`), installed and
+> Status: **first version shipped 2026-10-09**; now building milestone "v1 · Want to use it" (`docs/product/specs/2026-10-09-v1.md`), installed and
 > running via launchd. Next: refine from real use. See `README.md` for how it's
 > built. Ideation source: Notion → Journal → "2026-10-06 — Agentic Ideation Sticky Pad".
 >
@@ -32,7 +33,7 @@ real context about his day, so Muse stops repeating the same advice blind.
 
 ```
 CAPTURE (surfaces)        BACKEND (deterministic, no AI)      CONSUMERS (read it)
-side button / day view ─▶ local server                    ─▶ MCP server → any agent
+keyboard bar (⌥L)      ─▶ local server                    ─▶ MCP server → any agent
 phone action button    ─▶  └─ append-only event log        ─▶ Muse (push/pull)
 importers (Wispr, Whoop,                                   ─▶ Notion dashboard (maybe)
   calls, Mac activity) ─▶
@@ -41,10 +42,10 @@ importers (Wispr, Whoop,                                   ─▶ Notion dashboa
 - **The backend is the project.** It starts as a local server plus an append-only
   event log. It's dumb on purpose at the entry point so it stays fast and trustworthy.
   Intelligence gets layered on top later; it never replaces the raw log.
-- **Fast, clean, local, or he won't use it.** The bar is Wispr Flow-level latency.
-  Dark, minimal, a button on the side of the screen. Clicking it opens a small panel
-  with a scrollable day view (not a full window). He drags across a time range to
-  say "this is what I was doing."
+- **Fast, clean, local, keyboard-only, or he won't use it.** Wispr Flow-level latency.
+  ⌥L drops a black capsule from the top of the screen: one input line whose ring color is
+  the mode. No always-visible button, no calendar view (both dropped Oct 9). See
+  `docs/ui/keys.md` and `docs/ui/colors.md`.
 - **Greedy for ground truth.** If a system of record proves what he was doing, log it
   without asking: a Wispr Notetaker meeting, a phone call, a Whoop workout. Manual
   entries are also ground truth. Inferred activity is a *suggestion* until he
@@ -63,7 +64,7 @@ importers (Wispr, Whoop,                                   ─▶ Notion dashboa
 
 ## Evolution path (ideation, not a commitment)
 
-1. Dumb log: manual timer, quick "did X for 40m" entry, day view, MCP read access.
+1. Dumb log: manual timer, quick "did X for 40m" entry, look back / edit, MCP read access.
 2. Importers: Wispr meetings, calls, Whoop, passive Mac activity (apps, tabs).
 3. ML: predict labels for unlabeled time from observations, trained on his own
    confirmations. That's a model, not an agent.
