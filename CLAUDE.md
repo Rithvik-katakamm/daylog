@@ -83,6 +83,10 @@ importers (Wispr, Whoop,                                   ─▶ Notion dashboa
 
 ## Working rules
 
+- **Never disturb the stable app he's using.** Build with `scripts/dev.sh` and test the Dev app
+  through `.build/devctl` (no keyboard, no focus). Ship to stable with `scripts/release.sh <tag>`
+  only when he says so. See `docs/infra/install.md`.
+
 - Explain the *why* of every architectural choice. He wants to understand the build
   well enough to improve it himself (learning HTTP and backend craft through it).
 - Commit each slice; push roughly every 2 commits.
