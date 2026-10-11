@@ -5,6 +5,10 @@ Built for Rithvik first. Possible portfolio piece later.
 
 > **Work is tracked in Linear** (team RIT, project "Day Log"): pick issues there, move
 > status as you go. New ideas go to Linear Triage, not into the current issue.
+> **Learning goes to Linear Triage too (his rule, Oct 11):** when he says he wants to *learn* or
+> *deep dive* into something, file it in Triage with the `learn` flag (+ Type `Spike`, the right
+> Area, `agent-filed`). Name the layer of the stack it belongs to, quote what was explained, and
+> list a granular learning path. Triage is where he reviews and folds it into what he's learning.
 > **Labels:** follow the Linear doc "How we use labels" (team RIT): one Type, at most one
 > Area, plus flags, and **always `agent-filed`** on issues you create.
 > **Vision lives in `docs/product/vision.md`** (public). Personal context and the original
