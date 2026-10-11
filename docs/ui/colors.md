@@ -43,12 +43,17 @@ Substances (dimension 2) are a **soft halo outside the main ring**, never separa
 colored glow; several blend into each other around the shape (an angular gradient, blurred).
 The crisp main ring stays dimension 1 + focus heat. Component: `OuterRings` in `Views.swift`.
 
-## Always on (while the bar is closed)
+## Always on: the notch pill (Oct 11)
 
-- **Center pill**: a dimmed (60%) small bar at the top center: dot, task, ▲s, minutes. The bar
-  grows out of the same spot when opened.
-- **Side ring**: a 30pt ring on the right edge: status color, minutes inside, the substance glow.
-- When focus or a substance is on, the glow **breathes** slowly (2.2s), so it feels "on".
+**One shape, not two.** Closed, the bar hugs the notch like the Dynamic Island: black (it merges
+with the notch), status + task on the left ear, ▲s + minutes on the right ear, the camera in
+between. ⌥L grows the same shape down into the bar; closing shrinks it back. The notch width
+comes from macOS (`auxiliaryTopLeftArea/RightArea`); with no notch it's a small tab hanging
+from the top edge. It never takes clicks while closed.
+
+- Focus and substance glows **breathe** slowly (2.2s) while closed, so "on" is felt, not read.
+- **Side ring** (right edge) is still in ⌘K, off by default: it felt in the way (Oct 11).
+- Open UX question (to file as a UX talk): how much should be visible while working.
 
 ## History
 - Oct 11: substances shipped as a blended glow (not stacked rings); caffeinated (aqua) and

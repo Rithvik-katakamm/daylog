@@ -43,7 +43,7 @@ enum Theme {
 
     static let open = Animation.spring(response: 0.32, dampingFraction: 0.8)
     static let barSize = CGSize(width: 560, height: 50)
-    static let restSize = CGSize(width: 84, height: 30)  // what the bar grows out of
+    static let ear: CGFloat = 100  // width of each side of the closed pill, beside the notch
 }
 
 struct BarView: View {
@@ -52,24 +52,14 @@ struct BarView: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            if store.env == .dev { devTag }
-            ZStack(alignment: .top) {
-                // Closed: the dimmed pill stays (if on). Opening fades it as the bar grows out of it.
-                if store.showsPill {
-                    RestPill(store: store)
-                        .padding(.top, 3)
-                        .opacity(store.isOpen ? 0 : 1)
-                        .scaleEffect(store.isOpen ? 1.2 : 1, anchor: .top)
-                        .animation(Theme.open, value: store.isOpen)
-                }
-                bar
-            }
+            bar
             Group {
                 if store.mode == .menu { menuList } else { hintChip }
             }
             .opacity(store.isOpen ? 1 : 0)
             .offset(y: store.isOpen ? 0 : -10)
             .animation(Theme.open.delay(store.isOpen ? 0.06 : 0), value: store.isOpen)
+            if store.env == .dev { devTag }
             Spacer(minLength: 0)
         }
         .frame(width: AppDelegate.windowSize.width,
@@ -98,8 +88,16 @@ struct BarView: View {
 
     // MARK: the bar
 
+    /// ONE shape, hanging from the top of the screen like the Dynamic Island. Closed, it hugs
+    /// the notch: status on the left ear, time on the right, the camera in between. ⌥L grows the
+    /// same shape down into the bar; closing shrinks it back. With no notch it's a small tab.
     private var bar: some View {
-        let size = store.isOpen ? Theme.barSize : Theme.restSize
+        let open = store.isOpen
+        let ear = Theme.ear
+        let closedSize = CGSize(width: store.notchWidth + ear * 2, height: store.topInset)
+        let openSize = CGSize(width: Theme.barSize.width, height: store.topInset + Theme.barSize.height)
+        let size = open ? openSize : closedSize
+        let radius: CGFloat = open ? 22 : 9
         // One input line; the ring says which mode you're in.
         let ring: Color = switch store.mode {
             case .input: Theme.statusColor(store)
@@ -109,7 +107,43 @@ struct BarView: View {
             case .menu: Theme.task
         }
         let dashed = [.browse, .fill, .edit].contains(store.mode)  // the past is dashed
-        return ZStack {
+        let tier = focusTierAnyMode
+        let lively = tier > 0 || !store.states.isEmpty
+        return ZStack(alignment: .top) {
+            // Open: the input row sits below the notch line.
+            VStack(spacing: 0) {
+                Color.clear.frame(height: store.topInset)
+                openRow.frame(height: Theme.barSize.height)
+            }
+            .opacity(open ? 1 : 0)
+            // Closed: a glance at the ears beside the camera.
+            restRow(ear: ear)
+                .frame(height: store.topInset)
+                .opacity(open ? 0 : 0.85)
+        }
+        .frame(width: size.width, height: size.height, alignment: .top)
+        .clipShape(NotchShape(radius: radius))
+        .background(NotchShape(radius: radius).fill(Theme.chrome))
+        .overlay(NotchShape(radius: radius, closed: false).stroke(ring.opacity(open ? 0.85 : 0.6), style: StrokeStyle(
+            lineWidth: (open ? 1.5 : 1) + CGFloat(tier) * 0.5, dash: dashed ? [6, 4] : [])))
+        // Substances: one blended glow just outside.
+        .overlay(OuterRings(colors: Theme.stateColors(store.states), shape: NotchShape(radius: radius, closed: false),
+                            opacity: open ? 0.85 : 0.6, spacing: open ? 3.5 : 2.5))
+        // Focus glow: brighter the deeper you are; breathes slowly while closed.
+        .background(NotchShape(radius: radius).fill(.clear)
+            .shadow(color: ring.opacity(lively || open ? 0.18 + Double(tier) * 0.14 : 0),
+                    radius: (open ? 10 : 5) + CGFloat(tier) * (open ? 7 : 3))
+            .modifier(Breathing(active: lively && !open)))
+        .shadow(color: .black.opacity(open ? 0.45 : 0), radius: 22, y: 8)
+        .opacity(open || store.showsPill ? 1 : 0)
+        .animation(.easeInOut(duration: 0.35), value: tier)
+        .animation(.easeOut(duration: 0.15), value: store.mode)
+        .animation(Theme.open, value: open)
+        .animation(Theme.open, value: store.notchWidth)
+    }
+
+    private var openRow: some View {
+        ZStack {
             // Looking back shows one stop at a time instead of the input line.
             if store.mode == .browse, let item = store.current {
                 stop(item)
@@ -129,23 +163,47 @@ struct BarView: View {
         }
         .animation(.spring(response: 0.26, dampingFraction: 0.86), value: store.index)
         .padding(.horizontal, 16)
-        .opacity(store.isOpen ? 1 : 0)
-        .frame(width: size.width, height: size.height)
-        .clipShape(Capsule())
-        .background(Capsule().fill(Theme.chrome))
-        .overlay(Capsule().strokeBorder(ring.opacity(0.85), style: StrokeStyle(
-            lineWidth: 1.5 + CGFloat(focusTier) * 0.5, dash: dashed ? [6, 4] : [])))
-        // Substances: outer rings that stack outside the main ring (high, intoxicated, caffeinated).
-        .overlay(OuterRings(colors: Theme.stateColors(store.states), shape: Capsule(), opacity: 0.8)
-            .opacity(store.isOpen ? 1 : 0))
-        // Focus glows: the deeper you are, the brighter the ring.
-        .shadow(color: ring.opacity(0.18 + Double(focusTier) * 0.14), radius: 10 + CGFloat(focusTier) * 7)
-        .animation(.easeInOut(duration: 0.35), value: focusTier)
-        .shadow(color: .black.opacity(store.isOpen ? 0.45 : 0), radius: 22, y: 8)
-        .animation(.easeOut(duration: 0.15), value: store.mode)
-        .scaleEffect(store.isOpen ? 1 : 0.85, anchor: .top)
-        .opacity(store.isOpen ? 1 : 0)
-        .animation(Theme.open, value: store.isOpen)
+    }
+
+    /// Closed view: left ear = what (icon + name), right ear = how long (+ focus ▲s).
+    private func restRow(ear: CGFloat) -> some View {
+        let color = Theme.statusColor(store)
+        let start = store.onBreak?.start ?? store.ghost?.start ?? store.timer?.start
+        return HStack(spacing: 0) {
+            HStack(spacing: 5) {
+                if let b = store.onBreak {
+                    Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").foregroundStyle(color)
+                    Text(b.label)
+                } else if let g = store.ghost {
+                    Image(systemName: "moon.zzz.fill").foregroundStyle(color)
+                    Text(g.status)
+                } else if let t = store.timer {
+                    Circle().fill(color).frame(width: 6, height: 6).shadow(color: color, radius: 2)
+                    Text(t.label)
+                } else {
+                    Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
+                    Text("idle").foregroundStyle(Theme.muted)
+                }
+            }
+            .lineLimit(1).truncationMode(.tail)
+            .frame(width: ear - 12, alignment: .leading).padding(.leading, 12)
+            Color.clear.frame(width: store.notchWidth)
+            HStack(spacing: 4) {
+                if let f = store.timer?.focus, f > 0, store.onBreak == nil, store.ghost == nil {
+                    Text(String(repeating: "▲", count: f)).font(.system(size: 7, weight: .bold)).foregroundStyle(color)
+                }
+                if let start {
+                    TimelineView(.periodic(from: .now, by: 30)) { ctx in
+                        Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(start))))
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(color)
+                    }
+                }
+            }
+            .frame(width: ear - 12, alignment: .trailing).padding(.trailing, 12)
+        }
+        .font(.system(size: 11, weight: .medium))
+        .foregroundStyle(Theme.text)
     }
 
     /// What the single input line asks for, per mode.
@@ -219,6 +277,10 @@ struct BarView: View {
         case .browse:
             EmptyView()
         }
+    }
+
+    private var focusTierAnyMode: Int {
+        store.onBreak == nil && store.ghost == nil && (store.mode == .input || !store.isOpen) ? (store.timer?.focus ?? 0) : 0
     }
 
     private var focusTier: Int { store.mode == .input && store.ghost == nil ? (store.timer?.focus ?? 0) : 0 }
@@ -474,63 +536,6 @@ struct Breathing: ViewModifier {
 
 // MARK: - always-on, while the bar is closed (Oct 11: try both, then pick)
 
-/// Center pill: a dimmed, smaller version of the bar showing what you're on and for how long.
-/// The bar grows out of this same spot when you open it.
-struct RestPill: View {
-    @ObservedObject var store: Store
-
-    var body: some View {
-        let color = Theme.statusColor(store)
-        let tier = store.onBreak == nil && store.ghost == nil ? (store.timer?.focus ?? 0) : 0
-        let lively = tier > 0 || !store.states.isEmpty
-        HStack(spacing: 7) {
-            content(color)
-        }
-        .font(.system(size: 11, weight: .medium))
-        .foregroundStyle(Theme.text.opacity(0.85))
-        .lineLimit(1)
-        .padding(.horizontal, 11).frame(height: 24)
-        .background(Capsule().fill(Theme.chrome.opacity(0.82)))
-        .overlay(Capsule().strokeBorder(color.opacity(0.75), lineWidth: 1 + CGFloat(tier) * 0.4))
-        .overlay(OuterRings(colors: Theme.stateColors(store.states), shape: Capsule(), opacity: 0.7, spacing: 3))
-        .background(Capsule().fill(.clear).shadow(color: color.opacity(lively ? 0.25 + Double(tier) * 0.12 : 0),
-                                                   radius: 6 + CGFloat(tier) * 4)
-            .modifier(Breathing(active: lively)))
-        .opacity(0.6)
-        .frame(maxWidth: 300)
-    }
-
-    @ViewBuilder private func content(_ color: Color) -> some View {
-        if let b = store.onBreak {
-            Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").foregroundStyle(color)
-            Text(b.label)
-            elapsed(b.start, color)
-        } else if let g = store.ghost {
-            Image(systemName: "moon.zzz.fill").foregroundStyle(color)
-            Text(g.status).frame(maxWidth: 170, alignment: .leading)
-            elapsed(g.start, color)
-        } else if let t = store.timer {
-            Circle().fill(color).frame(width: 6, height: 6)
-            Text(t.label).truncationMode(.tail).frame(maxWidth: 170, alignment: .leading)
-            if let f = t.focus, f > 0 {
-                Text(String(repeating: "▲", count: f)).font(.system(size: 8, weight: .bold)).foregroundStyle(color)
-            }
-            elapsed(t.start, color)
-        } else {
-            Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
-            Text("nothing running").foregroundStyle(Theme.muted)
-        }
-    }
-
-    private func elapsed(_ start: String, _ color: Color) -> some View {
-        TimelineView(.periodic(from: .now, by: 30)) { ctx in
-            Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(start))))
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundStyle(color)
-        }
-    }
-}
-
 /// Side ring: just the status as a ring on the screen edge, with substance rings around it
 /// and minutes in the middle. Glance, don't read.
 struct SideRing: View {
@@ -564,5 +569,39 @@ struct SideRing: View {
                     .foregroundStyle(color)
             }
         }
+    }
+}
+
+/// The bar's outline: flat against the top edge of the screen, rounded at the bottom, so it reads
+/// as growing out of the notch. `closed: false` leaves the top edge open, for strokes.
+struct NotchShape: InsettableShape {
+    var radius: CGFloat
+    var closed = true
+    var inset: CGFloat = 0
+
+    var animatableData: CGFloat {
+        get { radius }
+        set { radius = newValue }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let minX = rect.minX + inset, maxX = rect.maxX - inset
+        let bottom = rect.maxY - inset, top = rect.minY - 4  // past the screen edge: no visible top line
+        let r = max(0, min(radius, (maxX - minX) / 2, bottom - rect.minY))
+        var p = Path()
+        p.move(to: CGPoint(x: minX, y: top))
+        p.addLine(to: CGPoint(x: minX, y: bottom - r))
+        p.addQuadCurve(to: CGPoint(x: minX + r, y: bottom), control: CGPoint(x: minX, y: bottom))
+        p.addLine(to: CGPoint(x: maxX - r, y: bottom))
+        p.addQuadCurve(to: CGPoint(x: maxX, y: bottom - r), control: CGPoint(x: maxX, y: bottom))
+        p.addLine(to: CGPoint(x: maxX, y: top))
+        if closed { p.closeSubpath() }
+        return p
+    }
+
+    func inset(by amount: CGFloat) -> NotchShape {
+        var s = self
+        s.inset += amount
+        return s
     }
 }

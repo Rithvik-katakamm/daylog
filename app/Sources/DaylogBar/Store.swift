@@ -13,9 +13,12 @@ final class Store: ObservableObject {
     /// What stays on screen while the bar is closed (his call, Oct 11: try both, then pick).
     enum RestStyle: String, CaseIterable { case pill, ring, both, off }
     @Published var restStyle: RestStyle = RestStyle(rawValue: UserDefaults.standard.string(forKey: "restStyle") ?? "")
-        ?? .both {
+        ?? .pill {
         didSet { UserDefaults.standard.set(restStyle.rawValue, forKey: "restStyle") }
     }
+    /// The screen's notch (0 = none) and menu-bar height, so the closed bar can hug the notch.
+    @Published var notchWidth: CGFloat = 0
+    @Published var topInset: CGFloat = 24
     var showsPill: Bool { restStyle == .pill || restStyle == .both }
     var showsRing: Bool { restStyle == .ring || restStyle == .both }
     @Published var summary: Summary?

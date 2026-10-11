@@ -38,7 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// A transparent stage; SwiftUI draws the capsules inside it. It only grows tall while
     /// the command menu is open, so it never sits over the screen when it doesn't need to.
-    static let windowSize = NSSize(width: 620, height: 150)
+    static let windowSize = NSSize(width: 620, height: 170)
     static let menuWindowSize = NSSize(width: 620, height: 470)
     private var modeWatch: AnyCancellable?
     private var restWatch: AnyCancellable?
@@ -151,6 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel = KeyPanel(contentRect: NSRect(origin: .zero, size: Self.windowSize),
                          styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         floating(panel)
+        panel.level = .statusBar  // above the menu bar, so it can sit in the notch
         let host = NSHostingView(rootView: BarView(store: store))
         host.layer?.backgroundColor = .clear
         panel.contentView = host
@@ -190,10 +191,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: placement: top-center, just under the menu bar, on the screen your cursor is on
 
     private func placePanel(menu: Bool = false) {
-        let screen = (NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
-                      ?? NSScreen.screens[0]).visibleFrame
+        let scr = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
+            ?? NSScreen.screens[0]
+        let f = scr.frame
+        // The notch: macOS reports the usable areas left and right of it; the gap is the camera.
+        var notch: CGFloat = 0
+        if let l = scr.auxiliaryTopLeftArea, let r = scr.auxiliaryTopRightArea {
+            notch = max(0, f.width - l.width - r.width)
+        }
+        let menuBar = scr.safeAreaInsets.top > 0 ? scr.safeAreaInsets.top : max(f.maxY - scr.visibleFrame.maxY, 24)
+        if store.notchWidth != notch { store.notchWidth = notch }
+        if store.topInset != menuBar { store.topInset = menuBar }
         let size = menu ? Self.menuWindowSize : Self.windowSize
-        panel.setFrame(NSRect(x: screen.midX - size.width / 2, y: screen.maxY - size.height - 8,
+        // Flush with the very top of the screen, over the menu bar, centered on the notch.
+        panel.setFrame(NSRect(x: f.midX - size.width / 2, y: f.maxY - size.height,
                               width: size.width, height: size.height), display: true)
     }
 
