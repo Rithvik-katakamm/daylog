@@ -1,67 +1,52 @@
 # Colors
 
-The bar is one input line. **The ring color tells you what you're doing right now.** This
-file is the source of truth for every color in the app (`app/Sources/DaylogBar/Views.swift`,
-`enum Theme`).
+The bar is one input line. Colors follow **three dimensions** (decided in the UI talk,
+Oct 10). Every color in the app is a token in `enum Theme`
+(`app/Sources/DaylogBar/Views.swift`), and this file is the source of truth for them.
 
-## Today (shipped)
-
-| Meaning | Where you see it | Color | Hex | `Theme` name |
-|---|---|---|---|---|
-| **Task:** typing what you're doing; running timer | ring, timer chip | neon mint | `#5CF5C7` | `accent` |
-| **Note** (⌘N) | ring, note chip | soft blue | `#8CC2FF` | `note` |
-| **Ghost** (⌘O), offline | ring, ghost chip | purple | `#B87AFF` | `ghost` |
-| **Looking at the past:** scroll back (↑), edit (↓), fill a gap | ring, time chip, date | yellow | `#FFD652` | `ring` |
-| **Wispr meeting** (when scrolling back) | dot | violet | `#B38CFF` | `meeting` |
-| Bar background | capsules | near-black, solid | `#090909` | `chrome` |
-| Hairline edge | capsule border | white 9% | — | `edge` |
-| Text / muted text | everywhere | white 94% / 48% | — | `text`, `muted` |
-
-**Focus today:** ⌘F keeps the ring mint and makes it glow brighter per tier (▲ ▲▲ ▲▲▲).
-
-**Known problem:** ghost purple (`#B87AFF`) and meeting violet (`#B38CFF`) are nearly the
-same color.
-
-## PROPOSED (Oct 10): two dimensions, mode and state
-
-He wants focus to change color (yellow → orange → red), plus **intoxicated** and **high**
-states that can **stack with focus**. One ring can't show two things at once, so the
-proposal splits color into two dimensions:
-
-1. **Mode = the main ring.** What the input line means right now.
-2. **State layers = outer rings.** How you are while doing the task. They stack.
-
-### Main ring
-
-| Ring | Color | Hex | Change from today |
-|---|---|---|---|
-| Task, no focus | neon mint | `#5CF5C7` | same |
-| Task + **focused** ▲ | yellow | `#FFD652` | **new** (was a mint glow) |
-| Task + **deep focus** ▲▲ | orange | `#FF9A3C` | **new** |
-| Task + **hyperfocus** ▲▲▲ | red | `#FF4D4D` | **new** |
-| Note | soft blue | `#8CC2FF` | same |
-| Ghost | purple | `#B87AFF` | same |
-| Looking at the past (↑ ↓ fill) | silver | `#D9DEE6` | **changed**: yellow now belongs to focus |
-| **Dev mode** (⌥D) | cyan, dashed ring + `DEV` chip | `#3FD9FF` | **new** |
-
-### State layers (outer rings, combinable)
-
-| State | Color | Hex |
+| Dimension | Channel | Lifetime |
 |---|---|---|
-| Intoxicated | rose | `#FF6FA5` |
-| High | lime green | `#9CFF4F` |
+| **1. What am I doing** | the main ring | persistent |
+| **2. How am I** | ring *heat* (focus) + *outer rings* (substances) | persistent; they stack |
+| **3. What am I typing** | the ring, only while typing | temporary (the *color* is temporary; what you type is data) |
+
+## Shipped
+
+| Dimension | Meaning | Color | Hex | Token |
+|---|---|---|---|---|
+| 1 | Nothing running | grey | `#6B7280` | `idle` |
+| 1 | Task | pearl white | `#ECEEF2` | `task` |
+| 1 | Ghost (⌘O), off the clock | purple | `#B87AFF` | `ghost` |
+| 2 | Task + focused ▲ (⌘F) | yellow | `#FFD652` | `focusHeat[1]` |
+| 2 | Task + deep focus ▲▲ | orange | `#FF9A3C` | `focusHeat[2]` |
+| 2 | Task + hyperfocus ▲▲▲ | red | `#FF4D4D` | `focusHeat[3]` |
+| 3 | Typing a note (⌘N) | blue | `#8CC2FF` | `note` |
+| 3 | Looking back (↑), editing (↓), filling a gap | silver, **dashed** ring | `#C9CED6` | `past` |
+| — | Wispr meeting (when looking back) | periwinkle | `#7A8CFF` | `meeting` |
+| — | Bar background | near-black, solid | `#090909` | `chrome` |
+| — | Hairline edge / text / muted text | white 9% / 94% / 48% | — | `edge`, `text`, `muted` |
+
+**How the heat works:** `Theme.taskColor(focus:)` picks the task color for a tier. The timer
+chip, its ▲s, the ring and the glow all use it, so the whole bar heats up together. The glow
+radius and ring width grow with the tier.
+
+**Dev mode** (⌥D) changes no colors: a `DEV` tag floats above the bar instead.
+
+## Defined, not used yet
+
+| Dimension | Meaning | Color | Hex | Token | Ships with |
+|---|---|---|---|---|---|
+| 2 | Intoxicated (outer ring) | rose | `#FF6FA5` | `intoxicated` | RIT-68 |
+| 2 | High (outer ring) | green | `#7CFF6B` | `high` | RIT-68, smoke break RIT-69 |
 
 ```
- deep focus + high:            ╭──────────────────────────────╮   ← lime (high)
+ deep focus + high:            ╭──────────────────────────────╮   ← green (high)
                               ╭┴──────────────────────────────┴╮  ← orange (deep focus)
                               │ ● building daylog ▲▲   1:12:40 │
                               ╰────────────────────────────────╯
 ```
 
-### Other fixes in the proposal
-- Meetings move to periwinkle `#7A8CFF`, so they stop looking like ghost.
-
-### Open questions
-- Is lime the right green for "high", or did you mean something else by "green can be
-  another color"?
-- Do altered states (intoxicated, high) also change the sound or anything else, or only color?
+## History
+- Oct 9: mint green task ring, yellow for the past.
+- Oct 10: green replaced by pearl (he didn't like it); yellow moved to focus; the past became
+  dashed silver; meetings moved off violet (it was too close to ghost).

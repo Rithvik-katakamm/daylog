@@ -4,15 +4,29 @@ import SwiftUI
 /// the bottom-center of the screen, no window chrome, shapes that grow and morph rather
 /// than windows that open.
 enum Theme {
-    static let accent = Color(red: 0.36, green: 0.96, blue: 0.78)  // neon mint: a running timer
-    static let ring = Color(red: 1.0, green: 0.84, blue: 0.32)     // yellow: you're looking at the past
-    static let meeting = Color(red: 0.70, green: 0.55, blue: 1.0)  // violet: Wispr meetings
-    static let note = Color(red: 0.55, green: 0.76, blue: 1.0)     // soft blue: a thought, not a task
-    static let ghost = Color(red: 0.72, green: 0.48, blue: 1.0)    // purple: offline, logging nothing
+    // Source of truth: docs/ui/colors.md. Three dimensions:
+    // 1. WHAT am I doing (main ring)  2. HOW am I (heat + outer rings)  3. WHAT am I typing.
+    static let idle = hex(0x6B7280)        // 1: nothing running
+    static let task = hex(0xECEEF2)        // 1: a task, pearl white (heats up with focus)
+    static let ghost = hex(0xB87AFF)       // 1: ghost, off the clock
+    static let focusHeat = [task, hex(0xFFD652), hex(0xFF9A3C), hex(0xFF4D4D)]  // 2: ▲ yellow ▲▲ orange ▲▲▲ red
+    static let intoxicated = hex(0xFF6FA5) // 2: outer ring
+    static let high = hex(0x7CFF6B)        // 2: outer ring
+    static let note = hex(0x8CC2FF)        // 3: typing a note
+    static let past = hex(0xC9CED6)        // 3: looking back / editing / filling (dashed ring)
+    static let meeting = hex(0x7A8CFF)     // a Wispr meeting when looking back
     static let chrome = Color(white: 0.035)  // solid, like Wispr: nothing bleeds through
     static let edge = Color.white.opacity(0.09)
     static let text = Color.white.opacity(0.94)
     static let muted = Color.white.opacity(0.48)
+
+    /// The task color for a focus tier: pearl, then heating up to red.
+    static func taskColor(focus: Int) -> Color { focusHeat[max(0, min(focus, 3))] }
+
+    static func hex(_ v: UInt32) -> Color {
+        Color(red: Double((v >> 16) & 0xFF) / 255, green: Double((v >> 8) & 0xFF) / 255,
+              blue: Double(v & 0xFF) / 255)
+    }
 
     static let open = Animation.spring(response: 0.32, dampingFraction: 0.8)
     static let barSize = CGSize(width: 560, height: 50)
@@ -61,11 +75,14 @@ struct BarView: View {
         let size = store.isOpen ? Theme.barSize : Theme.restSize
         // One input line; the ring says which mode you're in.
         let ring: Color = switch store.mode {
-            case .input: store.ghost != nil ? Theme.ghost : Theme.accent  // green: tasks
+            case .input:
+                store.ghost != nil ? Theme.ghost
+                    : store.timer != nil ? Theme.taskColor(focus: store.timer?.focus ?? 0) : Theme.idle
             case .note: Theme.note
             case .ghost: Theme.ghost
-            case .browse, .fill, .edit: Theme.ring
+            case .browse, .fill, .edit: Theme.past
         }
+        let dashed = [.browse, .fill, .edit].contains(store.mode)  // the past is dashed
         return ZStack {
             switch store.mode {
             case .input:
@@ -117,9 +134,9 @@ struct BarView: View {
                             Text("· " + Time.duration(store.editEnd.timeIntervalSince(t.start)))
                         }
                         .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundStyle(Theme.ring)
+                        .foregroundStyle(Theme.past)
                         .padding(.horizontal, 10).frame(height: 30)
-                        .background(Capsule().fill(Theme.ring.opacity(0.13)))
+                        .background(Capsule().fill(Theme.past.opacity(0.13)))
                         .animation(.easeOut(duration: 0.1), value: store.editEnd)
                     }
                     field("Title")
@@ -129,9 +146,9 @@ struct BarView: View {
                     if let gap = store.fillItem {
                         Text(gap.range)
                             .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(Theme.ring)
+                            .foregroundStyle(Theme.past)
                             .padding(.horizontal, 10).frame(height: 30)
-                            .background(Capsule().fill(Theme.ring.opacity(0.13)))
+                            .background(Capsule().fill(Theme.past.opacity(0.13)))
                     }
                     field("What were you doing then?")
                 }
@@ -143,7 +160,8 @@ struct BarView: View {
         .frame(width: size.width, height: size.height)
         .clipShape(Capsule())
         .background(Capsule().fill(Theme.chrome))
-        .overlay(Capsule().strokeBorder(ring.opacity(0.85), lineWidth: 1.5 + CGFloat(focusTier) * 0.5))
+        .overlay(Capsule().strokeBorder(ring.opacity(0.85), style: StrokeStyle(
+            lineWidth: 1.5 + CGFloat(focusTier) * 0.5, dash: dashed ? [6, 4] : [])))
         // Focus glows: the deeper you are, the brighter the ring.
         .shadow(color: ring.opacity(0.18 + Double(focusTier) * 0.14), radius: 10 + CGFloat(focusTier) * 7)
         .animation(.easeInOut(duration: 0.35), value: focusTier)
@@ -168,7 +186,8 @@ struct BarView: View {
     /// One stop in the past, shown inside the oval.
     private func stop(_ item: HistoryItem) -> some View {
         let color: Color = item.isGap ? Theme.muted : item.kind == "meeting" ? Theme.meeting
-            : item.isNote ? Theme.note : item.kind == "ghost" ? Theme.ghost : Theme.accent
+            : item.isNote ? Theme.note : item.kind == "ghost" ? Theme.ghost
+            : Theme.taskColor(focus: item.focusPeak ?? 0)
         return HStack(spacing: 12) {
             if item.isNote {
                 Image(systemName: "note.text").font(.system(size: 11)).foregroundStyle(color)
@@ -186,7 +205,7 @@ struct BarView: View {
                 .lineLimit(1).truncationMode(.tail)
             if let f = item.focusPeak, f > 0 {
                 Text(String(repeating: "▲", count: f))
-                    .font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.accent)
+                    .font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.taskColor(focus: f))
             }
             Spacer(minLength: 8)
             Text(item.isNote ? "" : Time.minutes(item.minutes))
@@ -211,26 +230,27 @@ struct BarView: View {
     }
 
     private func timerChip(_ t: TimerInfo) -> some View {
-        HStack(spacing: 7) {
-            Circle().fill(Theme.accent).frame(width: 7, height: 7)
-                .shadow(color: Theme.accent, radius: 3)
+        let tint = Theme.taskColor(focus: t.focus ?? 0)
+        return HStack(spacing: 7) {
+            Circle().fill(tint).frame(width: 7, height: 7)
+                .shadow(color: tint, radius: 3)
             Text(t.label).lineLimit(1).truncationMode(.tail).frame(maxWidth: 170, alignment: .leading)
             if let f = t.focus, f > 0 {
                 Text(String(repeating: "▲", count: f))
                     .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(tint)
                     .help(Store.focusNames[f])
             }
             TimelineView(.periodic(from: .now, by: 1)) { ctx in
                 Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(t.start)), withSeconds: true))
                     .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(tint)
             }
         }
         .font(.system(size: 12, weight: .medium))
         .foregroundStyle(Theme.text)
         .padding(.horizontal, 10).frame(height: 30)
-        .background(Capsule().fill(Theme.accent.opacity(0.13)))
+        .background(Capsule().fill(tint.opacity(0.13)))
         .help("Running. ⌘. stops it")
     }
 
@@ -253,7 +273,7 @@ struct BarView: View {
             Circle().fill(.red).frame(width: 6, height: 6)
             Text("daylog server isn’t running").foregroundStyle(Theme.text)
         } else if let flash = store.flash {
-            Image(systemName: "checkmark").foregroundStyle(Theme.accent).fontWeight(.bold)
+            Image(systemName: "checkmark").foregroundStyle(Theme.text).fontWeight(.bold)
             Text(flash).foregroundStyle(Theme.text)
         } else if let err = store.error {
             Text(err).foregroundStyle(.red.opacity(0.9))
@@ -271,7 +291,7 @@ struct BarView: View {
             Text("· esc back").foregroundStyle(Theme.muted)
         } else if store.mode == .browse, let item = store.current {
             Text(item.startDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
-                .foregroundStyle(Theme.ring)
+                .foregroundStyle(Theme.past)
             Text("· ↑ earlier  ↓ later").foregroundStyle(Theme.muted)
             switch item.kind {
             case "gap": Text("· ⏎ fill in").foregroundStyle(Theme.text)
@@ -283,7 +303,7 @@ struct BarView: View {
             default: Text("· ⌘⌫ delete").foregroundStyle(Theme.muted)
             }
         } else if typed, let p = store.preview, p.action == "log", let d = store.describe(p) {
-            Text("log").foregroundStyle(Theme.accent).fontWeight(.semibold)
+            Text("log").foregroundStyle(Theme.task).fontWeight(.semibold)
             Text(d).foregroundStyle(Theme.text)
             Text("⏎").foregroundStyle(Theme.muted)
         } else if typed {
@@ -294,7 +314,7 @@ struct BarView: View {
             Text("· ⌘O back online · or type a task").foregroundStyle(Theme.muted)
         } else {
             if let f = store.timer?.focus, f > 0 {
-                Text(Store.focusNames[f]).foregroundStyle(Theme.accent).fontWeight(.semibold)
+                Text(Store.focusNames[f]).foregroundStyle(Theme.taskColor(focus: f)).fontWeight(.semibold)
                 Text("·").foregroundStyle(Theme.muted)
             }
             Text(store.timer != nil ? "⌘F focus · ↑ look back · ↓ edit · ⌘N note · ⌘O ghost · tab back"
