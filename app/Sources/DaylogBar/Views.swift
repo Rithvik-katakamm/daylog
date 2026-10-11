@@ -85,14 +85,15 @@ struct BarView: View {
         .onChange(of: store.mode) { DispatchQueue.main.async { inputFocused = true } }
     }
 
-    /// Underdamped springs = a little overshoot that settles, like surface tension.
+    /// The drop (v2, Oct 11): widen in place on the notch, then fall straight down into the bar.
+    /// Closing is the exact same path in reverse: rise up, then narrow back into the notch.
     private func liquid(_ open: Bool) {
         if open {
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.62)) { dropH = true }
-            withAnimation(.spring(response: 0.44, dampingFraction: 0.68).delay(0.07)) { dropW = true }
+            withAnimation(.spring(response: 0.22, dampingFraction: 0.9)) { dropW = true }
+            withAnimation(.spring(response: 0.36, dampingFraction: 0.72).delay(0.12)) { dropH = true }
         } else {
-            withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) { dropW = false }
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.78).delay(0.08)) { dropH = false }
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) { dropH = false }
+            withAnimation(.spring(response: 0.22, dampingFraction: 0.9).delay(0.16)) { dropW = false }
         }
     }
 
@@ -143,7 +144,7 @@ struct BarView: View {
                 openRow.frame(height: Theme.barSize.height)
             }
             .opacity(open ? 1 : 0)
-            .animation(open ? .easeOut(duration: 0.18).delay(0.16) : .easeIn(duration: 0.08), value: open)
+            .animation(open ? .easeOut(duration: 0.18).delay(0.26) : .easeIn(duration: 0.08), value: open)
             // Closed: a glance at the ears beside the camera.
             restRow(ear: Theme.ear * Theme.textScale)
                 .frame(height: store.topInset)
