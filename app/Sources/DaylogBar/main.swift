@@ -305,7 +305,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Give the keyboard back to whatever you were doing before opening the bar.
         if restoreFocus, let app = previousApp { app.activate() }
         // Let the shrink animation play, then take the window away.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) { [weak self] in  // let the liquid retract
             guard let self, !self.store.isOpen else { return }
             if self.store.showsPill {
                 self.panel.ignoresMouseEvents = true  // stays as the dimmed pill

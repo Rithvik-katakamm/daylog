@@ -58,6 +58,10 @@ func fs(_ size: CGFloat) -> CGFloat { (size * Theme.textScale).rounded() }
 struct BarView: View {
     @ObservedObject var store: Store
     @FocusState private var inputFocused: Bool
+    // The liquid drop: height and width move on their own springs, so opening stretches down
+    // first and then spreads (a droplet), and closing narrows first and then pulls back up.
+    @State private var dropH = false
+    @State private var dropW = false
 
     var body: some View {
         VStack(spacing: 6) {
@@ -67,7 +71,7 @@ struct BarView: View {
             }
             .opacity(store.isOpen ? 1 : 0)
             .offset(y: store.isOpen ? 0 : -10)
-            .animation(Theme.open.delay(store.isOpen ? 0.06 : 0), value: store.isOpen)
+            .animation(Theme.open.delay(store.isOpen ? 0.2 : 0), value: store.isOpen)
             if store.env == .dev { devTag }
             Spacer(minLength: 0)
         }
@@ -76,8 +80,20 @@ struct BarView: View {
                alignment: .top)
         .environment(\.colorScheme, .dark)
         .onChange(of: store.focusRequest) { inputFocused = true }
+        .onChange(of: store.isOpen) { liquid(store.isOpen) }
         // Each mode swaps in a new field; give it the keyboard straight away.
         .onChange(of: store.mode) { DispatchQueue.main.async { inputFocused = true } }
+    }
+
+    /// Underdamped springs = a little overshoot that settles, like surface tension.
+    private func liquid(_ open: Bool) {
+        if open {
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.62)) { dropH = true }
+            withAnimation(.spring(response: 0.44, dampingFraction: 0.68).delay(0.07)) { dropW = true }
+        } else {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) { dropW = false }
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.78).delay(0.08)) { dropH = false }
+        }
     }
 
     // MARK: dev tag (⌥D): same colors, but nothing here touches the real log
@@ -105,9 +121,10 @@ struct BarView: View {
         let ear = Theme.ear * Theme.textScale
         let closedSize = CGSize(width: store.notchWidth + ear * 2, height: store.topInset)
         let openSize = CGSize(width: Theme.barSize.width, height: store.topInset + Theme.barSize.height)
-        let size = open ? openSize : closedSize
+        let size = CGSize(width: dropW ? openSize.width : closedSize.width,
+                          height: dropH ? openSize.height : closedSize.height)
         // Pill-like: the closed pill's corners are half its height; the bar's are generous too.
-        let radius: CGFloat = open ? 26 : store.topInset * 0.5
+        let radius: CGFloat = dropH ? 26 : store.topInset * 0.5
         // One input line; the ring says which mode you're in.
         let ring: Color = switch store.mode {
             case .input: Theme.statusColor(store)
@@ -126,10 +143,12 @@ struct BarView: View {
                 openRow.frame(height: Theme.barSize.height)
             }
             .opacity(open ? 1 : 0)
+            .animation(open ? .easeOut(duration: 0.18).delay(0.16) : .easeIn(duration: 0.08), value: open)
             // Closed: a glance at the ears beside the camera.
             restRow(ear: Theme.ear * Theme.textScale)
                 .frame(height: store.topInset)
                 .opacity(open ? 0 : 0.85)
+                .animation(open ? .easeIn(duration: 0.08) : .easeOut(duration: 0.2).delay(0.3), value: open)
         }
         .frame(width: size.width, height: size.height, alignment: .top)
         .clipShape(NotchShape(radius: radius))
@@ -149,7 +168,6 @@ struct BarView: View {
         .opacity(open || store.showsPill ? 1 : 0)
         .animation(.easeInOut(duration: 0.35), value: tier)
         .animation(.easeOut(duration: 0.15), value: store.mode)
-        .animation(Theme.open, value: open)
         .animation(Theme.open, value: store.notchWidth)
     }
 

@@ -13,7 +13,7 @@ final class Store: ObservableObject {
     /// What stays on screen while the bar is closed (his call, Oct 11: try both, then pick).
     enum RestStyle: String, CaseIterable { case pill, ring, both, off }
     @Published var restStyle: RestStyle = RestStyle(rawValue: UserDefaults.standard.string(forKey: "restStyle") ?? "")
-        ?? .pill {
+        ?? (Flavor.isDev ? .off : .pill) {  // only one pill in the notch: the real one
         didSet { UserDefaults.standard.set(restStyle.rawValue, forKey: "restStyle") }
     }
     /// Text size (⌘= / ⌘− / ⌘0). Views read Theme.textScale; this publishes the change.
