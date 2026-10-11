@@ -120,7 +120,10 @@ struct BarView: View {
     private var bar: some View {
         let open = store.isOpen
         let ear = Theme.ear * Theme.textScale
-        let closedSize = CGSize(width: store.notchWidth + ear * 2, height: store.topInset)
+        // MacBook: hug the notch (ears either side of the camera). Monitor: one row, room for the title.
+        let closedSize = store.notchWidth > 0
+            ? CGSize(width: store.notchWidth + ear * 2, height: store.topInset)
+            : CGSize(width: 380 * Theme.textScale, height: max(store.topInset, 28))
         let openSize = CGSize(width: Theme.barSize.width, height: store.topInset + Theme.barSize.height)
         let size = CGSize(width: dropW ? openSize.width : closedSize.width,
                           height: dropH ? openSize.height : closedSize.height)
@@ -195,8 +198,48 @@ struct BarView: View {
         .padding(.horizontal, 16)
     }
 
-    /// Closed view: left ear = what (icon + name), right ear = how long (+ focus ▲s).
-    private func restRow(ear: CGFloat) -> some View {
+    /// Closed view. MacBook: left ear = what, right ear = how long, the camera between.
+    /// Monitor (no notch): one row with the whole title and the time.
+    @ViewBuilder private func restRow(ear: CGFloat) -> some View {
+        if store.notchWidth > 0 { notchRow(ear: ear) } else { monitorRow }
+    }
+
+    private var monitorRow: some View {
+        let color = Theme.statusColor(store)
+        let start = store.onBreak?.start ?? store.ghost?.start ?? store.timer?.start
+        return HStack(spacing: 7) {
+            if let b = store.onBreak {
+                Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").foregroundStyle(color)
+                Text(b.label + (b.resume.map { " · then \($0)" } ?? ""))
+            } else if let g = store.ghost {
+                Image(systemName: "moon.zzz.fill").foregroundStyle(color)
+                Text(g.status)
+            } else if let t = store.timer {
+                Circle().fill(color).frame(width: 6, height: 6).shadow(color: color, radius: 2)
+                Text(t.label)
+            } else {
+                Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
+                Text("nothing running").foregroundStyle(Theme.muted)
+            }
+            Spacer(minLength: 8)
+            if let f = store.timer?.focus, f > 0, store.onBreak == nil, store.ghost == nil {
+                Text(String(repeating: "▲", count: f)).font(.system(size: fs(8), weight: .bold)).foregroundStyle(color)
+            }
+            if let start {
+                TimelineView(.periodic(from: .now, by: 30)) { ctx in
+                    Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(start))))
+                        .font(.system(size: fs(12), weight: .semibold).monospacedDigit())
+                        .foregroundStyle(color)
+                }
+            }
+        }
+        .lineLimit(1).truncationMode(.tail)
+        .font(.system(size: fs(12), weight: .medium))
+        .foregroundStyle(Theme.text)
+        .padding(.horizontal, 14)
+    }
+
+    private func notchRow(ear: CGFloat) -> some View {
         let color = Theme.statusColor(store)
         let start = store.onBreak?.start ?? store.ghost?.start ?? store.timer?.start
         return HStack(spacing: 0) {
@@ -499,9 +542,16 @@ struct BarView: View {
             Text("log").foregroundStyle(Theme.task).fontWeight(.semibold)
             Text(d).foregroundStyle(Theme.text)
             Text("⏎").foregroundStyle(Theme.muted)
+        } else if typed, let p = store.preview, p.action == "command" {
+            Text("⏎ \(p.label)").foregroundStyle(Theme.task).fontWeight(.semibold)
+            Text("· ⇧⏎ log it as a task instead").foregroundStyle(Theme.muted)
         } else if typed {
             Text(store.timer == nil ? "⏎ start timer" : "⏎ switch timer").foregroundStyle(Theme.text)
-            Text("· add 15m or 3:10-3:25 to log past time").foregroundStyle(Theme.muted)
+            if let also = store.preview?.also, !also.isEmpty {
+                Text("· + " + also.joined(separator: ", ")).foregroundStyle(Theme.high)
+            } else {
+                Text("· add 15m or 3:10-3:25 to log past time").foregroundStyle(Theme.muted)
+            }
         } else if let b = store.onBreak {
             Text("⌘B back").foregroundStyle(Theme.text)
             Text(b.resume.map { "· resumes “\($0)”" } ?? "· nothing to resume").foregroundStyle(Theme.muted).lineLimit(1)
@@ -517,8 +567,8 @@ struct BarView: View {
                 Text(Store.focusNames[f]).foregroundStyle(Theme.taskColor(focus: f)).fontWeight(.semibold)
                 Text("·").foregroundStyle(Theme.muted)
             }
-            Text(store.timer != nil ? "⌘K all commands · ⌘F focus · ⌘B break · ↑ look back · ⌘N note"
-                                    : "⌘K all commands · ↑ look back · ↓ edit · ⌘N note · ⌘O ghost").foregroundStyle(Theme.muted)
+            Text(store.timer != nil ? "type: smoke break · back · deep focus · high  ·  ⌘K all"
+                                    : "type a task, or: walk · ghost · high  ·  ⌘K all").foregroundStyle(Theme.muted)
             if store.timer != nil { Text("· ⌘. stop").foregroundStyle(Theme.muted) }
         }
     }

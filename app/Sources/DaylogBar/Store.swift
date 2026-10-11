@@ -30,6 +30,15 @@ final class Store: ObservableObject {
         flashBriefly("text size \(Int(textScale * 100))%")
     }
 
+    /// Which screen the pill lives on: the MacBook (notch), the external monitor, or wherever the
+    /// cursor is when you open it.
+    enum PillScreen: String { case follow, laptop, monitor }
+    @Published var pillScreen: PillScreen = PillScreen(rawValue: UserDefaults.standard.string(forKey: "pillScreen") ?? "")
+        ?? .follow {
+        didSet { UserDefaults.standard.set(pillScreen.rawValue, forKey: "pillScreen"); onPlacementChange?() }
+    }
+    var onPlacementChange: (() -> Void)?
+
     /// The screen's notch (0 = none) and menu-bar height, so the closed bar can hug the notch.
     @Published var notchWidth: CGFloat = 0
     @Published var topInset: CGFloat = 24
@@ -454,6 +463,12 @@ final class Store: ObservableObject {
         if mode == .edit { submitEdit(); return }
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        // Only trust a preview made for exactly this line (typing fast can outrun it).
+        let fresh = preview?.text?.trimmingCharacters(in: .whitespacesAndNewlines) == text ? preview : nil
+        if !forceTimer, fresh?.action == "command" || (fresh == nil && preview?.action == "command") {
+            submitCommand(text, say: fresh?.label ?? preview?.label ?? text)
+            return
+        }
         let willLog = !forceTimer && preview?.action == "log"
         if !willLog {  // optimistic: show the timer immediately
             let label = forceTimer ? (preview?.label ?? text) : text
@@ -468,6 +483,22 @@ final class Store: ObservableObject {
         Task {
             try? await Task.sleep(for: .seconds(flash != nil ? 1.2 : 0.5))
             onSubmitted?()
+            flash = nil
+        }
+    }
+
+    /// A typed command ("smoke break", "back", "deep focus", "high"): the server decides and does it,
+    /// then the bar shows the result. No optimistic guess, so it can't flash the wrong state.
+    private func submitCommand(_ text: String, say: String) {
+        input = ""; preview = nil
+        Sound.mode.play()
+        flash = say.prefix(1).uppercased() + say.dropFirst()
+        Task {
+            do { try await API.post("log", ["text": text, "source": "button"]) }
+            catch { self.error = error.localizedDescription; self.flash = nil }
+            await refreshAll()
+            try? await Task.sleep(for: .seconds(0.9))
+            if self.error == nil { onSubmitted?() }
             flash = nil
         }
     }

@@ -16,6 +16,25 @@ Keys are grouped by **what kind of thing they do**, so a new feature has an obvi
 | **Layers** | ⌘ + letter | Describe *how you are* on the current task. They stack (focus, states) |
 | **Actions** | ⌘ + symbol | Do something to what's selected (stop, delete) |
 
+## Say it instead (v0.6): typing is the main way, keys are shortcuts
+
+Type what you mean and press ⏎. The hint above the bar shows what will happen first.
+Works with Wispr Flow dictation too (⌥L, dictate, ⏎). Code: `server/daylog/intents.py`.
+
+| Type (or dictate) | Does |
+|---|---|
+| `smoke break` · `smoke` · `going on a smoke break` | Smoke break (comes back high) |
+| `walk` · `break` · `brb` · `stepping away` | Walk break |
+| `back` · `I'm back` | End the break and resume the task (or come back from ghost) |
+| `focus` · `locked in` / `deep focus` / `hyperfocus` · `in the zone` / `focus off` | Focus tiers |
+| `high` · `drunk` · `caffeinated` · `coffee` / `not high anymore` · `sober` | Substances on / off |
+| `ghost` · `ghost: dinner` · `ghost mode` / `online` | Ghost on / off |
+| `stop` · `done` | Stop the timer |
+| `working on daylog, little high` | Starts the task **and** turns high on |
+| `Coffee, high, change the status to deep focus.` | All three, in order (dictation style) |
+
+⇧⏎ always logs the line as a plain task, never a command.
+
 ## Today (shipped)
 
 | Key | Where | Does |

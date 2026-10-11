@@ -139,12 +139,14 @@ struct Timeline: Decodable {
 
 /// What the server would do with the current line (live preview).
 struct LinePreview: Decodable, Equatable {
-    let action: String  // "log" or "timer"
+    let action: String  // "log", "timer" or "command" (typed: "smoke break", "deep focus"…)
     let label: String
     let start: String?
     let end: String?
     let minutes: Int?
     let untilNow: Bool?
+    var text: String? = nil      // the line this preview is for (to ignore a stale preview)
+    var also: [String]? = nil    // substances a task line turns on/off: ["high on"]
 }
 
 /// One stop when scrolling back: a logged block, a meeting, or an untracked gap.

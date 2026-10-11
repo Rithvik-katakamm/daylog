@@ -24,7 +24,7 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from . import db, parse, timeline, wispr
+from . import db, intents, parse, timeline, wispr
 
 log = logging.getLogger("daylog")
 
@@ -409,16 +409,62 @@ async def add_note(body: Note):
 @app.get("/parse")
 async def parse_line(text: str):
     """What would /log do with this line? Used for the live preview while typing."""
-    return _describe(parse.parse(text))
+    cmds = intents.commands(text)
+    if cmds:
+        return {"action": "command", "label": " · ".join(c.say for c in cmds), "text": text}
+    out = _describe(parse.parse(text)) | {"text": text}
+    if out["action"] == "timer":
+        also = [f"{n} {'on' if on else 'off'}" for n, on in intents.states(text)]
+        if also:
+            out["also"] = also
+    return out
+
+
+async def _run(cmd: intents.Command, source: str) -> dict:
+    """Do a typed command through the same rules as its key would."""
+    a = cmd.args
+    if cmd.action == "break":
+        await break_start(Break(kind=a["kind"], source=source))
+    elif cmd.action == "back":
+        b, g = timeline.on_break(conn()), timeline.ghost(conn())
+        if b or (g and g["data"].get("from_break")):
+            await break_end(source)
+        elif g:
+            _end_ghost(source)
+        else:
+            raise HTTPException(409, "you're not away")
+    elif cmd.action == "focus":
+        await set_focus(Focus(tier=a["tier"], source=source))
+    elif cmd.action == "state":
+        for name, on in a["states"]:
+            _set_state(name, on, source)
+    elif cmd.action == "ghost":
+        await ghost_on(Ghost(status=a["status"], source=source))
+    elif cmd.action == "online":
+        if not _end_ghost(source):
+            raise HTTPException(409, "not in ghost mode")
+    elif cmd.action == "stop":
+        if not _stop_running(source):
+            raise HTTPException(409, "no timer is running")
+    return {"action": "command", "did": cmd.say, **timeline.now_state(conn())}
 
 
 @app.post("/log", status_code=201)
 async def log_line(body: Line):
-    """One line in, the right event out: a time in the text logs it, otherwise starts a timer.
-    The same endpoint the panel, the phone, or a shortcut can call."""
+    """One line in, the right thing out: a command ("smoke break", "deep focus") does it; a time
+    in the text logs a past block; anything else starts a timer, turning on any substance it
+    mentions ("working on daylog, little high"). The same endpoint the bar, phone or an agent uses."""
+    cmds = None if body.timer else intents.commands(body.text)
+    if cmds:
+        out: dict = {}
+        for c in cmds:  # in the order said: "smoke break, then high" works step by step
+            out = await _run(c, body.source)
+        return out | {"did": " · ".join(c.say for c in cmds)}
     p = parse.parse(body.text)
     if body.timer or not p.is_range:
         await timer_start(TimerStart(label=p.label if p.is_range else body.text, source=body.source))
+        for name, on in intents.states(body.text):
+            _set_state(name, on, body.source)
         return {"action": "timer", **timeline.now_state(conn())}
     row = db.append(conn(), kind="claim", type="entry.log", source=body.source,
                     start=p.start, end=p.end, label=p.label.strip())

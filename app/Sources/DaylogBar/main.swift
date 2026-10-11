@@ -50,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async { self?.applyRest() }
         }
         store.onSubmitted = { [weak self] in self?.hide() }
+        store.onPlacementChange = { [weak self] in DispatchQueue.main.async { self?.placePanel() } }
         modeWatch = store.$mode.removeDuplicates().sink { [weak self] m in
             DispatchQueue.main.async { self?.placePanel(menu: m == .menu) }
         }
@@ -194,8 +195,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: placement: top-center, just under the menu bar, on the screen your cursor is on
 
     private func placePanel(menu: Bool = false) {
-        let scr = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
-            ?? NSScreen.screens[0]
+        let cursor = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) }
+        let laptop = NSScreen.screens.first { $0.safeAreaInsets.top > 0 }
+        let monitor = NSScreen.screens.first { $0.safeAreaInsets.top == 0 }
+        let scr: NSScreen = switch store.pillScreen {
+            case .laptop: laptop ?? cursor ?? NSScreen.screens[0]
+            case .monitor: monitor ?? cursor ?? NSScreen.screens[0]
+            case .follow: cursor ?? NSScreen.main ?? NSScreen.screens[0]
+        }
         let f = scr.frame
         // The notch: macOS reports the usable areas left and right of it; the gap is the camera.
         var notch: CGFloat = 0

@@ -16,14 +16,15 @@ Technical work → Linear (team RIT). Product/design questions → Notion.
 | **Breath** | ui | Slow pulse while closed when something is on | `Breathing` | Shipped | Watch whether it annoys over hours |
 | **Text size** | ui, ux | ⌘= / ⌘− / ⌘0 | `fs()`, `Store.resizeText` | Shipped v0.3 | Closed pill ears don't grow with it well |
 | **Side ring** | ui | Status ring on the right edge | `SideRing` | Off by default (in the way) | Keep or delete after the UX talk |
-| **Monitor mode** | ux | No notch → a small tab at the top | `placePanel` | Works, untested by eye | Which screen should own the pill? |
+| **Monitor mode** | ux, ui | No notch → one row: full title, ▲s, time | `monitorRow`, `placePanel`, `PillScreen` | Shipped v0.6; ⌘K: pill on MacBook / monitor / follow cursor | Style it further (RIT-82) |
 
 ## UX: commands
 
 | Component | Layer | What it is | Code | State | Open problems |
 |---|---|---|---|---|---|
-| **Key commands** | ux | ⌘F focus, ⌘B/⌘⇧B breaks, ⌘G/⌘I/⌘E substances, ⌘N, ⌘O, ⌘K | `handleKey`, `CommandMenu.swift`, `docs/ui/keys.md` | Shipped | **Too many keys to remember** (Oct 11). Next: type what you mean ("smoke break") → Smart capture |
-| **Smart capture** | ux, ai | Typed line → status, clean title, time fixes, juggling | not built (RIT-78, RIT-52) | Next pivot | Keyword baseline first (he writes it), then a model; eval both |
+| **Key commands** | ux | ⌘F focus, ⌘B/⌘⇧B breaks, ⌘G/⌘I/⌘E substances, ⌘N, ⌘O, ⌘K | `handleKey`, `CommandMenu.swift`, `docs/ui/keys.md` | Shipped; now shortcuts, not the main way | — |
+| **Typed commands** | ux, backend | Say it: "smoke break", "back", "deep focus", "coffee, high, deep focus" (also via Wispr dictation) | `server/daylog/intents.py`, `/parse`, `/log` | MVP shipped v0.6 (keyword rules, 50+ tests) | Rules miss anything unusual; "coffee" anywhere = caffeinated. Next: a model + eval vs these rules (RIT-78) |
+| **Smart capture** | ux, ai | Model-backed: understand anything typed, clean titles, time fixes, juggling | not built (RIT-78, RIT-52) | After living with the MVP | Data shape decided at typing time (data talk, RIT-70) |
 
 ## Backend
 
