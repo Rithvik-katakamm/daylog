@@ -44,7 +44,16 @@ enum Theme {
     static let open = Animation.spring(response: 0.32, dampingFraction: 0.8)
     static let barSize = CGSize(width: 560, height: 50)
     static let ear: CGFloat = 100  // width of each side of the closed pill, beside the notch
+
+    /// Text size multiplier (⌘= / ⌘− / ⌘0), remembered between launches.
+    static var textScale: CGFloat = {
+        let v = UserDefaults.standard.double(forKey: "textScale")
+        return v > 0 ? CGFloat(v) : 1
+    }()
 }
+
+/// A font size, scaled by the user's text size (⌘= / ⌘−).
+func fs(_ size: CGFloat) -> CGFloat { (size * Theme.textScale).rounded() }
 
 struct BarView: View {
     @ObservedObject var store: Store
@@ -75,8 +84,8 @@ struct BarView: View {
 
     private var devTag: some View {
         HStack(spacing: 6) {
-            Text("DEV").font(.system(size: 10, weight: .heavy, design: .monospaced))
-            Text("testing · nothing is logged").font(.system(size: 10))
+            Text("DEV").font(.system(size: fs(10), weight: .heavy).monospacedDigit())
+            Text("testing · nothing is logged").font(.system(size: fs(10)))
                 .foregroundStyle(Theme.muted)
         }
         .foregroundStyle(Theme.text)
@@ -93,11 +102,12 @@ struct BarView: View {
     /// same shape down into the bar; closing shrinks it back. With no notch it's a small tab.
     private var bar: some View {
         let open = store.isOpen
-        let ear = Theme.ear
+        let ear = Theme.ear * Theme.textScale
         let closedSize = CGSize(width: store.notchWidth + ear * 2, height: store.topInset)
         let openSize = CGSize(width: Theme.barSize.width, height: store.topInset + Theme.barSize.height)
         let size = open ? openSize : closedSize
-        let radius: CGFloat = open ? 22 : 9
+        // Pill-like: the closed pill's corners are half its height; the bar's are generous too.
+        let radius: CGFloat = open ? 26 : store.topInset * 0.5
         // One input line; the ring says which mode you're in.
         let ring: Color = switch store.mode {
             case .input: Theme.statusColor(store)
@@ -117,19 +127,20 @@ struct BarView: View {
             }
             .opacity(open ? 1 : 0)
             // Closed: a glance at the ears beside the camera.
-            restRow(ear: ear)
+            restRow(ear: Theme.ear * Theme.textScale)
                 .frame(height: store.topInset)
                 .opacity(open ? 0 : 0.85)
         }
         .frame(width: size.width, height: size.height, alignment: .top)
         .clipShape(NotchShape(radius: radius))
         .background(NotchShape(radius: radius).fill(Theme.chrome))
-        .overlay(NotchShape(radius: radius, closed: false).stroke(ring.opacity(open ? 0.85 : 0.6), style: StrokeStyle(
-            lineWidth: (open ? 1.5 : 1) + CGFloat(tier) * 0.5, dash: dashed ? [6, 4] : [])))
-        // Substances: one blended glow just outside.
+        // The neon tube: bloom, colored glass, hot core (see docs/ui/neon.md).
+        .overlay(NeonTube(shape: NotchShape(radius: radius, closed: false), color: ring,
+                          heat: tier, dashed: dashed, dim: !open))
+        // Substances: one blended halo just outside the tube.
         .overlay(OuterRings(colors: Theme.stateColors(store.states), shape: NotchShape(radius: radius, closed: false),
-                            opacity: open ? 0.85 : 0.6, spacing: open ? 3.5 : 2.5))
-        // Focus glow: brighter the deeper you are; breathes slowly while closed.
+                            opacity: open ? 0.85 : 0.65, spacing: open ? 4 : 3))
+        // Focus heat: the bloom grows with the tier and breathes while closed.
         .background(NotchShape(radius: radius).fill(.clear)
             .shadow(color: ring.opacity(lively || open ? 0.18 + Double(tier) * 0.14 : 0),
                     radius: (open ? 10 : 5) + CGFloat(tier) * (open ? 7 : 3))
@@ -190,19 +201,19 @@ struct BarView: View {
             Color.clear.frame(width: store.notchWidth)
             HStack(spacing: 4) {
                 if let f = store.timer?.focus, f > 0, store.onBreak == nil, store.ghost == nil {
-                    Text(String(repeating: "▲", count: f)).font(.system(size: 7, weight: .bold)).foregroundStyle(color)
+                    Text(String(repeating: "▲", count: f)).font(.system(size: fs(7), weight: .bold)).foregroundStyle(color)
                 }
                 if let start {
                     TimelineView(.periodic(from: .now, by: 30)) { ctx in
                         Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(start))))
-                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .font(.system(size: fs(11), weight: .semibold).monospacedDigit())
                             .foregroundStyle(color)
                     }
                 }
             }
             .frame(width: ear - 12, alignment: .trailing).padding(.trailing, 12)
         }
-        .font(.system(size: 11, weight: .medium))
+        .font(.system(size: fs(11), weight: .medium))
         .foregroundStyle(Theme.text)
     }
 
@@ -234,7 +245,7 @@ struct BarView: View {
                 Text(store.timer.map { "note · \($0.label)" } ?? "note")
                     .lineLimit(1).truncationMode(.tail).frame(maxWidth: 170, alignment: .leading)
             }
-            .font(.system(size: 12, weight: .medium))
+            .font(.system(size: fs(12), weight: .medium))
             .foregroundStyle(Theme.note)
             .padding(.horizontal, 10).frame(height: 30)
             .background(Capsule().fill(Theme.note.opacity(0.13)))
@@ -243,12 +254,12 @@ struct BarView: View {
                 Image(systemName: "moon.zzz.fill")
                 Text("ghost")
             }
-            .font(.system(size: 12, weight: .semibold))
+            .font(.system(size: fs(12), weight: .semibold))
             .foregroundStyle(Theme.ghost)
             .padding(.horizontal, 10).frame(height: 30)
             .background(Capsule().fill(Theme.ghost.opacity(0.14)))
         case .menu:
-            Text("⌘K").font(.system(size: 11, weight: .bold, design: .monospaced))
+            Text("⌘K").font(.system(size: fs(11), weight: .bold).monospacedDigit())
                 .foregroundStyle(Theme.text)
                 .padding(.horizontal, 9).frame(height: 26)
                 .background(Capsule().fill(Color.white.opacity(0.1)))
@@ -260,7 +271,7 @@ struct BarView: View {
                     Text(Time.clockString(store.editEnd)).fontWeight(.bold)
                     Text("· " + Time.duration(store.editEnd.timeIntervalSince(t.start)))
                 }
-                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .font(.system(size: fs(12), weight: .medium).monospacedDigit())
                 .foregroundStyle(Theme.past)
                 .padding(.horizontal, 10).frame(height: 30)
                 .background(Capsule().fill(Theme.past.opacity(0.13)))
@@ -269,7 +280,7 @@ struct BarView: View {
         case .fill:
             if let gap = store.fillItem {
                 Text(gap.range)
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .font(.system(size: fs(12), weight: .semibold).monospacedDigit())
                     .foregroundStyle(Theme.past)
                     .padding(.horizontal, 10).frame(height: 30)
                     .background(Capsule().fill(Theme.past.opacity(0.13)))
@@ -288,7 +299,7 @@ struct BarView: View {
     private func field(_ prompt: String) -> some View {
         TextField("", text: $store.input, prompt: Text(prompt).foregroundStyle(Theme.muted))
             .textFieldStyle(.plain)
-            .font(.system(size: 15))
+            .font(.system(size: fs(15)))
             .foregroundStyle(Theme.text)
             .focused($inputFocused)
             .onSubmit { store.submit() }
@@ -301,40 +312,40 @@ struct BarView: View {
             : Theme.taskColor(focus: item.focusPeak ?? 0)
         return HStack(spacing: 12) {
             if item.isNote {
-                Image(systemName: "note.text").font(.system(size: 11)).foregroundStyle(color)
+                Image(systemName: "note.text").font(.system(size: fs(11))).foregroundStyle(color)
             } else {
                 Circle().fill(item.isGap ? .clear : color).overlay(Circle().strokeBorder(color, lineWidth: 1))
                     .frame(width: 7, height: 7)
             }
             Text(item.isNote ? Time.clockString(item.startDate) : item.range)
-                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .font(.system(size: fs(12), weight: .medium).monospacedDigit())
                 .foregroundStyle(Theme.muted)
             Text(item.isGap ? "untracked" : (item.label ?? ""))
-                .font(.system(size: 15, weight: item.isGap ? .regular : .medium))
+                .font(.system(size: fs(15), weight: item.isGap ? .regular : .medium))
                 .italic(item.isGap)
                 .foregroundStyle(item.isGap ? Theme.muted : Theme.text)
                 .lineLimit(1).truncationMode(.tail)
             if let f = item.focusPeak, f > 0 {
                 Text(String(repeating: "▲", count: f))
-                    .font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.taskColor(focus: f))
+                    .font(.system(size: fs(9), weight: .bold)).foregroundStyle(Theme.taskColor(focus: f))
             }
             Spacer(minLength: 8)
             Text(item.isNote ? "" : Time.minutes(item.minutes))
-                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                .font(.system(size: fs(13), weight: .semibold).monospacedDigit())
                 .foregroundStyle(item.isGap ? Theme.muted : Theme.text)
         }
     }
 
     private func breakChip(_ b: BreakInfo) -> some View {
         HStack(spacing: 7) {
-            Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").font(.system(size: 10))
+            Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").font(.system(size: fs(10)))
             Text(b.label)
             TimelineView(.periodic(from: .now, by: 1)) { ctx in
                 Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(b.start)), withSeconds: true))
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .font(.system(size: fs(12), weight: .semibold).monospacedDigit())
             }
         }
-        .font(.system(size: 12, weight: .medium))
+        .font(.system(size: fs(12), weight: .medium))
         .foregroundStyle(Theme.away)
         .padding(.horizontal, 10).frame(height: 30)
         .background(Capsule().fill(Theme.away.opacity(0.14)))
@@ -342,14 +353,14 @@ struct BarView: View {
 
     private func ghostChip(_ g: GhostInfo) -> some View {
         HStack(spacing: 7) {
-            Image(systemName: "moon.zzz.fill").font(.system(size: 10))
+            Image(systemName: "moon.zzz.fill").font(.system(size: fs(10)))
             Text(g.status).lineLimit(1).truncationMode(.tail).frame(maxWidth: 170, alignment: .leading)
             TimelineView(.periodic(from: .now, by: 30)) { ctx in
                 Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(g.start))))
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .font(.system(size: fs(12), weight: .semibold).monospacedDigit())
             }
         }
-        .font(.system(size: 12, weight: .medium))
+        .font(.system(size: fs(12), weight: .medium))
         .foregroundStyle(Theme.ghost)
         .padding(.horizontal, 10).frame(height: 30)
         .background(Capsule().fill(Theme.ghost.opacity(0.14)))
@@ -363,17 +374,17 @@ struct BarView: View {
             Text(t.label).lineLimit(1).truncationMode(.tail).frame(maxWidth: 170, alignment: .leading)
             if let f = t.focus, f > 0 {
                 Text(String(repeating: "▲", count: f))
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: fs(9), weight: .bold))
                     .foregroundStyle(tint)
                     .help(Store.focusNames[f])
             }
             TimelineView(.periodic(from: .now, by: 1)) { ctx in
                 Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(t.start)), withSeconds: true))
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .font(.system(size: fs(12), weight: .semibold).monospacedDigit())
                     .foregroundStyle(tint)
             }
         }
-        .font(.system(size: 12, weight: .medium))
+        .font(.system(size: fs(12), weight: .medium))
         .foregroundStyle(Theme.text)
         .padding(.horizontal, 10).frame(height: 30)
         .background(Capsule().fill(tint.opacity(0.13)))
@@ -386,20 +397,20 @@ struct BarView: View {
         let items = store.menuItems
         return VStack(alignment: .leading, spacing: 1) {
             if items.isEmpty {
-                Text("No matching command").font(.system(size: 12)).foregroundStyle(Theme.muted)
+                Text("No matching command").font(.system(size: fs(12))).foregroundStyle(Theme.muted)
                     .padding(.horizontal, 12).padding(.vertical, 8)
             }
             ForEach(Array(items.enumerated()), id: \.element.id) { i, cmd in
                 if i == 0 || items[i - 1].group != cmd.group {
                     Text(cmd.group.rawValue)
-                        .font(.system(size: 9, weight: .bold)).tracking(1.2)
+                        .font(.system(size: fs(9), weight: .bold)).tracking(1.2)
                         .foregroundStyle(Theme.muted)
                         .padding(.horizontal, 12).padding(.top, i == 0 ? 4 : 8).padding(.bottom, 2)
                 }
                 HStack {
-                    Text(cmd.title).font(.system(size: 13)).foregroundStyle(Theme.text)
+                    Text(cmd.title).font(.system(size: fs(13))).foregroundStyle(Theme.text)
                     Spacer()
-                    Text(cmd.shortcut).font(.system(size: 12, weight: .medium, design: .monospaced))
+                    Text(cmd.shortcut).font(.system(size: fs(12), weight: .medium).monospacedDigit())
                         .foregroundStyle(Theme.muted)
                 }
                 .padding(.horizontal, 12).frame(height: 28)
@@ -421,7 +432,7 @@ struct BarView: View {
 
     private var hintChip: some View {
         HStack(spacing: 6) { hintContent }
-            .font(.system(size: 12))
+            .font(.system(size: fs(12)))
             .lineLimit(1)
             .padding(.horizontal, 12).frame(height: 26)
             .background(Capsule().fill(Theme.chrome))
@@ -565,19 +576,21 @@ struct SideRing: View {
             TimelineView(.periodic(from: .now, by: 30)) { ctx in
                 let m = Int(ctx.date.timeIntervalSince(Time.parse(start)) / 60)
                 Text(m >= 60 ? "\(m / 60)h" : "\(m)")
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .font(.system(size: fs(9), weight: .bold, design: .rounded))
                     .foregroundStyle(color)
             }
         }
     }
 }
 
-/// The bar's outline: flat against the top edge of the screen, rounded at the bottom, so it reads
-/// as growing out of the notch. `closed: false` leaves the top edge open, for strokes.
+/// The bar's outline: it flows out of the top edge of the screen. Small concave shoulders where
+/// it meets the edge, and Apple-style continuous ("squircle") corners at the bottom: the curve
+/// starts earlier and eases in, instead of a plain circular arc. `closed: false` = no top edge.
 struct NotchShape: InsettableShape {
     var radius: CGFloat
     var closed = true
     var inset: CGFloat = 0
+    var shoulder: CGFloat = 7
 
     var animatableData: CGFloat {
         get { radius }
@@ -586,15 +599,30 @@ struct NotchShape: InsettableShape {
 
     func path(in rect: CGRect) -> Path {
         let minX = rect.minX + inset, maxX = rect.maxX - inset
-        let bottom = rect.maxY - inset, top = rect.minY - 4  // past the screen edge: no visible top line
-        let r = max(0, min(radius, (maxX - minX) / 2, bottom - rect.minY))
+        let top = rect.minY, bottom = rect.maxY - inset
+        let r = max(0, min(radius, (maxX - minX) / 2.6, (bottom - top) / 1.3))
+        let k: CGFloat = 1.28   // how far before the corner the curve starts (continuous corners)
+        let c: CGFloat = 0.36   // control-point pull
+        let sh = shoulder
         var p = Path()
-        p.move(to: CGPoint(x: minX, y: top))
-        p.addLine(to: CGPoint(x: minX, y: bottom - r))
-        p.addQuadCurve(to: CGPoint(x: minX + r, y: bottom), control: CGPoint(x: minX, y: bottom))
-        p.addLine(to: CGPoint(x: maxX - r, y: bottom))
-        p.addQuadCurve(to: CGPoint(x: maxX, y: bottom - r), control: CGPoint(x: maxX, y: bottom))
-        p.addLine(to: CGPoint(x: maxX, y: top))
+        // left shoulder: from the screen edge, curving down into the side
+        p.move(to: CGPoint(x: minX - sh, y: top - 4))
+        p.addLine(to: CGPoint(x: minX - sh, y: top))
+        p.addQuadCurve(to: CGPoint(x: minX, y: top + sh), control: CGPoint(x: minX, y: top))
+        // left side, bottom-left continuous corner
+        p.addLine(to: CGPoint(x: minX, y: bottom - r * k))
+        p.addCurve(to: CGPoint(x: minX + r * k, y: bottom),
+                   control1: CGPoint(x: minX, y: bottom - r * c),
+                   control2: CGPoint(x: minX + r * c, y: bottom))
+        // bottom, bottom-right corner, right side
+        p.addLine(to: CGPoint(x: maxX - r * k, y: bottom))
+        p.addCurve(to: CGPoint(x: maxX, y: bottom - r * k),
+                   control1: CGPoint(x: maxX - r * c, y: bottom),
+                   control2: CGPoint(x: maxX, y: bottom - r * c))
+        p.addLine(to: CGPoint(x: maxX, y: top + sh))
+        // right shoulder back to the edge
+        p.addQuadCurve(to: CGPoint(x: maxX + sh, y: top), control: CGPoint(x: maxX, y: top))
+        p.addLine(to: CGPoint(x: maxX + sh, y: top - 4))
         if closed { p.closeSubpath() }
         return p
     }
@@ -603,5 +631,33 @@ struct NotchShape: InsettableShape {
         var s = self
         s.inset += amount
         return s
+    }
+}
+
+/// Neon: a glass tube of colored light. Three layers, outermost first: a soft bloom (light
+/// scattering in the air), the tube itself (colored, slightly soft), and a hot core (near-white,
+/// thin, sharp). The core is what makes it read as *lit* rather than *painted*.
+struct NeonTube<S: Shape>: View {
+    let shape: S
+    let color: Color
+    var heat: Int = 0        // focus tier 0-3: a brighter, thicker tube
+    var dashed = false       // the past: an unlit, dashed tube
+    var dim = false          // closed pill: a little quieter
+
+    var body: some View {
+        let h = CGFloat(heat)
+        let dash: [CGFloat] = dashed ? [6, 4] : []
+        let lit = dashed ? 0.55 : (dim ? 0.8 : 1)
+        ZStack {
+            shape.stroke(color, style: StrokeStyle(lineWidth: 5 + h * 2, dash: dash))
+                .blur(radius: 6 + h * 2).opacity(0.45 * lit)
+            shape.stroke(color, style: StrokeStyle(lineWidth: 1.8 + h * 0.5, dash: dash))
+                .blur(radius: 0.6).opacity(0.95 * lit)
+            if !dashed {
+                shape.stroke(Color.white.opacity(0.55 + 0.1 * h), style: StrokeStyle(lineWidth: 0.6 + h * 0.15))
+                    .blendMode(.plusLighter).opacity(lit)
+            }
+        }
+        .allowsHitTesting(false)
     }
 }

@@ -16,6 +16,20 @@ final class Store: ObservableObject {
         ?? .pill {
         didSet { UserDefaults.standard.set(restStyle.rawValue, forKey: "restStyle") }
     }
+    /// Text size (⌘= / ⌘− / ⌘0). Views read Theme.textScale; this publishes the change.
+    @Published var textScale: CGFloat = Theme.textScale {
+        didSet {
+            Theme.textScale = textScale
+            UserDefaults.standard.set(Double(textScale), forKey: "textScale")
+        }
+    }
+
+    func resizeText(_ step: Int) {
+        let next = step == 0 ? 1 : min(1.4, max(0.8, textScale + CGFloat(step) * 0.1))
+        textScale = (next * 10).rounded() / 10
+        flashBriefly("text size \(Int(textScale * 100))%")
+    }
+
     /// The screen's notch (0 = none) and menu-bar height, so the closed bar can hug the notch.
     @Published var notchWidth: CGFloat = 0
     @Published var topInset: CGFloat = 24

@@ -290,6 +290,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case (34, .input) where cmd: store.toggleState("intoxicated")      // ⌘I
         case (14, .input) where cmd: store.toggleState("caffeinated")      // ⌘E (espresso)
         case (47, _) where cmd: store.stop()                               // ⌘. stop
+        case (24, _) where cmd: store.resizeText(1)                        // ⌘= bigger text
+        case (27, _) where cmd: store.resizeText(-1)                       // ⌘− smaller
+        case (29, _) where cmd: store.resizeText(0)                        // ⌘0 reset
         case (51, .browse) where cmd: store.deleteCurrent()                // ⌘⌫ delete
         default: return false
         }
