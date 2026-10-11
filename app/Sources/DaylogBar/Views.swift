@@ -71,7 +71,8 @@ struct BarView: View {
             }
             .opacity(store.isOpen ? 1 : 0)
             .offset(y: store.isOpen ? 0 : -10)
-            .animation(Theme.open.delay(store.isOpen ? 0.2 : 0), value: store.isOpen)
+            .animation(.spring(response: Motion.current.response, dampingFraction: 1)
+                .delay(store.isOpen ? Motion.current.contentDelay : 0), value: store.isOpen)
             if store.env == .dev { devTag }
             Spacer(minLength: 0)
         }
@@ -85,15 +86,17 @@ struct BarView: View {
         .onChange(of: store.mode) { DispatchQueue.main.async { inputFocused = true } }
     }
 
-    /// The drop (v2, Oct 11): widen in place on the notch, then fall straight down into the bar.
-    /// Closing is the exact same path in reverse: rise up, then narrow back into the notch.
+    /// The drop (v3, Oct 11 night: "crisp like Wispr"). Same path as v2 (widen on the notch, then
+    /// down; close in reverse) but compressed: near-critical damping (no wobble), short response,
+    /// tiny stagger. Every number is a knob in `Motion` (tunable live, see docs/ui/motion.md).
     private func liquid(_ open: Bool) {
+        let m = Motion.current
         if open {
-            withAnimation(.spring(response: 0.22, dampingFraction: 0.9)) { dropW = true }
-            withAnimation(.spring(response: 0.36, dampingFraction: 0.72).delay(0.12)) { dropH = true }
+            withAnimation(.spring(response: m.response * 0.8, dampingFraction: m.damping)) { dropW = true }
+            withAnimation(.spring(response: m.response, dampingFraction: m.damping).delay(m.stagger)) { dropH = true }
         } else {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) { dropH = false }
-            withAnimation(.spring(response: 0.22, dampingFraction: 0.9).delay(0.16)) { dropW = false }
+            withAnimation(.spring(response: m.closeResponse, dampingFraction: 1)) { dropH = false }
+            withAnimation(.spring(response: m.closeResponse * 0.8, dampingFraction: 1).delay(m.stagger)) { dropW = false }
         }
     }
 
@@ -147,12 +150,12 @@ struct BarView: View {
                 openRow.frame(height: Theme.barSize.height)
             }
             .opacity(open ? 1 : 0)
-            .animation(open ? .easeOut(duration: 0.18).delay(0.26) : .easeIn(duration: 0.08), value: open)
+            .animation(open ? .easeOut(duration: 0.12).delay(Motion.current.contentDelay) : .easeIn(duration: 0.06), value: open)
             // Closed: a glance at the ears beside the camera.
             restRow(ear: Theme.ear * Theme.textScale)
                 .frame(height: store.topInset)
                 .opacity(open ? 0 : 0.85)
-                .animation(open ? .easeIn(duration: 0.08) : .easeOut(duration: 0.2).delay(0.3), value: open)
+                .animation(open ? .easeIn(duration: 0.06) : .easeOut(duration: 0.14).delay(Motion.current.closeResponse), value: open)
         }
         .frame(width: size.width, height: size.height, alignment: .top)
         .clipShape(NotchShape(radius: radius))
@@ -739,5 +742,27 @@ struct NeonTube<S: Shape>: View {
         }
         .gpuLight()
         .allowsHitTesting(false)
+    }
+}
+
+/// The precision knobs for how the pill moves. Defaults are tuned for "crisp"; override any of
+/// them live without a rebuild, e.g. `defaults write com.rithvik.daylog motion.response 0.2`,
+/// then press ⌥L again. Read fresh on every open/close.
+struct Motion {
+    var response: Double       // seconds the spring takes to arrive (speed). Lower = snappier
+    var damping: Double        // 1 = no overshoot; lower = bounce/wobble (the "sloppy" feel)
+    var stagger: Double        // delay between widening and dropping
+    var contentDelay: Double   // when the text appears after the press
+    var closeResponse: Double  // speed of going back up
+
+    static let defaults = Motion(response: 0.22, damping: 0.9, stagger: 0.03, contentDelay: 0.08, closeResponse: 0.18)
+
+    static var current: Motion {
+        let d = UserDefaults.standard
+        func v(_ k: String, _ fallback: Double) -> Double { d.object(forKey: "motion." + k) as? Double ?? fallback }
+        let x = defaults
+        return Motion(response: v("response", x.response), damping: v("damping", x.damping),
+                      stagger: v("stagger", x.stagger), contentDelay: v("contentDelay", x.contentDelay),
+                      closeResponse: v("closeResponse", x.closeResponse))
     }
 }

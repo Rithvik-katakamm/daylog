@@ -237,16 +237,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         removeMonitors()  // never stack monitors if show() runs twice
         panel.ignoresMouseEvents = false
         placePanel()
+        // Start moving on the very next frame: show + animate first, take the keyboard right after.
+        // (Activating the app first cost a frame or two before anything moved.)
+        panel.orderFrontRegardless()
+        store.isOpen = true  // SwiftUI grows the bar down from the top of the screen
         if activate {
             let front = NSWorkspace.shared.frontmostApplication
             if front?.bundleIdentifier != Bundle.main.bundleIdentifier { previousApp = front }
             // Take the keyboard so you can type immediately (no click needed).
             NSApp.activate(ignoringOtherApps: true)
-            panel.makeKeyAndOrderFront(nil)
-        } else {
-            panel.orderFrontRegardless()
+            panel.makeKey()
         }
-        store.isOpen = true  // SwiftUI grows the bar down from the top of the screen
         if activate { Sound.open.play() }
         // Focus the field once SwiftUI has laid it out.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in self?.store.focusRequest += 1 }
@@ -317,7 +318,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Give the keyboard back to whatever you were doing before opening the bar.
         if restoreFocus, let app = previousApp { app.activate() }
         // Let the shrink animation play, then take the window away.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) { [weak self] in  // let the liquid retract
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in  // let it retract first
             guard let self, !self.store.isOpen else { return }
             if self.store.showsPill {
                 self.panel.ignoresMouseEvents = true  // stays as the dimmed pill
