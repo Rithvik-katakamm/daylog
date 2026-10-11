@@ -94,4 +94,7 @@ importers (Wispr, Whoop,                                   ─▶ Notion dashboa
 - Explain the *why* of every architectural choice. He wants to understand the build
   well enough to improve it himself (learning HTTP and backend craft through it).
 - Commit each slice; push roughly every 2 commits.
+- **Every commit ends with a `Layer:` trailer** (one or more of: taste, ui, ux, product, backend,
+  infra, ai). At the end of the build we join commits with his Day Log blocks to measure hours and
+  enjoyment (focus tier, notes) per layer. Layer definitions: Notion "Product & design talk".
 - Nothing outward (posts, messages to humans) without his approval.
