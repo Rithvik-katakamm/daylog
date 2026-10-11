@@ -21,6 +21,7 @@ Keys are grouped by **what kind of thing they do**, so a new feature has an obvi
 | Key | Where | Does |
 |---|---|---|
 | **⌥L** | anywhere | Open or close the bar (and take the keyboard) |
+| **⌥D** | anywhere | Open the bar in **dev mode** (separate test database, DEV tag); switches if already open |
 | ⏎ | typing | Start a timer, or log a past block if the text has a time (`15m`, `3:10-3:25`, `since 1pm`) |
 | ⇧⏎ | typing | Force a timer even if the text contains a time |
 | ↑ | empty line | Look back through logs, meetings, notes and gaps |
@@ -41,7 +42,6 @@ Keys are grouped by **what kind of thing they do**, so a new feature has an obvi
 
 | Key | Group | Does |
 |---|---|---|
-| **⌥D** | Global | Open the bar in **dev mode**: same UI, separate test database |
 | **⌘I** | Layer | Toggle **intoxicated** |
 | **⌘G** | Layer | Toggle **high** ("G" for green) |
 | ← / → | Navigate | Reserved: flip ghost ↔ tracker (RIT-43) |

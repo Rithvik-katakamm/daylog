@@ -32,7 +32,8 @@ Everything Day Log knows is a row in one SQLite table, `events`. Code: `server/d
 
 | Method | Path | Does |
 |---|---|---|
-| GET | `/health` | Up check |
+| GET | `/health` | Up check; `env` is `real` or `dev` |
+| POST | `/dev/reset` | Wipe the dev database (dev server only; 404 on real) |
 | GET | `/now` | Running timer (with focus), current app, meeting, ghost |
 | POST | `/timer/start`, `/timer/stop` | Start (auto-stops the old timer, ends ghost) / stop |
 | POST | `/log` | One line in: logs a past block if it has a time, else starts a timer |

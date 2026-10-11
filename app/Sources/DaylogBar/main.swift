@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import SwiftUI
 
 /// A borderless panel that can still take keyboard input (like Spotlight), without
@@ -14,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let recorder = ActivityRecorder()
     var panel: KeyPanel!
     var hotKey: HotKey?
+    var devHotKey: HotKey?
     var clickMonitor: Any?
     var keyMonitor: Any?
 
@@ -23,7 +25,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ note: Notification) {
         makePanel()
         store.onSubmitted = { [weak self] in self?.hide() }
-        hotKey = HotKey { [weak self] in MainActor.assumeIsolated { self?.toggle() } }
+        hotKey = HotKey(id: 1) { [weak self] in MainActor.assumeIsolated { self?.toggle(env: .real) } }
+        devHotKey = HotKey(keyCode: UInt32(kVK_ANSI_D), id: 2) { [weak self] in
+            MainActor.assumeIsolated { self?.toggle(env: .dev) }
+        }
         recorder.start()
         store.startPolling()
     }
@@ -61,11 +66,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: show / hide
 
-    func toggle() {
+    /// ⌥L toggles the real bar, ⌥D the dev bar. Pressing the other one while open switches.
+    func toggle(env: API.Env) {
         // Trust what's on screen, not just our flag, so the two can never drift apart.
         let open = store.isOpen && panel.isVisible
-        print("toggle: \(open ? "close" : "open")"); fflush(stdout)
-        open ? hide() : show()
+        print("toggle(\(env)): \(open ? (store.env == env ? "close" : "switch") : "open")"); fflush(stdout)
+        if open && store.env == env { hide(); return }
+        store.env = env
+        if open {
+            store.resetMode()
+            Task { await store.refreshAll() }
+        } else {
+            show()
+        }
     }
 
     /// The app you were in when you pressed ⌥L. Closing hands the keyboard back to it.

@@ -149,9 +149,30 @@ def _end_ghost(source: str):
 
 # ---------- routes ----------
 
+def is_dev() -> bool:
+    """The dev server (DAYLOG_DEV=1) holds test data only: ⌥D in the app points here."""
+    return os.environ.get("DAYLOG_DEV") == "1"
+
+
 @app.get("/health")
 async def health():
-    return {"ok": True, "db": str(db.db_path())}
+    return {"ok": True, "env": "dev" if is_dev() else "real", "db": str(db.db_path())}
+
+
+@app.post("/dev/reset")
+async def dev_reset():
+    """Wipe the dev database for a clean slate. Exists only on the dev server: the real
+    log is append-only and this route is a 404 there."""
+    if not is_dev():
+        raise HTTPException(404, "not found")
+    app.state.conn.close()
+    path = db.db_path()
+    for suffix in ("", "-wal", "-shm"):
+        p = path.with_name(path.name + suffix)
+        if p.exists():
+            p.unlink()
+    app.state.conn = db.connect()
+    return {"reset": True}
 
 
 @app.get("/now")

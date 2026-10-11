@@ -15,6 +15,8 @@ final class Store: ObservableObject {
     @Published var preview: LinePreview?
     @Published var flash: String?  // brief confirmation after an action
     @Published var isOpen = false   // drives the grow/shrink animation
+    /// Real or dev (⌥D). Dev talks to a separate server and database; colors stay identical.
+    @Published var env: API.Env = .real { didSet { API.env = env } }
 
     // Scrolling back through the past with ↑/↓.
     enum Mode: Equatable { case input, browse, fill, note, ghost, edit }

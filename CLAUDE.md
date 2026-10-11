@@ -10,6 +10,9 @@ Built for Rithvik first. Possible portfolio piece later.
 > **Vision lives in `docs/product/vision.md`** (public). Personal context and the original
 > vision sources live outside the repo (in the brain: `docs/daylog-private/`).
 > Notion is read-only context unless he says otherwise.
+> **"Vision note: …"** = append a dated entry (his words) to the Linear document "Vision notes"
+> on the Day Log project. Notes are thoughts, not work: promote to a Spike/issue only when
+> he decides. Never put vision notes in the public repo verbatim.
 > **Docs map: `docs/README.md`** (product / ui / backend / infra). Before adding a key, color
 > or sound, update `docs/ui/keys.md`, `colors.md` or `sounds.md` in the same commit.
 >

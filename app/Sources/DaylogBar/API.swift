@@ -3,7 +3,16 @@ import Foundation
 /// HTTP client for the daylog server. The app never touches the database directly;
 /// everything goes through the same API that agents use.
 enum API {
-    static let base = URL(string: ProcessInfo.processInfo.environment["DAYLOG_API"] ?? "http://127.0.0.1:7878")!
+    /// Real = your actual log. Dev = a separate server and database for testing (⌥D).
+    enum Env { case real, dev }
+
+    private static let realBase = URL(string: ProcessInfo.processInfo.environment["DAYLOG_API"] ?? "http://127.0.0.1:7878")!
+    private static let devBase = URL(string: ProcessInfo.processInfo.environment["DAYLOG_DEV_API"] ?? "http://127.0.0.1:7879")!
+
+    /// Which server the bar talks to right now; set on open (⌥L real, ⌥D dev).
+    static var env: Env = .real
+
+    static func base(_ e: Env? = nil) -> URL { (e ?? env) == .dev ? devBase : realBase }
 
     private static let session: URLSession = {
         let c = URLSessionConfiguration.ephemeral
@@ -23,23 +32,23 @@ enum API {
         var errorDescription: String? { message }
     }
 
-    static func get<T: Decodable>(_ path: String, query: [String: String] = [:]) async throws -> T {
-        var comps = URLComponents(url: base.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
+    static func get<T: Decodable>(_ path: String, query: [String: String] = [:], env: Env? = nil) async throws -> T {
+        var comps = URLComponents(url: base(env).appendingPathComponent(path), resolvingAgainstBaseURL: false)!
         if !query.isEmpty { comps.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) } }
         return try await send(URLRequest(url: comps.url!))
     }
 
     @discardableResult
-    static func post(_ path: String, _ body: [String: Any] = [:]) async throws -> Data {
-        var req = URLRequest(url: base.appendingPathComponent(path))
+    static func post(_ path: String, _ body: [String: Any] = [:], env: Env? = nil) async throws -> Data {
+        var req = URLRequest(url: base(env).appendingPathComponent(path))
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         return try await raw(req)
     }
 
-    static func delete(_ path: String) async throws {
-        var req = URLRequest(url: base.appendingPathComponent(path))
+    static func delete(_ path: String, env: Env? = nil) async throws {
+        var req = URLRequest(url: base(env).appendingPathComponent(path))
         req.httpMethod = "DELETE"
         _ = try await raw(req)
     }

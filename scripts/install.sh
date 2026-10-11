@@ -68,6 +68,12 @@ echo "→ launchd agents"
 write_agent com.rithvik.daylog.server \
   "<string>$UV</string><string>run</string><string>--project</string><string>$ROOT/server</string><string>uvicorn</string><string>daylog.api:app</string><string>--host</string><string>127.0.0.1</string><string>--port</string><string>7878</string>" \
   server "<key>WorkingDirectory</key><string>$ROOT/server</string>"
+# Dev server (⌥D): same code, separate database, importers off. Test data never touches
+# the real log, and POST /dev/reset only exists here.
+DEVDB="$HOME/Library/Application Support/daylog/daylog-dev.sqlite"
+write_agent com.rithvik.daylog.dev \
+  "<string>$UV</string><string>run</string><string>--project</string><string>$ROOT/server</string><string>uvicorn</string><string>daylog.api:app</string><string>--host</string><string>127.0.0.1</string><string>--port</string><string>7879</string>" \
+  server-dev "<key>WorkingDirectory</key><string>$ROOT/server</string><key>EnvironmentVariables</key><dict><key>DAYLOG_DEV</key><string>1</string><key>DAYLOG_DB</key><string>$DEVDB</string><key>DAYLOG_IMPORTERS</key><string>0</string></dict>"
 write_agent com.rithvik.daylog.app \
   "<string>$APP/Contents/MacOS/Daylog</string>" \
   app "<key>LimitLoadToSessionType</key><string>Aqua</string>"
@@ -78,5 +84,6 @@ for _ in $(seq 1 30); do
   echo -n "."; sleep 1
 done
 curl -fs http://127.0.0.1:7878/health && echo
-echo "✓ daylog installed. Press ⌥L to open it."
+curl -fs --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:7879/health >/dev/null && echo "  dev server up (:7879)"
+echo "✓ daylog installed. Press ⌥L to open it (⌥D = dev mode)."
 echo "  Logs: $LOGS"

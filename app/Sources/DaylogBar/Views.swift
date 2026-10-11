@@ -24,7 +24,8 @@ struct BarView: View {
     @FocusState private var inputFocused: Bool
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
+            if store.env == .dev { devTag }
             bar
             hintChip
                 .opacity(store.isOpen ? 1 : 0)
@@ -37,6 +38,21 @@ struct BarView: View {
         .onChange(of: store.focusRequest) { inputFocused = true }
         // Each mode swaps in a new field; give it the keyboard straight away.
         .onChange(of: store.mode) { DispatchQueue.main.async { inputFocused = true } }
+    }
+
+    // MARK: dev tag (⌥D): same colors, but nothing here touches the real log
+
+    private var devTag: some View {
+        HStack(spacing: 6) {
+            Text("DEV").font(.system(size: 10, weight: .heavy, design: .monospaced))
+            Text("testing · nothing is logged").font(.system(size: 10))
+                .foregroundStyle(Theme.muted)
+        }
+        .foregroundStyle(Theme.text)
+        .padding(.horizontal, 10).frame(height: 20)
+        .background(Capsule().fill(Theme.chrome))
+        .overlay(Capsule().strokeBorder(Color.white.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
+        .opacity(store.isOpen ? 1 : 0)
     }
 
     // MARK: the bar

@@ -104,7 +104,7 @@ final class ActivityRecorder {
         Task {
             while let next = queue.first {
                 do {
-                    try await API.post("observations", next)
+                    try await API.post("observations", next, env: .real)  // never into the dev DB
                     queue.removeFirst()
                 } catch let f as API.Failure where (400..<500).contains(f.status) {
                     queue.removeFirst()  // the server rejected it; retrying won't help

@@ -324,3 +324,26 @@ def test_switching_tasks_resets_focus(client, clock):
 def test_focus_tier_validated(client):
     client.post("/timer/start", json={"label": "a"})
     assert client.post("/focus", json={"tier": 4}).status_code == 422
+
+
+# ---------- dev mode (RIT-58) ----------
+
+def test_health_reports_env(client):
+    assert client.get("/health").json()["env"] == "real"
+
+
+def test_dev_reset_is_refused_on_the_real_server(client):
+    assert client.post("/dev/reset").status_code == 404
+
+
+def test_dev_reset_wipes_only_the_dev_db(tmp_path, monkeypatch):
+    monkeypatch.setenv("DAYLOG_DB", str(tmp_path / "dev.sqlite"))
+    monkeypatch.setenv("DAYLOG_IMPORTERS", "0")
+    monkeypatch.setenv("DAYLOG_DEV", "1")
+    from daylog.api import app
+    with TestClient(app) as c:
+        assert c.get("/health").json()["env"] == "dev"
+        c.post("/entries", json={"label": "test", "minutes": 5})
+        assert c.get("/timeline").json()["claims"]
+        assert c.post("/dev/reset").status_code == 200
+        assert c.get("/timeline").json()["claims"] == []

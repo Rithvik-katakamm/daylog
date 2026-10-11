@@ -45,13 +45,19 @@ scripts/uninstall.sh   # remove (data stays)
   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.rithvik.daylog.app.plist
   ```
 
-## PROPOSED: dev mode (⌥D)
+## Dev mode (⌥D)
 
-Make the scratch setup permanent, so he can test features without polluting his real log:
+Test features without polluting the real log.
 
-- A second always-on server, `com.rithvik.daylog.dev`, on `127.0.0.1:7879` with its own
-  database (`daylog-dev.sqlite`) and importers off.
-- **⌥D** opens the same bar pointed at the dev server, with the dev color (dashed cyan ring
-  plus a `DEV` chip). ⌥L always means real.
-- The Mac activity recorder keeps posting to the **real** server only.
-- A "reset dev data" command for a clean slate.
+| | Real (⌥L) | Dev (⌥D) |
+|---|---|---|
+| Server | `com.rithvik.daylog.server`, `:7878` | `com.rithvik.daylog.dev`, `:7879` (`DAYLOG_DEV=1`) |
+| Database | `daylog.sqlite` | `daylog-dev.sqlite` |
+| Importers (Wispr) | on | off |
+| Looks | normal | **identical colors** + a `DEV · testing · nothing is logged` tag above the bar |
+
+- The Mac activity recorder always posts to **real**, never to dev.
+- ⌥L / ⌥D while the bar is open switches between them; the same key again closes it.
+- Wipe dev data: `curl -X POST localhost:7879/dev/reset`. (This route is a 404 on the real
+  server.) It'll move into the command menu (RIT-60).
+- Agents testing UI changes should use ⌥D, never the real bar.
