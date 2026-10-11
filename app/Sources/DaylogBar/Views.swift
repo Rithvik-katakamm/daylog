@@ -547,8 +547,18 @@ struct OuterRings<S: InsettableShape>: View {
                 shape.inset(by: -spacing * 0.6).stroke(style, lineWidth: spacing * 0.9)
                     .blur(radius: spacing * 0.9).opacity(opacity)
             }
+            .gpuLight()
             .allowsHitTesting(false)
         }
+    }
+}
+
+extension View {
+    /// Render a light layer (blurs, glows) in one Metal pass instead of re-drawing each blur on
+    /// the CPU every animation frame: what lets the drop run at the display's 120 Hz. The padding
+    /// gives the blur room, since a Metal pass is clipped to its own bounds.
+    func gpuLight(room: CGFloat = 28) -> some View {
+        padding(room).drawingGroup().padding(-room)
     }
 }
 
@@ -677,6 +687,7 @@ struct NeonTube<S: Shape>: View {
                     .blendMode(.plusLighter).opacity(lit)
             }
         }
+        .gpuLight()
         .allowsHitTesting(false)
     }
 }

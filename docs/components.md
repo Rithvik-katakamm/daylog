@@ -1,0 +1,41 @@
+# Components
+
+Every part of Day Log we work on, by **layer** (taste · ui · ux · product · backend · infra · ai,
+defined in Notion "Product & design talk"). One row per component: what it is, where it lives,
+its state, and what's still wrong. Update the row in the same commit that changes the component.
+Technical work → Linear (team RIT). Product/design questions → Notion.
+
+## UI / UX: the pill
+
+| Component | Layer | What it is | Code | State (Oct 11) | Open problems |
+|---|---|---|---|---|---|
+| **Notch pill** | ui, ux, taste | The closed bar: a black body hugging the notch, task left, time right | `BarView.bar`, `restRow`, `NotchShape` | Shipped v0.2+. Height = full menu bar (38pt on 14" MBP; notch is 32×185) so it wraps the notch | Covers ~100pt of menu bar each side: hides menu items, feels bolted on. Needs to belong to the menu bar (see Linear) |
+| **The drop** | ui, ux | How the pill opens and closes | `BarView.liquid` | v2: widen on the notch, fall down; close reverses | Not smooth yet: blurred glow re-drawn on the CPU each frame. Moving glow to Metal (`gpuLight`) to reach 120 Hz |
+| **Neon tube** | ui, taste | The lit outline: bloom, glass, hot core. Says *what* + focus *heat* | `NeonTube` | Shipped v0.3 | Color-layer talk pending (Notion) |
+| **Halo** | ui | Substances as one blended glow (high neon green, rose, aqua) | `OuterRings` | Shipped v0.2, green brightened v0.4 | Part of the color talk |
+| **Breath** | ui | Slow pulse while closed when something is on | `Breathing` | Shipped | Watch whether it annoys over hours |
+| **Text size** | ui, ux | ⌘= / ⌘− / ⌘0 | `fs()`, `Store.resizeText` | Shipped v0.3 | Closed pill ears don't grow with it well |
+| **Side ring** | ui | Status ring on the right edge | `SideRing` | Off by default (in the way) | Keep or delete after the UX talk |
+| **Monitor mode** | ux | No notch → a small tab at the top | `placePanel` | Works, untested by eye | Which screen should own the pill? |
+
+## UX: commands
+
+| Component | Layer | What it is | Code | State | Open problems |
+|---|---|---|---|---|---|
+| **Key commands** | ux | ⌘F focus, ⌘B/⌘⇧B breaks, ⌘G/⌘I/⌘E substances, ⌘N, ⌘O, ⌘K | `handleKey`, `CommandMenu.swift`, `docs/ui/keys.md` | Shipped | **Too many keys to remember** (Oct 11). Next: type what you mean ("smoke break") → Smart capture |
+| **Smart capture** | ux, ai | Typed line → status, clean title, time fixes, juggling | not built (RIT-78, RIT-52) | Next pivot | Keyword baseline first (he writes it), then a model; eval both |
+
+## Backend
+
+| Component | Layer | What it is | Code | State | Open problems |
+|---|---|---|---|---|---|
+| **Event log** | backend | Append-only SQLite, edits as new events | `db.py` | Shipped | — |
+| **Substances** | backend | `state.set` events, global | `api.py /state`, `timeline.active_states` | Shipped v0.2 | Old labels contain "high" (data talk, RIT-70) |
+| **Breaks** | backend | `break.start`; resumes the task; smoke → high; >1h → ~15 min + ghost | `api.py /break`, `timeline.expire_break` | Shipped v0.2 | Learn real break lengths (Smart capture) |
+
+## Infra
+
+| Component | Layer | What it is | Code | State | Open problems |
+|---|---|---|---|---|---|
+| **Channels** | infra | Stable (frozen tag) + Dev; for now stable = dev | `scripts/release.sh`, `dev.sh` | Auto-ship each checked build | Building on the Mac he uses: one instance rule; maybe a test user/VM later |
+| **Launch agents** | infra | launchd keeps server + app alive | `scripts/lib.sh write_agent` | Idempotent (no repeat "Background Items Added") | — |

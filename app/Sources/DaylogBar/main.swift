@@ -202,7 +202,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let l = scr.auxiliaryTopLeftArea, let r = scr.auxiliaryTopRightArea {
             notch = max(0, f.width - l.width - r.width)
         }
-        let menuBar = scr.safeAreaInsets.top > 0 ? scr.safeAreaInsets.top : max(f.maxY - scr.visibleFrame.maxY, 24)
+        // The full menu bar height (38pt on a 14" MacBook Pro; the notch itself is 32), so the closed
+        // pill's bottom edge lines up with the menu bar and wraps just past the notch.
+        let menuBar = max(f.maxY - scr.visibleFrame.maxY, scr.safeAreaInsets.top, 24)
         if store.notchWidth != notch { store.notchWidth = notch }
         if store.topInset != menuBar { store.topInset = menuBar }
         let size = menu ? Self.menuWindowSize : Self.windowSize
