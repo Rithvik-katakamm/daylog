@@ -33,3 +33,6 @@ his words, history, links
 - **2026-10-12:** compressed cards (Ships / Done when / Knobs / Layer / Data / Components,
   context kept below). Same evening: he said issues should be "things me and Claude would have
   to think and work on", so **Think together** was added and Question can replace Ships for spikes.
+- **2026-10-12, 7 PM:** cards carry a **Design lens** line where it matters: *does it understand me / is it
+  competent / is it reliable* (his frame, "a bigger thought" than friction). Each card names which leg it serves
+  (e.g. RIT-39 and RIT-117 = reliable). One Linear tab open at a time: the card he's on.
