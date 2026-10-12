@@ -104,3 +104,24 @@ importers (Wispr, Whoop,                                   ─▶ Notion dashboa
   infra, ai). At the end of the build we join commits with his Day Log blocks to measure hours and
   enjoyment (focus tier, notes) per layer. Layer definitions: Notion "Product & design talk".
 - Nothing outward (posts, messages to humans) without his approval.
+
+## Agent Context and Documentation
+
+Handoff as of 2026-10-12. Start here in a fresh session.
+
+- **What to work on:** Linear (team RIT), project Day Log. The order is the issue **priority**:
+  In Progress first, then Todo from Urgent down. He keeps a Linear board view "what's next?"
+  (Todo / In Progress / Done columns, priority rows). Pull the top card. Don't re-rank or reorganize Linear.
+- **Right now:** RIT-78 (status follows what you type) is the In Progress parent. **Next: RIT-101**, the stale
+  reset. His rule is written in the issue: display off **and** more than 3h since the last status change → end the
+  task at the moment the display went off, then clear the states. The "show what you can type" hints half is
+  on hold. **He writes `is_stale(...)` and its 3 pytest cases himself** (his RIT-102 coding rep); you
+  wire the plumbing and review. After that, in order: RIT-39 (idle cut-back), RIT-65/66 (focus sound + Do Not
+  Disturb), RIT-42 v1 (output tracking: type what got done). RIT-44 (demo + video) is blocked by RIT-101.
+- **Build-first commitment (his, Oct 12):** for 7 days, no system/meta work (no Linear reshuffles, views,
+  workflows, skills or research runs). Start in the editor, not Linear. The week's number is *pieces someone
+  other than him used*. Context: `~/workspace/brain/records/plans/2026-10-12-founder-pattern-plan.md`.
+- **Checks:** server tests run with `cd server && uv run pytest -q` (112 passing on Oct 12; plain
+  `python -m pytest` uses the wrong env). Swift: see the Build note at the top.
+- **Day Log data caveat:** until RIT-101 ships, overnight time labels are inflated by stale statuses. Use
+  `computer_active_minutes`, not label totals.
