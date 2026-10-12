@@ -35,3 +35,10 @@ hand it to a few other people for feedback.
 - **Design + performance talk:** making the pill more beautiful, and measuring and hitting
   60 Hz (Linear spike RIT-76).
 - **Agentic shape** vs. explicit input, through the knuckle-test lens: RIT-74.
+
+## Knobs: the monitor pill
+
+On a screen with no notch (external monitor) the closed pill is one compact island with the
+status and time **centered** together (Oct 12: "maybe we centre it? let's try"). Size lives in
+`Theme.monitorPill` (`app/Sources/DaylogBar/Views.swift`): 280 × 30 pt, scaled by text size.
+Wider shows more of a long title; taller hangs further below the menu bar.

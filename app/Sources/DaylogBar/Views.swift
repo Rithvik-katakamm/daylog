@@ -44,6 +44,8 @@ enum Theme {
     static let open = Animation.spring(response: 0.32, dampingFraction: 0.8)
     static let barSize = CGSize(width: 560, height: 50)
     static let ear: CGFloat = 100  // width of each side of the closed pill, beside the notch
+    /// Monitor (no notch) closed pill: one compact island, status centered (knobs, docs/ui/design-notes.md).
+    static let monitorPill = CGSize(width: 280, height: 30)
 
     /// Text size multiplier (⌘= / ⌘− / ⌘0), remembered between launches.
     static var textScale: CGFloat = {
@@ -126,7 +128,8 @@ struct BarView: View {
         // MacBook: hug the notch (ears either side of the camera). Monitor: one row, room for the title.
         let closedSize = store.notchWidth > 0
             ? CGSize(width: store.notchWidth + ear * 2, height: store.topInset)
-            : CGSize(width: 380 * Theme.textScale, height: max(store.topInset, 28))
+            : CGSize(width: Theme.monitorPill.width * Theme.textScale,
+                     height: max(store.topInset, Theme.monitorPill.height))
         let openSize = CGSize(width: Theme.barSize.width, height: store.topInset + Theme.barSize.height)
         let size = CGSize(width: dropW ? openSize.width : closedSize.width,
                           height: dropH ? openSize.height : closedSize.height)
@@ -210,7 +213,10 @@ struct BarView: View {
     private var monitorRow: some View {
         let color = Theme.statusColor(store)
         let start = store.onBreak?.start ?? store.ghost?.start ?? store.timer?.start
+        // Centered like an island: status and time sit together in the middle; a long title
+        // truncates before the spacers squeeze the time out.
         return HStack(spacing: 7) {
+            Spacer(minLength: 0)
             if let b = store.onBreak {
                 Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").foregroundStyle(color)
                 Text(b.label + (b.resume.map { " · then \($0)" } ?? ""))
@@ -224,7 +230,6 @@ struct BarView: View {
                 Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
                 Text("nothing running").foregroundStyle(Theme.muted)
             }
-            Spacer(minLength: 8)
             if let f = store.timer?.focus, f > 0, store.onBreak == nil, store.ghost == nil {
                 Text(String(repeating: "▲", count: f)).font(.system(size: fs(8), weight: .bold)).foregroundStyle(color)
             }
@@ -233,8 +238,10 @@ struct BarView: View {
                     Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(start))))
                         .font(.system(size: fs(12), weight: .semibold).monospacedDigit())
                         .foregroundStyle(color)
+                        .fixedSize()
                 }
             }
+            Spacer(minLength: 0)
         }
         .lineLimit(1).truncationMode(.tail)
         .font(.system(size: fs(12), weight: .medium))
