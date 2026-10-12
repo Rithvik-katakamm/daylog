@@ -1,0 +1,40 @@
+{
+  "_doc": "Auto-labeler knobs (RIT-120). Categories every minute is sorted into, and the rules that sort it. Rules are checked top to bottom; the first match wins. Matching is case-insensitive and on substrings. Edit freely: the auto view is derived, so a change here relabels history on the next read.",
+  "categories": ["build", "learn", "plan", "talk", "watch", "admin", "break", "sleep", "away"],
+  "apps": [
+    {"match": ["iterm", "terminal", "xcode", "cursor", "visual studio code", "daylog", "warp", "ghostty"], "category": "build"},
+    {"match": ["linear", "notion", "muse", "obsidian", "things", "reminders"], "category": "plan"},
+    {"match": ["whatsapp", "messages", "slack", "discord", "facetime", "zoom", "telegram", "signal"], "category": "talk"},
+    {"match": ["music", "spotify", "tv", "iina", "vlc", "netflix"], "category": "watch"},
+    {"match": ["mail", "calendar", "finder", "system settings", "preview", "1password"], "category": "admin"},
+    {"match": ["claude", "chatgpt", "kindle", "books"], "category": "learn"},
+    {"match": ["loginwindow", "screensaver"], "category": "away"}
+  ],
+  "web": [
+    {"match": ["youtube.com/watch", "netflix", "hulu", "crunchyroll", "primevideo", "disneyplus", "twitch", "x.com", "twitter.com", "reddit.com", "instagram.com", "tiktok"], "category": "watch"},
+    {"match": ["github.com", "localhost", "127.0.0.1", "stackoverflow", "developer.apple.com", "docs.python", "pypi.org"], "category": "build"},
+    {"match": ["linear.app", "notion.so", "notion.com", "calendar.google"], "category": "plan"},
+    {"match": ["mail.google", "outlook", "amazon.com/gp", "bank"], "category": "admin"},
+    {"match": ["claude.ai", "chatgpt.com", "arxiv", "medium.com", "substack", "wikipedia", "coursera", "youtube.com"], "category": "learn"}
+  ],
+  "browsers": ["safari", "brave", "chrome", "arc", "firefox", "edge"],
+  "browser_default": "learn",
+  "claim_words": [
+    {"match": ["sleep", "nap", "bed"], "category": "sleep"},
+    {"match": ["walk", "smoke", "break", "shower", "eat", "lunch", "dinner"], "category": "break"},
+    {"match": ["watch", "anime", "movie", "b99", "show", "youtube", "video", "netflix"], "category": "watch"},
+    {"match": ["learn", "reading", "read ", "chapter", "course", "study", "lecture"], "category": "learn"},
+    {"match": ["linear", "plan", "workflow", "to dos", "todos", "notion", "rank"], "category": "plan"},
+    {"match": ["call", "meeting", "talking", "friends", "chat", "roommates"], "category": "talk"},
+    {"match": ["email", "admin", "errand", "laundry", "taxes", "bills"], "category": "admin"},
+    {"match": ["build", "building", "working on", "coding", "code", "day log", "daylog", "debug", "lock in", "ship"], "category": "build"}
+  ],
+  "knobs": {
+    "blip_minutes": 2,
+    "away_absorb_minutes": 5,
+    "sleep_min_hours": 3,
+    "sleep_window_local": [22, 11],
+    "history_days": 30,
+    "confident": 0.5
+  }
+}
