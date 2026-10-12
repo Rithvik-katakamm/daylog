@@ -131,12 +131,6 @@ struct Segment: Decodable {
     var endDate: Date { end.map(Time.parse) ?? Date() }
 }
 
-struct Timeline: Decodable {
-    let claims: [Segment]
-    let meetings: [Segment]
-    let activity: [Segment]
-}
-
 /// What the server would do with the current line (live preview).
 struct LinePreview: Decodable, Equatable {
     let action: String  // "log", "timer" or "command" (typed: "smoke break", "deep focus"…)
