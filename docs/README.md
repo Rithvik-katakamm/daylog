@@ -4,7 +4,7 @@ The map of everything that isn't code. If you can't hold it in your head, it sho
 
 | Folder | What lives here | Start with |
 |---|---|---|
-| `product/` | What Day Log is and where it's going | `vision.md`, then `specs/` |
+| `product/` | What Day Log is and where it's going, and how issues are shaped | `vision.md`, then `specs/`, `issue-shape.md` |
 | `ui/` | What you see, press and hear | `keys.md`, `colors.md`, `sounds.md` |
 | `backend/` | The server, the event log, the API | `events.md` |
 | `infra/` | How it's installed, run, signed, and tested | `install.md` |
