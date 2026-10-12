@@ -121,6 +121,13 @@ Handoff as of 2026-10-12. Start here in a fresh session.
 - **Build-first commitment (his, Oct 12):** for 7 days, no system/meta work (no Linear reshuffles, views,
   workflows, skills or research runs). Start in the editor, not Linear. The week's number is *pieces someone
   other than him used*. Context: `~/workspace/brain/records/plans/2026-10-12-founder-pattern-plan.md`.
+- **Build loop + learn slices are enforced by hooks** (`.claude/settings.json`, Oct 12):
+  `hooks/build-loop.sh` (SessionStart) injects the loop: top Linear issue by priority → state what ships, the
+  check that proves it's done, and the core piece *he* writes → ship → next. `hooks/learn-trigger.py`
+  (UserPromptSubmit) spots concept gaps ("I don't understand…", "why does…") and attaches the learn-slice
+  protocol: name the concept and its layer, teach it in ≤5 sentences from this repo's code, one check question,
+  file a Linear Triage `learn` issue related to the build issue, then resume. Triggers are logged to
+  `.learning/triggers.jsonl` (gitignored) so we can count learn slices per build slice.
 - **Checks:** server tests run with `cd server && uv run pytest -q` (112 passing on Oct 12; plain
   `python -m pytest` uses the wrong env). Swift: see the Build note at the top.
 - **Day Log data caveat:** until RIT-101 ships, overnight time labels are inflated by stale statuses. Use

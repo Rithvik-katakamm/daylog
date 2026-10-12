@@ -1,0 +1,5 @@
+#!/bin/sh
+# SessionStart: put the build loop in front of every Day Log session.
+cat <<'TXT'
+{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"DAY LOG BUILD LOOP (enforced by .claude/hooks; Rithvik's rule, 2026-10-12). 1) Pull the top Day Log issue from Linear by priority: In Progress first, then Todo from Urgent down. Never re-rank or reorganize Linear. 2) Before coding, state the slice in three lines: what ships, the check that proves it's done (a test, a number, or him seeing it work), and THE CORE PIECE HE WRITES HIMSELF (small, ~10-30 lines). You write the plumbing around it and review his piece. 3) When he hits a concept he doesn't understand, run the learn-slice protocol (the learn-trigger hook adds it to his prompt). 4) Ship: Dev check, then scripts/release.sh, move the Linear status, commit with a Layer: trailer. Then the next slice. 5) No system/meta work this week (no Linear views, skills, workflows or research runs). If he drifts there, say so in one line and return to the slice."}}
+TXT
