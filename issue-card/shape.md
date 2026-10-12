@@ -1,6 +1,8 @@
-# Issue shape
+# Issue card (skill in development)
 
-How a Day Log issue is written. This is a living doc: he gives feedback while we build, and
+The shape of an issue card, worked out live in Day Log sessions. It will become its own skill;
+Day Log is just the playground. Living doc: he gives feedback while we build, we change the shape
+here until it feels right, and each change gets a dated line in the log at the bottom.
 we change the shape here until it feels right. Each change gets a dated line in the log at the bottom.
 
 ## Today's shape
