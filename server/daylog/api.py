@@ -227,6 +227,18 @@ async def timer_start(body: TimerStart):
     return timeline.now_state(conn())
 
 
+@app.post("/timer/cut")
+async def timer_cut(body: TimerStop | None = None):
+    """RIT-39: accept the cut offer. The task ends when he walked away (a backdated timer.stop,
+    like the stale reset), and nothing is running until he types what he's on now."""
+    offer = timeline.cut_offer(conn())
+    if not offer:
+        raise HTTPException(409, "no cut to offer")
+    db.append(conn(), kind="claim", type="timer.stop", source=body.source if body else "api",
+              start=db.parse(offer["away_from"]), ref=offer["timer_id"], data={"reason": "cut"})
+    return timeline.now_state(conn())
+
+
 @app.post("/timer/stop")
 async def timer_stop(body: TimerStop | None = None):
     stopped = _stop_running(body.source if body else "api")

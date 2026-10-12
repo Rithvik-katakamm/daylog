@@ -48,6 +48,7 @@ Works with Wispr Flow dictation too (⌥L, dictate, ⏎). Code: `server/daylog/i
 | ⏎ | on a gap | Fill it in |
 | ⌘⌫ | looking back | Delete that block or note |
 | ↓ | empty line | Edit the running (or last) block |
+| ⌫ | empty line, after a 2h+ away | End the running task when you walked away (shown as "away 2:40–6:10 · ⌫ end task at 2:40"; RIT-39) |
 | ↓ / ↑ (⇧ = 15m) | editing | Move the end time 5 minutes earlier / later |
 | ⏎ | note, ghost, edit, fill | Save |
 | ⌘N | typing | Note mode |

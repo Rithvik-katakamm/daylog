@@ -548,6 +548,10 @@ struct BarView: View {
                 Text("· ⌘⌫ delete").foregroundStyle(Theme.muted)
             default: Text("· ⌘⌫ delete").foregroundStyle(Theme.muted)
             }
+        } else if !typed, store.mode == .input, let c = store.cutOffer {
+            let from = Time.clockString(Time.parse(c.awayFrom)), to = Time.clockString(Time.parse(c.awayTo))
+            Text("away \(from)–\(to)").foregroundStyle(Theme.text)
+            Text("· ⌫ end task at \(from)").foregroundStyle(Theme.muted)
         } else if typed, let p = store.preview, p.action == "log", let d = store.describe(p) {
             Text("log").foregroundStyle(Theme.task).fontWeight(.semibold)
             Text(d).foregroundStyle(Theme.text)

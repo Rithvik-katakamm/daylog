@@ -307,6 +307,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case (27, _) where cmd: store.resizeText(-1)                       // ⌘− smaller
         case (29, _) where cmd: store.resizeText(0)                        // ⌘0 reset
         case (51, .browse) where cmd: store.deleteCurrent()                // ⌘⌫ delete
+        case (51, .input) where noMods && store.input.isEmpty && store.cutOffer != nil:
+            store.acceptCut()                                              // ⌫ cut at away (RIT-39)
         default: return false
         }
         return true

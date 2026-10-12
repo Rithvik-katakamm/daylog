@@ -8,6 +8,7 @@ final class Store: ObservableObject {
     @Published var timer: TimerInfo?
     @Published var ghost: GhostInfo?  // ghost mode: offline, logging nothing
     @Published var onBreak: BreakInfo?  // ⌘B walk / ⌘⇧B smoke
+    @Published var cutOffer: CutOffer?  // RIT-39: a long away inside the running timer
     @Published var states: Set<String> = []  // substances that are on: outer rings
 
     /// What stays on screen while the bar is closed (his call, Oct 11: try both, then pick).
@@ -536,6 +537,7 @@ final class Store: ObservableObject {
             if now.timer != timer { timer = now.timer }
             if now.ghost != ghost { ghost = now.ghost }
             if now.onBreak != onBreak { onBreak = now.onBreak }
+            if now.cutOffer != cutOffer { cutOffer = now.cutOffer }
             let on = Set((now.states ?? []).map(\.state))
             if on != states { states = on }
             serverDown = false
@@ -559,6 +561,14 @@ final class Store: ObservableObject {
     }
 
     // MARK: actions
+
+    /// RIT-39: accept the cut offer (⌫ on an empty line). The task ends when he walked away.
+    func acceptCut() {
+        guard cutOffer != nil else { return }
+        Sound.saved.play()
+        timer = nil; cutOffer = nil  // optimistic
+        run { try await API.post("timer/cut", ["source": "bar"]) }
+    }
 
     func stop() {
         guard timer != nil else { return }

@@ -78,6 +78,14 @@ struct NowState: Decodable {
     let ghost: GhostInfo?
     var onBreak: BreakInfo? = nil
     var states: [StateInfo]? = nil
+    var cutOffer: CutOffer? = nil
+}
+
+/// RIT-39: the running timer spans a long away; ⌫ on an empty line ends the task when he left.
+struct CutOffer: Decodable, Equatable {
+    let timerId: String
+    let awayFrom: String
+    let awayTo: String
 }
 
 struct GhostInfo: Decodable, Equatable {
