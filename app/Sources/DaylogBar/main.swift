@@ -75,6 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             hotKey = HotKey(id: 1) { [weak self] in MainActor.assumeIsolated { self?.toggle() } }
             devHotKey = HotKey(keyCode: UInt32(kVK_ANSI_D), id: 2) { MainActor.assumeIsolated { Self.openDevApp() } }
+            ActivityRecorder.requestTitleAccess()  // RIT-120: window titles (asks once)
             recorder.start()  // only stable records what's in front of you
         }
         store.startPolling()

@@ -24,7 +24,7 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from . import db, intents, parse, timeline, wispr
+from . import autolabel, db, intents, parse, timeline, wispr
 
 log = logging.getLogger("daylog")
 
@@ -215,6 +215,21 @@ async def now():
     timeline.expire_break(conn())  # never show a break that should already be ghost
     timeline.expire_stale(conn())  # nor last night's status (RIT-101)
     return timeline.now_state(conn())
+
+
+@app.get("/auto")
+async def auto(date: date | None = None, start: datetime | None = None, end: datetime | None = None):
+    """RIT-120: every minute labeled with zero input (derived; never written to the log)."""
+    lo, hi = _window(date, start, end)
+    segs = autolabel.label_day(conn(), lo, hi)
+    return {"from": db.iso(lo), "to": db.iso(hi), "segments": segs,
+            "summary": autolabel.summarize(segs, autolabel.rules()["knobs"]["confident"])}
+
+
+@app.get("/auto/score")
+async def auto_score(days: int = 14):
+    """How well zero-input labels match what he typed (category + task accuracy)."""
+    return autolabel.score(conn(), db.utcnow(), days)
 
 
 @app.post("/timer/start", status_code=201)

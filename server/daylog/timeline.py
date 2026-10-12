@@ -325,12 +325,16 @@ def activity(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[
         if not clipped:
             continue
         app = e["data"].get("app") or "unknown"
+        # Window title and browser URL (RIT-120 capture; absent on older events).
+        title, url = e["data"].get("title") or "", e["data"].get("url") or ""
         s, en = clipped
         last = segs[-1] if segs else None
-        if last and last["app"] == app and db.parse(last["end"]) >= s - timedelta(seconds=1):
+        if (last and last["app"] == app and last.get("title", "") == title and last.get("url", "") == url
+                and db.parse(last["end"]) >= s - timedelta(seconds=1)):
             last["end"] = db.iso(en)
         else:
-            segs.append(_seg(s, en, app=app, bundle_id=e["data"].get("bundle_id")))
+            extra = {k: v for k, v in (("title", title), ("url", url)) if v}
+            segs.append(_seg(s, en, app=app, bundle_id=e["data"].get("bundle_id"), **extra))
     return segs
 
 

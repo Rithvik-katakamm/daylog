@@ -72,6 +72,15 @@ def day_summary(date: str | None = None) -> dict:
 
 
 @mcp.tool()
+def auto_labels(date: str | None = None) -> dict:
+    """Every minute of a day labeled with zero input: category (build, learn, plan, talk,
+    watch, admin, break, sleep, away), best-guess task, source and confidence. source
+    'claim' = he typed it; 'rule'/'history' = a PREDICTION, so say "probably" when you use
+    it. Includes the day's minutes per category. date: YYYY-MM-DD (default today)."""
+    return _call("GET", "/auto", params={"date": date} if date else {})
+
+
+@mcp.tool()
 def log_activity(label: str, start: str, end: str) -> dict:
     """Record something Rithvik told you he did (past only). ISO-8601 start/end with
     timezone offset. Only log what he actually said, never a guess."""
