@@ -4,7 +4,24 @@ The shape of an issue card, worked out live in Day Log sessions. It will become 
 Day Log is just the playground. Living doc: he gives feedback while we build, we change the shape
 here until it feels right, and each change gets a dated line in the log at the bottom.
 
-## Today's shape
+## Two kinds of card
+
+- **Build card:** short, so issue size never slows the build. The shape below.
+- **Think card:** for a raw thought that hides a deeper problem (first one: RIT-118). It should
+  provoke the nuance, bring the data and the outside knowledge, set up **one informed choice**,
+  and teach something on the way:
+
+```
+**The thought:** his words, one or two lines
+## Principal components   the problem split into parts that can be solved separately
+## What we actually have  real numbers from his data, not guesses
+## Prior art              who solved part of it and what to steal
+## The choice             2-3 options with costs; one recommended, often "measure first"
+**Done when / Layer / Data / Components**
+## Learn                  the concept, its layer, where it shows up in this repo, 2-3 sources + a do-it step
+```
+
+## Build card shape
 
 An issue is **something he and Claude think through together**, not a spec Claude can build
 in one go. The top block stays short; whatever was said before goes below `### Context`.
@@ -36,3 +53,7 @@ his words, history, links
 - **2026-10-12, 7 PM:** cards carry a **Design lens** line where it matters: *does it understand me / is it
   competent / is it reliable* (his frame, "a bigger thought" than friction). Each card names which leg it serves
   (e.g. RIT-39 and RIT-117 = reliable). One Linear tab open at a time: the card he's on.
+- **2026-10-12, 7:07 PM:** "each issue card should help with and provoke capture of that nuance, the data, and
+  bring in supporting information… help me make a very informed choice right there and learn something in the
+  process." → **Think card** type added (principal components, real data, prior art, one choice, learn).
+  Build cards stay short.
