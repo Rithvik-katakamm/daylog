@@ -3,6 +3,13 @@
 A personal time-truth system: **what was Rithvik actually doing, and when?**
 Built for Rithvik first. Possible portfolio piece later.
 
+> **GOAL OF THIS REPO (his call, Oct 12): get Day Log into the hands of people other than him, and run a
+> tight feedback loop.** First target: 5 free outside users for 3+ days, each giving feedback (RIT-109). The
+> metric is outside users and feedback conversations per week, not features shipped. Distribution is part of
+> the build: an install a stranger can do (RIT-44), the first 5 by hand and in person, build-in-public via Holland
+> (nothing posted without his approval). Design means *how it works* (Tanay): judge every slice by whether it
+> makes the experience better for someone using it. Ideas parked for later: task launcher (RIT-107).
+
 > **Work is tracked in Linear** (team RIT, project "Day Log"): pick issues there, move
 > status as you go. New ideas go to Linear Triage, not into the current issue.
 > **Learning goes to Linear Triage too (his rule, Oct 11):** when he says he wants to *learn* or
