@@ -213,6 +213,7 @@ async def dev_reset():
 @app.get("/now")
 async def now():
     timeline.expire_break(conn())  # never show a break that should already be ghost
+    timeline.expire_stale(conn())  # nor last night's status (RIT-101)
     return timeline.now_state(conn())
 
 

@@ -34,6 +34,16 @@ BREAK_GHOST_AFTER = timedelta(hours=1)
 BREAK_ASSUMED = timedelta(minutes=15)
 BREAK_LABELS = {"walk": "walk", "smoke": "smoke break"}
 
+# Stale status (RIT-101): display off and no status change for STALE_AFTER means last night's
+# task and states are over; they end when the display went off. Idle alone doesn't count:
+# only sleep, display sleep or lock mean the display is off.
+STALE_AFTER = timedelta(hours=3)
+STALE_MIN_OFF = timedelta(hours=1)  # so a quick lock late in a long session never ends the task
+DISPLAY_OFF_REASONS = {"NSWorkspaceScreensDidSleepNotification", "NSWorkspaceWillSleepNotification",
+                       "locked"}
+STATUS_CHANGE_TYPES = ("timer.start", "timer.stop", "state.set", "focus.set", "break.start",
+                       "ghost.start")
+
 # Focus is a layer on a task: focus.set events reference the task and carry a tier.
 FOCUS_NAMES = {1: "focused", 2: "deep", 3: "hyperfocus"}
 
@@ -153,6 +163,54 @@ def expire_break(conn: sqlite3.Connection) -> dict[str, Any] | None:
                      label=f"away after a {b['label']}",
                      data={"from_break": b["id"], "kind": b["data"].get("kind"),
                            "resume": b["data"].get("resume")})
+
+
+def is_stale(display_off_at: datetime | None, last_change_at: datetime, now: datetime) -> bool:
+    """RIT-101, his rule: a status is stale when the display has been off for STALE_MIN_OFF AND
+    it's been more than STALE_AFTER since he last changed it. `display_off_at` is None while the
+    display is on. `now` is the moment being judged (for a past night, when the display came back)."""
+    return (display_off_at is not None and now - display_off_at >= STALE_MIN_OFF
+            and now - last_change_at > STALE_AFTER)
+
+
+def expire_stale(conn: sqlite3.Connection) -> datetime | None:
+    """A status left over from last night: if is_stale() says so, end the task and clear the
+    states at the moment the display went off, logged as `auto` events so history stays
+    honest. Ghost is left alone (he chose it). Returns when the status was cleared, if it was."""
+    timer, on = running_timer(conn), active_states(conn)
+    if (not timer and not on) or ghost(conn):
+        return None
+    marks = ",".join("?" * len(STATUS_CHANGE_TYPES))
+    last = conn.execute(f"SELECT MAX(start) FROM events WHERE type IN ({marks})",
+                        STATUS_CHANGE_TYPES).fetchone()[0]
+    if last is None:
+        return None
+    last_change = db.parse(last)
+
+    # Walk the display-off spans since the last change; the first stale one wins.
+    off_at, stale_at = None, None
+    for r in conn.execute("SELECT type, start, data FROM events WHERE type IN ('app.focus', 'away.start')"
+                          " AND start >= ? ORDER BY start", (last,)):
+        a = db.to_dict(r)
+        if a["type"] == "away.start" and a["data"].get("reason") in DISPLAY_OFF_REASONS:
+            off_at = off_at or db.parse(a["start"])
+        elif a["type"] == "app.focus" and off_at:
+            if is_stale(off_at, last_change, db.parse(a["start"])):
+                stale_at = off_at
+                break
+            off_at = None
+    if stale_at is None and off_at and is_stale(off_at, last_change, db.utcnow()):
+        stale_at = off_at
+    if stale_at is None:
+        return None
+
+    if timer:
+        db.append(conn, kind="claim", type="timer.stop", source="auto", start=stale_at,
+                  ref=timer["id"], data={"reason": "stale"})
+    for s in on:
+        db.append(conn, kind="claim", type="state.set", source="auto", start=stale_at,
+                  data={"state": s["state"], "on": False, "reason": "stale"})
+    return stale_at
 
 
 def claims(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[str, Any]]:
