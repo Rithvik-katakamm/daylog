@@ -128,7 +128,7 @@ importers (Wispr, Whoop,                                   ─▶ Notion dashboa
 
 ## Agent Context and Documentation
 
-Handoff as of 2026-10-12, 8 PM. Start here in a fresh session.
+Handoff as of 2026-10-13, 2:30 AM. Start here in a fresh session.
 
 - **What to work on:** Linear (team RIT), project Day Log. The order is the issue **priority**:
   In Progress first, then Todo from Urgent down. He keeps a Linear board view "what's next?"
@@ -143,8 +143,7 @@ Handoff as of 2026-10-12, 8 PM. Start here in a fresh session.
   the label data shape) → RIT-125 (what may leave the Mac) → RIT-52 (one parser) → RIT-126 (agent labeler) →
   RIT-127 (sync, when cross-device pain is real). Also queued: RIT-121 (Dev-mode feedback → headless Claude Code fixes small things on a branch). The model path (baseline lookup
   table → trees/logistic regression → embeddings → sequence model → active learning) is on RIT-118. He wants a real
-  model, not just a lookup table; labels are the bottleneck. Ask him first: did he turn on Accessibility for
-  Daylog (window titles)?
+  model, not just a lookup table; labels are the bottleneck. Window titles are captured (Accessibility on since Oct 13).
 - **How he works now:** you write the code (no "core piece he writes" step); cards follow `issue-card/shape.md`
   (build cards short, think cards deep). Keep the Linear In Progress card live and open it on his MacBook. The
   Day Log Map artifact (private link on Linear RIT-120) is the visual; update it as things
@@ -157,9 +156,9 @@ Handoff as of 2026-10-12, 8 PM. Start here in a fresh session.
   the check that proves it's done, and the layer + components touched → ship → next. Claude writes the code. `hooks/learn-trigger.py`
   (UserPromptSubmit) spots concept gaps ("I don't understand…", "why does…") and attaches the learn-slice
   protocol: name the concept and its layer, teach it in ≤5 sentences from this repo's code, one check question,
-  file a Linear Triage `learn` issue related to the build issue, then resume. Triggers are logged to
+  map it to an existing learn card (new only if he asks), then resume. Triggers are logged to
   `.learning/triggers.jsonl` (gitignored) so we can count learn slices per build slice.
-- **Checks:** server tests run with `cd server && uv run pytest -q` (132 passing on Oct 12 night; plain
+- **Checks:** server tests run with `cd server && uv run pytest -q` (133 passing on Oct 13; plain
   `python -m pytest` uses the wrong env). Swift: see the Build note at the top.
 - **Day Log data caveat:** label totals before Oct 12 are inflated by stale statuses (RIT-101 fixed it from v0.9).
   Prefer `/auto` (sleep and away are separated) or `computer_active_minutes`.
