@@ -114,17 +114,27 @@ importers (Wispr, Whoop,                                   ─▶ Notion dashboa
 
 ## Agent Context and Documentation
 
-Handoff as of 2026-10-12. Start here in a fresh session.
+Handoff as of 2026-10-12, 8 PM. Start here in a fresh session.
 
 - **What to work on:** Linear (team RIT), project Day Log. The order is the issue **priority**:
   In Progress first, then Todo from Urgent down. He keeps a Linear board view "what's next?"
   (Todo / In Progress / Done columns, priority rows). Pull the top card. Don't re-rank or reorganize Linear.
-- **Right now:** RIT-78 (status follows what you type) is the In Progress parent. **Next: RIT-101**, the stale
-  reset. His rule is written in the issue: display off **and** more than 3h since the last status change → end the
-  task at the moment the display went off, then clear the states. The "show what you can type" hints half is
-  on hold. **He writes `is_stale(...)` and its 3 pytest cases himself** (his RIT-102 coding rep); you
-  wire the plumbing and review. After that, in order: RIT-39 (idle cut-back), RIT-65/66 (focus sound + Do Not
-  Disturb), RIT-42 v1 (output tracking: type what got done). RIT-44 (demo + video) is blocked by RIT-101.
+- **Right now (Oct 12 night):** working on branch **`experiment/auto-labeler`**, released to stable as **v0.12**
+  (his OK). Main's hand-rolled checkpoint is tag `handrolled-2026-10-12`. Don't merge to main without asking.
+  Shipped tonight: RIT-101 stale reset (v0.9), monitor pill (v0.10), RIT-39 cut offer (v0.11), RIT-120 auto-labeler
+  v1 (v0.12: `server/daylog/autolabel.py`, knobs in `labels.json`, `/auto`, `/auto/score`, MCP `auto_labels`,
+  window title + browser URL capture). First score: category 35%, task 4% (iTerm2 hides the activity).
+- **Problem (RIT-116, his framing):** zero-input tracking of his whole day, accurate and reliable; time is the side
+  benefit. Narrowed: every Mac minute gets the right label with zero input, scored against what he typed.
+- **Next:** RIT-122 (the bar shows its guess; ⏎ confirms, typing corrects = labels: the data flywheel), then
+  RIT-121 (Dev-mode feedback → headless Claude Code fixes small things on a branch). The model path (baseline lookup
+  table → trees/logistic regression → embeddings → sequence model → active learning) is on RIT-118. He wants a real
+  model, not just a lookup table; labels are the bottleneck. Ask him first: did he turn on Accessibility for
+  Daylog (window titles)?
+- **How he works now:** you write the code (no "core piece he writes" step); cards follow `issue-card/shape.md`
+  (build cards short, think cards deep). Keep the Linear In Progress card live and open it on his MacBook. The
+  Day Log Map artifact (https://claude.ai/artifact/TLCj9MQKgCzVWsDY2S7Qry) is the visual; update it as things
+  ship. Setup feedback → Notion "Build setup feedback (live log)" under Agent Context.
 - **Build-first commitment (his, Oct 12):** for 7 days, no system/meta work (no Linear reshuffles, views,
   workflows, skills or research runs). Start in the editor, not Linear. The week's number is *pieces someone
   other than him used*. Context: `~/workspace/brain/records/plans/2026-10-12-founder-pattern-plan.md`.
@@ -135,7 +145,7 @@ Handoff as of 2026-10-12. Start here in a fresh session.
   protocol: name the concept and its layer, teach it in ≤5 sentences from this repo's code, one check question,
   file a Linear Triage `learn` issue related to the build issue, then resume. Triggers are logged to
   `.learning/triggers.jsonl` (gitignored) so we can count learn slices per build slice.
-- **Checks:** server tests run with `cd server && uv run pytest -q` (112 passing on Oct 12; plain
+- **Checks:** server tests run with `cd server && uv run pytest -q` (132 passing on Oct 12 night; plain
   `python -m pytest` uses the wrong env). Swift: see the Build note at the top.
-- **Day Log data caveat:** until RIT-101 ships, overnight time labels are inflated by stale statuses. Use
-  `computer_active_minutes`, not label totals.
+- **Day Log data caveat:** label totals before Oct 12 are inflated by stale statuses (RIT-101 fixed it from v0.9).
+  Prefer `/auto` (sleep and away are separated) or `computer_active_minutes`.
