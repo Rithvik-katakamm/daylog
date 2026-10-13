@@ -44,11 +44,11 @@ enum Commands {
                     isAvailable: { $0.timer != nil }, run: { store.cycleFocus() }),
             Command(id: "focus-off", group: .how, title: "Focus off", shortcut: "⌘⇧F",
                     isAvailable: { ($0.timer?.focus ?? 0) > 0 }, run: { store.focusOff() }),
-            Command(id: "high", group: .how, title: "High (green ring)", shortcut: "⌘G",
+            Command(id: "high", group: .how, title: "High (green ring)", shortcut: "⌘H",
                     isAvailable: always, run: { store.toggleState("high") }),
             Command(id: "intoxicated", group: .how, title: "Intoxicated (rose ring)", shortcut: "⌘I",
                     isAvailable: always, run: { store.toggleState("intoxicated") }),
-            Command(id: "caffeinated", group: .how, title: "Caffeinated (aqua ring)", shortcut: "⌘E",
+            Command(id: "caffeinated", group: .how, title: "Caffeinated (brown ring)", shortcut: "⌘C",
                     isAvailable: always, run: { store.toggleState("caffeinated") }),
 
             // GO

@@ -11,7 +11,7 @@ Code: `NeonTube`, `OuterRings`, `NotchShape`, `Breathing` in `app/Sources/Daylog
 | **Body** | The black shape hanging from the notch. Flat top, straight sides into the screen edge, continuous ("squircle") corners | Day Log is there | `NotchShape` |
 | **Tube** | The neon outline: bloom + colored glass + hot core | **What** you're doing (pearl task, purple ghost, blue-grey break, silver past) | `NeonTube` |
 | **Heat** | The tube getting hotter: yellow → orange → red, thicker and brighter | **How deep** your focus is (⌘F tiers) | `NeonTube(heat:)` + the bloom |
-| **Halo** | A soft colored aura just outside the tube; several blend into one gradient | **Substances**: high (green), intoxicated (rose), caffeinated (aqua) | `OuterRings` |
+| **Halo** | A soft colored aura just outside the tube; several blend into one gradient | **Substances**: high (green), intoxicated (rose), caffeinated (coffee brown) | `OuterRings` |
 | **Breath** | A slow 2.2s rise and fall of the bloom while the pill is closed | Something is "on" (focus or a substance): felt, not read | `Breathing` |
 | **Unlit tube** | Dashed, dim, no hot core | You're looking at the **past** (↑ look back, ↓ edit, fill) | `NeonTube(dashed:)` |
 

@@ -266,7 +266,7 @@ final class Store: ObservableObject {
         }
     }
 
-    /// ⌘G high · ⌘I intoxicated · ⌘E caffeinated: toggle a substance ring. They stack.
+    /// ⌘H high · ⌘I intoxicated · ⌘C caffeinated: toggle a substance ring. They stack.
     static let stateNames = ["high": "high", "intoxicated": "intoxicated", "caffeinated": "caffeinated"]
 
     func toggleState(_ name: String) {
@@ -581,6 +581,14 @@ final class Store: ObservableObject {
         if let r = h.release, !r.new.isEmpty, UserDefaults.standard.string(forKey: "seenVersion") != r.version {
             showWhatsNew = true
         }
+    }
+
+    /// RIT-124: the ⌘K header's version, e.g. "v0.17 · released 3:26 PM" (or "Oct 12" if older than today).
+    var versionLabel: String {
+        guard let s = release?.released_at, let d = ISO8601DateFormatter().date(from: s) else { return version }
+        let f = DateFormatter()
+        f.dateFormat = Calendar.current.isDateInToday(d) ? "h:mm a" : "MMM d, h:mm a"
+        return "\(version) · released \(f.string(from: d))"
     }
 
     /// ⌘K "What's new": show the line again, or just the version when there are no notes.

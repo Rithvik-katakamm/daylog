@@ -12,7 +12,7 @@ Technical work → Linear (team RIT). Product/design questions → Notion.
 | **Notch pill** | ui, ux, taste | The closed bar: a black body hugging the notch, task left, time right | `BarView.bar`, `restRow`, `NotchShape` | Shipped v0.2+. Height = full menu bar (38pt on 14" MBP; notch is 32×185) so it wraps the notch | Covers ~100pt of menu bar each side: hides menu items, feels bolted on. Needs to belong to the menu bar (see Linear) |
 | **The drop** | ui, ux | How the pill opens and closes | `BarView.liquid` | v2: widen on the notch, fall down; close reverses | Not smooth yet: blurred glow re-drawn on the CPU each frame. Moving glow to Metal (`gpuLight`) to reach 120 Hz |
 | **Neon tube** | ui, taste | The lit outline: bloom, glass, hot core. Says *what* + focus *heat* | `NeonTube` | Shipped v0.3 | Color-layer talk pending (Notion) |
-| **Halo** | ui | Substances as one blended glow (high neon green, rose, aqua) | `OuterRings` | Shipped v0.2, green brightened v0.4 | Part of the color talk |
+| **Halo** | ui | Substances as one blended glow (high neon green, rose, coffee brown) | `OuterRings` | Shipped v0.2, green brightened v0.4 | Part of the color talk |
 | **Breath** | ui | Slow pulse while closed when something is on | `Breathing` | Shipped | Watch whether it annoys over hours |
 | **Text size** | ui, ux | ⌘= / ⌘− / ⌘0 | `fs()`, `Store.resizeText` | Shipped v0.3 | Closed pill ears don't grow with it well |
 | **Side ring** | ui | Status ring on the right edge | `SideRing` | Off by default (in the way) | Keep or delete after the UX talk |
@@ -22,7 +22,7 @@ Technical work → Linear (team RIT). Product/design questions → Notion.
 
 | Component | Layer | What it is | Code | State | Open problems |
 |---|---|---|---|---|---|
-| **Key commands** | ux | ⌘F focus, ⌘B/⌘⇧B breaks, ⌘G/⌘I/⌘E substances, ⌘N, ⌘O, ⌘K | `handleKey`, `CommandMenu.swift`, `docs/ui/keys.md` | Shipped; now shortcuts, not the main way | — |
+| **Key commands** | ux | ⌘F focus, ⌘B/⌘⇧B breaks, ⌘H/⌘I/⌘C substances, ⌘N, ⌘O, ⌘K | `handleKey`, `CommandMenu.swift`, `docs/ui/keys.md` | Shipped; now shortcuts, not the main way | — |
 | **Typed commands** | ux, backend | Say it: "smoke break", "back", "deep focus", "coffee, high, deep focus" (also via Wispr dictation) | `server/daylog/intents.py`, `/parse`, `/log` | MVP shipped v0.6 (keyword rules, 50+ tests) | Rules miss anything unusual; "coffee" anywhere = caffeinated. Next: a model + eval vs these rules (RIT-78) |
 | **Smart capture** | ux, ai | Model-backed: understand anything typed, clean titles, time fixes, juggling | not built (RIT-78, RIT-52) | After living with the MVP | Data shape decided at typing time (data talk, RIT-70) |
 

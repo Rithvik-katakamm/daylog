@@ -103,6 +103,7 @@ struct ReleaseInfo: Decodable, Equatable {
     let version: String
     var new: [String] = []
     var `try`: [String] = []
+    var released_at: String? = nil
 }
 
 /// RIT-39: the running timer spans a long away; ⌫ on an empty line ends the task when he left.

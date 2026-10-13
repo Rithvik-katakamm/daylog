@@ -18,9 +18,9 @@ Oct 10). Every color in the app is a token in `enum Theme`
 | 1 | Task | pearl white | `#ECEEF2` | `task` |
 | 1 | Ghost (⌘O), off the clock | purple | `#B87AFF` | `ghost` |
 | 1 | On a break (⌘B walk, ⌘⇧B smoke) | blue-grey | `#8FA3B8` | `away` |
-| 2 | High (⌘G) | neon green | `#39FF14` | `high` |
+| 2 | High (⌘H) | neon green | `#39FF14` | `high` |
 | 2 | Intoxicated (⌘I) | rose | `#FF6FA5` | `intoxicated` |
-| 2 | Caffeinated (⌘E) | aqua | `#5CE1E6` | `caffeinated` |
+| 2 | Caffeinated (⌘C) | coffee brown | `#A8754A` | `caffeinated` |
 | 2 | Task + focused ▲ (⌘F) | yellow | `#FFD652` | `focusHeat[1]` |
 | 2 | Task + deep focus ▲▲ | orange | `#FF9A3C` | `focusHeat[2]` |
 | 2 | Task + hyperfocus ▲▲▲ | red | `#FF4D4D` | `focusHeat[3]` |
@@ -56,6 +56,7 @@ from the top edge. It never takes clicks while closed.
 - Open UX question (to file as a UX talk): how much should be visible while working.
 
 ## History
+- Oct 13: caffeinated is coffee brown (`#A8754A`, was aqua `#5CE1E6`), his call; key moved to ⌘C.
 - Oct 11 (later): high made a brighter neon green (`#39FF14`, was `#7CFF6B`); the pill's
   curved shoulders removed (straight sides into the screen edge).
 - Oct 11: substances shipped as a blended glow (not stacked rings); caffeinated (aqua) and

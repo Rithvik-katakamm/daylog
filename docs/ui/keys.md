@@ -58,9 +58,9 @@ Works with Wispr Flow dictation too (⌥L, dictate, ⏎). Code: `server/daylog/i
 | ⌘⇧F | typing, in focus | Focus off, straight away |
 | ⌘B | typing | Walk break: the task pauses. ⌘B again when you're back resumes it |
 | ⌘⇧B | typing | Smoke break: same, and you come back **high** |
-| ⌘G | typing | Toggle **high** (G for green) |
+| ⌘H | typing | Toggle **high** (bar wins over macOS Hide, Oct 13) |
 | ⌘I | typing | Toggle **intoxicated** |
-| ⌘E | typing | Toggle **caffeinated** (E for espresso) |
+| ⌘C | typing | Toggle **caffeinated** (C for coffee; bar wins over Copy, Oct 13) |
 | ⌘. | typing | Stop the timer |
 | Tab | anywhere in the bar | Close and return to the app you were in |
 | Esc | anywhere | Step back one level; closes from the typing line |

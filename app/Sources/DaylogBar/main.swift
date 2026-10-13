@@ -321,9 +321,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case (3, .input) where cmd && shift: store.focusOff()              // ⌘⇧F focus off
         case (3, .input) where cmd: store.cycleFocus()                     // ⌘F
         case (11, .input) where cmd: store.breakKey(smoke: shift)          // ⌘B walk · ⌘⇧B smoke
-        case (5, .input) where cmd: store.toggleState("high")              // ⌘G high (green)
+        case (4, .input) where cmd: store.toggleState("high")              // ⌘H high (bar wins over Hide)
         case (34, .input) where cmd: store.toggleState("intoxicated")      // ⌘I
-        case (14, .input) where cmd: store.toggleState("caffeinated")      // ⌘E (espresso)
+        case (8, .input) where cmd: store.toggleState("caffeinated")       // ⌘C coffee (bar wins over Copy)
         case (47, _) where cmd: store.stop()                               // ⌘. stop
         case (24, _) where cmd: store.resizeText(1)                        // ⌘= bigger text
         case (27, _) where cmd: store.resizeText(-1)                       // ⌘− smaller

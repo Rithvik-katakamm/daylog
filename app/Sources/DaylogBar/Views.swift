@@ -12,7 +12,7 @@ enum Theme {
     static let focusHeat = [task, hex(0xFFD652), hex(0xFF9A3C), hex(0xFF4D4D)]  // 2: ▲ yellow ▲▲ orange ▲▲▲ red
     static let intoxicated = hex(0xFF6FA5) // 2: outer ring
     static let high = hex(0x39FF14)        // 2: halo, neon green (brighter, Oct 11)
-    static let caffeinated = hex(0x5CE1E6) // 2: outer ring (aqua: kept clear of the focus heat)
+    static let caffeinated = hex(0xA8754A) // 2: outer ring (coffee brown, Oct 13; was aqua)
     static let away = hex(0x8FA3B8)        // 1: on a break (⌘B walk / ⌘⇧B smoke)
     static let note = hex(0x8CC2FF)        // 3: typing a note
     static let past = hex(0xC9CED6)        // 3: looking back / editing / filling (dashed ring)
@@ -303,7 +303,7 @@ struct BarView: View {
                 : store.timer == nil ? "What are you doing?" : "Switch, or log: client call 3:10-3:25"
         case .note: "What’s on your mind?"
         case .ghost: "Status (optional): dinner with family, deep reset…"
-        case .menu: "Type a command… (↑↓ ⏎, esc)"
+        case .menu: "Type a command… (↑↓ ⏎, esc) · Day Log \(store.versionLabel)"
         case .edit: "Title"
         case .fill: "What were you doing then?"
         case .browse: ""
@@ -608,7 +608,7 @@ struct BarView: View {
 // MARK: - substances: one blended glow outside the main ring
 
 /// Substances as a single soft halo, not separate lines (his call, Oct 11: "a blend and glow").
-/// Several at once blend around the shape (high's green flowing into caffeinated's aqua);
+/// Several at once blend around the shape (high's green flowing into caffeinated's brown);
 /// one alone is a plain colored glow. The crisp main ring stays the task/focus.
 struct OuterRings<S: InsettableShape>: View {
     let colors: [Color]
