@@ -11,7 +11,10 @@ Built for Rithvik first. Possible portfolio piece later.
 > makes the experience better for someone using it. Ideas parked for later: task launcher (RIT-107).
 
 > **Work is tracked in Linear** (team RIT, project "Day Log"): pick issues there, move
-> status as you go. New ideas go to Linear Triage, not into the current issue.
+> status as you go. **Don't create new Linear issues (his rule, Oct 13):** knock off the ones that exist and
+> modify a card when his build direction changes it. When something isn't on the card, say so in one line
+> ("this isn't on the card, and here's how it changes the build") and carry on. When a card is done, move it to
+> Done, move the next one to In Progress, and open it in the Linear app on his MacBook.
 > **Learning goes to Linear Triage too (his rule, Oct 11):** when he says he wants to *learn* or
 > *deep dive* into something, file it in Triage with the `learn` flag (+ Type `Spike`, the right
 > Area, `agent-filed`). Name the layer of the stack it belongs to, quote what was explained, and
