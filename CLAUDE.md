@@ -51,7 +51,8 @@ the experience better for someone using it.
 - **Check his foundation:** after a learn, 1-2 check questions in his own code's terms.
 - **Explain the why** of every architectural choice; he's learning backend craft through this.
 - **Commits:** one per slice, push roughly every 2. Every commit ends with a `Layer:` trailer (taste, ui, ux,
-  product, backend, infra, ai); commits get joined with his Day Log blocks to measure hours per layer.
+  product, backend, infra, ai); commits get joined with his Day Log blocks to measure hours per layer. A `Try:` line (what to try, shown
+  after a release) goes in that same last paragraph with `Layer:`: git only reads trailers from the last paragraph.
 - **Nothing outward** (posts, messages to humans) without his approval.
 - The build loop and learn-slice protocol are injected by hooks (`.claude/hooks/build-loop.sh`,
   `learn-trigger.py`); triggers log to `.learning/triggers.jsonl`.
