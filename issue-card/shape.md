@@ -58,4 +58,4 @@ his words, history, links
   process." → **Think card** type added (principal components, real data, prior art, one choice, learn).
   Build cards stay short.
 - **2026-10-13, 1:38 PM:** "the layer preference or tag is important to me." Every card names its Layer; whether it
-  becomes a Linear label is open until the data seasons. Distilled into `docs/skills/linear-management.md`.
+  becomes a Linear label is open until the data seasons. Logged in Notion "Linear Card Management (feedback + rules)".

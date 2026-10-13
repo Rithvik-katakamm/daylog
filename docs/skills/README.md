@@ -6,7 +6,7 @@ personal skills folder once the shape settles. Until then, `CLAUDE.md` holds the
 
 | Draft | What it would do | Status |
 |---|---|---|
-| `linear-management.md` | Run a build as Linear build + learn cards: pick, keep status live, shape, close | Draft, Oct 13; waiting for more real use |
+| `linear-management.md` | Run a build as Linear build + learn cards: pick, keep status live, shape, close | Lives in Notion (Agent Context); pointer here |
 | `../../issue-card/shape.md` | The shape of a single card (build vs think) | Living doc, kept at the repo root on his call |
 
 Planned, not drafted: **CLAUDE.md working rules** (his boilerplate: pain first, name the fork, decide with

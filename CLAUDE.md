@@ -37,7 +37,8 @@ the experience better for someone using it.
   never put them in the public repo verbatim. Notion is read-only unless he says otherwise.
 - The visual is the Day Log Map artifact (private link on RIT-120); update it as things ship. Setup feedback
   goes to Notion "Build setup feedback (live log)" under Agent Context.
-- Draft of the skill these rules will become: `docs/skills/linear-management.md`.
+- **Full rules + his card feedback:** Notion "Linear Card Management (feedback + rules)" under Agent Context
+  (https://app.notion.com/p/3f8a8f2071a581f382bed180b71a169f). Log new card feedback there.
 
 ## Working rules
 
