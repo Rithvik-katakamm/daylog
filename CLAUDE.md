@@ -137,7 +137,7 @@ Handoff as of 2026-10-13, 2:30 AM. Start here in a fresh session.
 - **What to work on:** Linear (team RIT), project Day Log. The order is the issue **priority**:
   In Progress first, then Todo from Urgent down. He keeps a Linear board view "what's next?"
   (Todo / In Progress / Done columns, priority rows). Pull the top card. You may re-rank when a decision changes what's next (his call, Oct 12 night); say what you moved.
-- **Right now (Oct 13):** `main` is what he runs (stable **v0.13**). The auto-labeler experiment was merged into
+- **Right now (Oct 13):** `main` is what he runs (stable **v0.15**). The auto-labeler experiment was merged into
   main on his OK; the hand-rolled checkpoint stays as tag `handrolled-2026-10-12`. Shipped Oct 12–13: RIT-101 stale
   reset (v0.9), monitor pill (v0.10), RIT-39 cut offer (v0.11), RIT-120 auto-labeler v1 (v0.12), RIT-124 what's new
   after a release + owner-only feature flag (v0.13). First score: category 35%, task 4%.
