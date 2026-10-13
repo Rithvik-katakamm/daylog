@@ -24,6 +24,8 @@ the experience better for someone using it.
 
 - **What's next = issue priority:** In Progress first, then Todo from Urgent down. You may re-rank when a
   decision changes what's next; say what you moved.
+- **Read, then confirm, then build (Oct 13).** For a build card: open it with what we're doing and the options
+  (your pick), then stop. He reads it; code starts only when he confirms.
 - **Keep status live:** current card In Progress; on ship move it to Done, the next one to In Progress, and open
   it in the Linear app on his MacBook (`open "linear://rithvik-katakam/issue/RIT-NN"`).
 - **Don't create new issues (Oct 13).** Work existing cards; fold changes in his build direction into an
