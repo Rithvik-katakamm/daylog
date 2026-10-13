@@ -38,9 +38,18 @@ Technical work → Linear (team RIT). Product/design questions → Notion.
 
 | Component | Layer | What it is | Code | State | Open problems |
 |---|---|---|---|---|---|
-| **Channels** | infra | Stable (frozen tag) + Dev; for now stable = dev | `scripts/release.sh`, `dev.sh` | Auto-ship each checked build | Building on the Mac he uses: one instance rule; maybe a test user/VM later |
+| **Channels** | infra | Stable (frozen tag) + Dev; for now stable = dev. One server day to day: Dev's :7879 runs only between `devctl start`/`stop` | `scripts/release.sh`, `dev.sh`, `tools/devctl.swift` | Auto-ship each checked build; ⌘K shows `vX · runs releases/vX` (v0.18) | Building on the Mac he uses: one instance rule; maybe a test user/VM later |
 | **Launch agents** | infra | launchd keeps server + app alive | `scripts/lib.sh write_agent` | Idempotent (no repeat "Background Items Added"). App runs as `ProcessType Interactive` (v0.7): unspecified = CPU-throttled, which made stable stutter while Dev was smooth | — |
 | **Agent status** | backend, ai | Agents set his status in plain words via MCP `set_status` (source `agent:<name>`); the pill polls every 4s | `mcp_server.py`, `Store.startPolling` | MVP v0.7 | Push instead of poll; agent-set status is a claim *on his behalf*, show it differently? |
+
+### Infra → dev infra (the cloud loop, RIT-87): `docs/infra/dev-infra/`
+
+| Component | Layer | What it is | Code | State | Open problems |
+|---|---|---|---|---|---|
+| **Cloud sessions** | infra → dev infra | Claude Code in an Anthropic VM, started from his phone; works on a `claude/…` branch | `CLAUDE.md` "Cloud sessions" | Rules written Oct 13; first phone run pending | No macOS, no DB: backend/docs only |
+| **CI + landing** | infra → dev infra, testing | GitHub Actions: pytest (Linux) + swift build (macOS VM) on every push; green `claude/*` branches merge into main by themselves | `.github/workflows/ci.yml` | Shipped Oct 13: 9 s / 52 s; smoke branch landed | Swift build checks it compiles, not how it looks |
+| **CD at unlock** | infra → dev infra | On unlock/wake the app kicks a launchd job that pulls main, tests, releases | `scripts/autorelease.sh`, `main.swift watchForCD` | Shipped v0.22 (released itself) | Skips on a dirty repo or a diverged main (by design) |
+| **Mac vs walking** | product, infra | `Where: mac/cloud` on every commit, to count work by surface | `CLAUDE.md` commits rule | Trailer only | The Day Log view that answers it in real time isn't built |
 
 ## Testing
 
@@ -50,4 +59,4 @@ Technical work → Linear (team RIT). Product/design questions → Notion.
 | **devctl** | testing | Test remote for the Dev app (no keyboard, no focus) | `tools/devctl.swift`, `AppDelegate` test channel | Shipped; `start`/`stop`/`snap` added Oct 13 | — |
 | **Headless Dev** | testing | Dev app off-screen and silent; snapshots of the bar | `Flavor.headless`, `snapshot(name:)`, `Sound.play` | Shipped Oct 13 (default for all tests) | Snapshot may differ from a real window (glow/blur) |
 | **Lab VM** | testing, infra | Hidden macOS VM for real-window checks | — | Not set up (his call: when needed) | Costs Mac memory/CPU/disk; one-time setup needs him |
-| **CI gate** | testing, infra | GitHub Actions on every push | — | Not set up (RIT-130) | Pain arrives when agents push (RIT-121) |
+| **CI gate** | testing, infra | GitHub Actions on every push | `.github/workflows/ci.yml` | Shipped Oct 13 (RIT-130); see dev infra above | — |

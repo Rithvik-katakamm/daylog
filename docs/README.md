@@ -7,7 +7,8 @@ The map of everything that isn't code. If you can't hold it in your head, it sho
 | `product/` | What Day Log is and where it's going | `vision.md`, then `specs/` |
 | `ui/` | What you see, press and hear | `keys.md`, `colors.md`, `sounds.md` |
 | `backend/` | The server, the event log, the API | `events.md` |
-| `infra/` | How it's installed, run, signed and released; the phone/cloud loop | `install.md`, `cloud.md` |
+| `infra/` | How it's installed, run, signed and released | `install.md` |
+| `infra/dev-infra/` | Sub-layer (his, Oct 13): how *building* works, phone → cloud → CI → his Mac | `cloud-loop.html` (explainer), `cloud.md` |
 | `testing/` | How changes are checked without touching his screens (his layer, Oct 13) | `strategy.md` |
 | `skills/` | Drafts of skills distilled from how he runs builds (PROPOSED, not installed) | `README.md` |
 

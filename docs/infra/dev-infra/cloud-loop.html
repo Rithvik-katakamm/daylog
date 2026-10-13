@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day Log Cloud Loop</title>
+<style>
+:root{
+  --bg:#f6f5f1; --card:#ffffff; --ink:#1b1a18; --sub:#5d5b55; --faint:#8b887f; --line:rgba(0,0,0,.12);
+  --phone:#7a5cff; --cloud:#2f7de1; --ci:#1f9d6b; --mac:#c2410c; --bad:#c62828; --idle:#9aa0a6;
+  --hl:rgba(47,125,225,.12);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e0f11; --card:#17191c; --ink:#ecebe7; --sub:#a9a69e; --faint:#7a776f; --line:rgba(255,255,255,.12);
+  --phone:#a58bff; --cloud:#5aa2ff; --ci:#3ccf91; --mac:#ff8a4c; --bad:#ff6b6b; --idle:#6b7178; --hl:rgba(90,162,255,.14);
+}}
+:root[data-theme="dark"]{
+  --bg:#0e0f11; --card:#17191c; --ink:#ecebe7; --sub:#a9a69e; --faint:#7a776f; --line:rgba(255,255,255,.12);
+  --phone:#a58bff; --cloud:#5aa2ff; --ci:#3ccf91; --mac:#ff8a4c; --bad:#ff6b6b; --idle:#6b7178; --hl:rgba(90,162,255,.14);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
+main{max-width:920px;margin:0 auto;padding:28px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:19px;margin:36px 0 10px}
+p{margin:6px 0 12px;color:var(--sub)}
+.lede{font-size:17px;color:var(--ink)}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--sub);margin-right:6px}
+code{font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--hl);padding:1px 5px;border-radius:4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.scen{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}
+.scen button,.ctrl button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 12px;border-radius:99px;cursor:pointer}
+.scen button[aria-pressed="true"]{border-color:var(--cloud);background:var(--hl)}
+button:focus-visible{outline:2px solid var(--cloud);outline-offset:2px}
+.lanes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.lane{border:1px solid var(--line);border-radius:12px;padding:10px;min-height:120px;transition:border-color .25s,background .25s}
+.lane h3{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em}
+.lane .what{font-size:13px;color:var(--faint)}
+.lane.on{background:var(--hl)}
+.lane.phone h3{color:var(--phone)} .lane.cloud h3{color:var(--cloud)} .lane.ci h3{color:var(--ci)} .lane.mac h3{color:var(--mac)}
+.lane.phone.on{border-color:var(--phone)} .lane.cloud.on{border-color:var(--cloud)} .lane.ci.on{border-color:var(--ci)} .lane.mac.on{border-color:var(--mac)}
+.step{margin-top:14px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start}
+.num{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:600;color:#fff;background:var(--cloud)}
+.step h4{margin:2px 0 4px;font-size:16px}
+.step .why{font-size:14px;color:var(--sub)}
+.step .check{font-size:13px;margin-top:6px}
+.bad .num{background:var(--bad)} .bad h4{color:var(--bad)}
+.ctrl{display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
+.progress{flex:1;min-width:120px;height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--cloud);transition:width .3s}
+table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--faint);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+.yes{color:var(--ci);font-weight:600} .no{color:var(--bad);font-weight:600}
+@media (max-width:640px){ .lanes{grid-template-columns:repeat(2,minmax(0,1fr))} h1{font-size:23px} .lane{min-height:0} }
+@media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+<main>
+  <span class="tag">layer: infra → dev infra</span><span class="tag">RIT-87</span><span class="tag">Oct 13</span>
+  <h1>The cloud loop: close the laptop, keep building</h1>
+  <p class="lede">His goal: "close the laptop and continue the work without feeling the difference, and sit back down and open it when I want to." This page follows <b>one change</b> from the phone to ⌘K. Pick a scenario, then step through it.</p>
+
+  <h2>Follow one change</h2>
+  <div class="card">
+    <div class="scen" role="group" aria-label="Scenario">
+      <button data-s="happy" aria-pressed="true">Happy path</button>
+      <button data-s="red">Tests fail in CI</button>
+      <button data-s="closed">Mac closed all night</button>
+      <button data-s="dirty">Repo has local edits at unlock</button>
+      <button data-s="docs">Change only touches docs</button>
+    </div>
+    <div class="lanes" aria-hidden="true">
+      <div class="lane phone" id="L-phone"><h3>Phone</h3><div class="what">Claude app → Code tab</div></div>
+      <div class="lane cloud" id="L-cloud"><h3>Cloud VM</h3><div class="what">fresh clone of the GitHub repo, Linux</div></div>
+      <div class="lane ci" id="L-ci"><h3>GitHub Actions</h3><div class="what">Linux + a throwaway macOS VM per push</div></div>
+      <div class="lane mac" id="L-mac"><h3>His Mac</h3><div class="what">founder version on :7878</div></div>
+    </div>
+    <div id="step" class="step" aria-live="polite"></div>
+    <div class="ctrl">
+      <button id="prev" aria-label="Previous step">← Back</button>
+      <button id="next" aria-label="Next step">Next →</button>
+      <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+      <span id="count" style="font-size:13px;color:var(--faint)"></span>
+    </div>
+  </div>
+
+  <h2>Why it's shaped like this</h2>
+  <table>
+    <tr><th>Constraint</th><th>So</th></tr>
+    <tr><td>A closed Mac is asleep and runs nothing</td><td>CI runs on GitHub's machines, never the Mac</td></tr>
+    <tr><td>Polling costs battery and does nothing while closed</td><td>No timer. The app kicks the CD job on <b>unlock/wake</b>; launchd also runs it at login</td></tr>
+    <tr><td>The founder version lives on his Mac</td><td>CD runs on the Mac, at the moment it's awake and his</td></tr>
+    <tr><td>The cloud VM and the CI Mac have no screen he sees</td><td>They can test and compile the pill, not show it. Notch/UI work stays at the Mac</td></tr>
+    <tr><td>His database never leaves the Mac</td><td>Cloud sessions can't run evals on his real lines</td></tr>
+    <tr><td>He may be mid-work when he unlocks</td><td>autorelease skips unless the repo is a clean <code>main</code></td></tr>
+  </table>
+
+  <h2>What a cloud session brings from his setup</h2>
+  <p>The cloud VM starts from a fresh clone. What's committed to the repo comes along; what lives only on his Mac doesn't. (Claude Code docs, "What carries over from your setup".)</p>
+  <table>
+    <tr><th>Thing</th><th>In the cloud?</th><th>Why</th></tr>
+    <tr><td>Repo <code>CLAUDE.md</code> (incl. the "Cloud sessions" rules)</td><td class="yes">Yes</td><td>Part of the clone</td></tr>
+    <tr><td>Repo <code>.claude/settings.json</code> hooks (build loop, learn trigger)</td><td class="yes">Yes</td><td>Part of the clone (one-repo session)</td></tr>
+    <tr><td>Repo <code>.claude/skills/</code>, <code>agents/</code>, <code>.mcp.json</code></td><td class="yes">Yes</td><td>Part of the clone</td></tr>
+    <tr><td>Skills enabled on claude.ai</td><td class="yes">Yes</td><td>Loaded from his account</td></tr>
+    <tr><td><code>~/.claude/CLAUDE.md</code> (the brain pointer), user skills (layered-docs…), plugins, memory</td><td class="no">No</td><td>Live on his Mac. To bring one along, commit it to the repo's <code>.claude/</code></td></tr>
+    <tr><td>MCP servers added locally (daylog MCP)</td><td class="no">No</td><td>In <code>~/.claude.json</code> on the Mac; and the daylog server is on localhost anyway</td></tr>
+    <tr><td>GitHub credentials</td><td class="yes">Proxied</td><td>Stay encrypted on Anthropic's servers; a proxy attaches a scoped credential to git operations. No token in the VM</td></tr>
+  </table>
+
+  <h2>Check it yourself</h2>
+  <table>
+    <tr><th>Question</th><th>Command</th></tr>
+    <tr><td>Did CI pass on the last push?</td><td><code>gh run list --limit 3</code></td></tr>
+    <tr><td>What did the last unlock do?</td><td><code>tail ~/Library/Logs/daylog/autorelease.log</code></td></tr>
+    <tr><td>Which version runs, from where?</td><td>⌘K, or <code>curl -s localhost:7878/health</code></td></tr>
+    <tr><td>Turn CD off / on</td><td><code>launchctl bootout gui/$(id -u)/com.rithvik.daylog.autorelease</code> · <code>scripts/autorelease.sh --install</code></td></tr>
+  </table>
+  <p style="margin-top:18px">Files: <code>.github/workflows/ci.yml</code> · <code>scripts/autorelease.sh</code> · <code>app/Sources/DaylogBar/main.swift</code> (<code>watchForCD</code>) · <code>CLAUDE.md</code> "Cloud sessions" · text version: <code>cloud.md</code></p>
+</main>
+<script>
+const S = {
+  common: [
+    {lane:"phone", t:"He starts a cloud session from the phone", w:"On a walk: Claude app → Code tab → the daylog repo → \"RIT-45: …\". He steers by chat; the laptop is closed.", c:"Seen in: claude.ai/code session list"},
+    {lane:"cloud", t:"Claude works in a fresh clone", w:"An Anthropic VM clones GitHub's main, reads CLAUDE.md (the \"Cloud sessions\" rules) and runs `pytest` to check its own work. No macOS, no database, no localhost server.", c:"It can't run release.sh or devctl, and CLAUDE.md says not to"},
+    {lane:"cloud", t:"It pushes a claude/… branch", w:"Git goes through GitHub's proxy, which attaches a scoped credential server-side. The VM never holds his token. It pushes a branch, never main.", c:"Seen in: GitHub → branches"}
+  ],
+  ci_ok: [
+    {lane:"ci", t:"GitHub Actions tests the branch", w:"Two jobs at once: `pytest` on Linux (~9 s) and `swift build` on a throwaway macOS VM (~52 s). The macOS VM can compile the pill; nobody sees it.", c:"gh run list"},
+    {lane:"ci", t:"Green → it lands on main by itself", w:"The `land` job merges the branch into main, runs the tests again on the merged result, pushes main and deletes the branch. No PR to approve (his call, Oct 13).", c:"git log origin/main"}
+  ],
+  ci_red: [
+    {lane:"ci", t:"GitHub Actions tests the branch", w:"`pytest` fails on one test.", c:"gh run list → ✗"},
+    {lane:"ci", t:"Red → nothing lands", bad:true, w:"`land` needs both jobs green, so it doesn't run. Main is untouched, so his Mac has nothing new to release. The cloud session can read the failure and push a fix to the same branch, which re-runs CI.", c:"The founder version is never touched by red code"}
+  ],
+  mac_ok: [
+    {lane:"mac", t:"Meanwhile the Mac is closed", w:"Asleep: no server, no launchd jobs, no polling. That's why nothing on the Mac waits or checks; it has zero battery cost.", c:""},
+    {lane:"mac", t:"He unlocks the Mac", w:"The stable app hears the unlock (or wake) and kicks the launchd job com.rithvik.daylog.autorelease. If it's already running, the kick does nothing.", c:"watchForCD in main.swift"},
+    {lane:"mac", t:"autorelease: fetch, fast-forward, test", w:"Repo on a clean main? Fast-forward to GitHub's main. Did app/ or server/ change since releases/current? Then run pytest locally.", c:"tail ~/Library/Logs/daylog/autorelease.log"},
+    {lane:"mac", t:"release.sh v0.N+1, then a notification", w:"Freezes the new tag, rebuilds the app, switches `current`, restarts the server and the app. A notification says it's live, and ⌘K shows the version and the folder it runs from.", c:"⌘K: Day Log v0.23 · runs releases/v0.23"}
+  ],
+  closed: [
+    {lane:"mac", t:"Closed all night: still nothing runs", w:"Main moved hours ago, but the Mac is asleep, so the founder version waits. Nothing is lost: main on GitHub holds the change.", c:""},
+    {lane:"mac", t:"Morning unlock catches up", w:"One unlock releases everything that landed overnight in a single release (one tag, several commits in what's new).", c:"autorelease.log: main moved past v0.22 → releasing v0.23"}
+  ],
+  dirty: [
+    {lane:"mac", t:"He unlocks with uncommitted edits in the repo", w:"autorelease refuses to touch a repo he's working in.", c:""},
+    {lane:"mac", t:"Skipped, on purpose", bad:true, w:"Log: \"skip: uncommitted changes in the repo\". Commit or stash, then lock and unlock (or run scripts/autorelease.sh) to catch up. Same for being on another branch, or local main diverging from GitHub's.", c:"autorelease.log"}
+  ],
+  docs: [
+    {lane:"mac", t:"He unlocks the Mac", w:"autorelease fast-forwards main.", c:""},
+    {lane:"mac", t:"No release needed", w:"Only docs changed, nothing in app/ or server/, so the running version is already right. Log: \"up to date\". No restart, no notification.", c:"autorelease.log: up to date (v0.22)"}
+  ]
+};
+const plan = {
+  happy:[...S.common, ...S.ci_ok, ...S.mac_ok],
+  red:[...S.common, ...S.ci_red],
+  closed:[...S.common, ...S.ci_ok, ...S.closed, ...S.mac_ok.slice(3)],
+  dirty:[...S.common, ...S.ci_ok, ...S.dirty],
+  docs:[...S.common, ...S.ci_ok, ...S.docs]
+};
+let cur="happy", i=0;
+const el=id=>document.getElementById(id);
+function md(s){return s.replace(/`([^`]+)`/g,'<code>$1</code>')}
+function render(){
+  const steps=plan[cur], s=steps[i];
+  ["phone","cloud","ci","mac"].forEach(l=>el("L-"+l).classList.toggle("on", l===s.lane));
+  el("step").className="step"+(s.bad?" bad":"");
+  el("step").innerHTML=`<div class="num">${i+1}</div><div><h4>${s.t}</h4><div class="why">${md(s.w)}</div>${s.c?`<div class="check">Check: ${md(s.c)}</div>`:""}</div>`;
+  el("bar").style.width=((i+1)/steps.length*100)+"%";
+  el("count").textContent=`${i+1} / ${steps.length}`;
+  el("prev").disabled=i===0; el("next").disabled=i===steps.length-1;
+}
+document.querySelectorAll(".scen button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".scen button").forEach(x=>x.setAttribute("aria-pressed", x===b));
+  cur=b.dataset.s; i=0; render();
+});
+el("prev").onclick=()=>{ if(i>0){i--;render();} };
+el("next").onclick=()=>{ if(i<plan[cur].length-1){i++;render();} };
+document.addEventListener("keydown",e=>{ if(e.key==="ArrowRight") el("next").click(); if(e.key==="ArrowLeft") el("prev").click(); });
+render();
+</script>
+</body>
+</html>

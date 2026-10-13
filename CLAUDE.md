@@ -33,6 +33,10 @@ the experience better for someone using it.
   here's how it changes the build" in one line and carry on.
 - **Learn cards:** map to an existing card (project "Learning" or `learn` label), comment "pulled by <issue>",
   always say "existing card RIT-x" vs "new card"; new only when he asks.
+- **After a build card ships, offer its learn card (Oct 13).** Say it's done, suggest what the learn should hold
+  (his gaps and questions from the conversation, how we built it); he says what he wants; file it **Urgent**,
+  about the topic as built here. It closes only when he can defend it. Mid-build questions → a learn card tagged
+  `during build question`, no priority. His quoted words in cards are a data source: keep them.
 - **Cards follow `issue-card/shape.md`** (build cards short, think cards deep). **Labels:** the Linear doc "How
   we use labels": one Type, at most one Area, flags, and always `agent-filed` on issues you create.
 - **"Vision note: …"** = append a dated entry (his words) to the Linear doc "Vision notes". Notes aren't work;
