@@ -20,6 +20,17 @@ REL="$DATA/releases/$VERSION"
 echo "→ freezing $VERSION into $REL"
 rm -rf "$REL"; mkdir -p "$REL"
 git archive "$VERSION" | tar -x -C "$REL"
+
+# RIT-124: what's new in this release, for the bar's one-time "what's new" line. "new" = commit subjects since
+# the previous tag that touched the app or server; "try" = their `Try:` trailers (add one when a change is worth trying).
+PREV="$(git describe --tags --abbrev=0 "$VERSION^" 2>/dev/null || true)"
+RANGE="${PREV:+$PREV..}$VERSION"
+NEW="$(git log --no-merges --format='%s' "$RANGE" -- app server | head -6)" \
+TRY="$(git log --no-merges --format='%(trailers:key=Try,valueonly)' "$RANGE" -- app server | sed '/^$/d' | head -3)" \
+VER="$VERSION" python3 -c 'import json,os,datetime; split=lambda k:[l for l in os.environ[k].splitlines() if l.strip()]
+print(json.dumps({"version":os.environ["VER"],"released_at":datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+"new":split("NEW"),"try":split("TRY")},indent=1))' > "$REL/RELEASE.json"
+echo "→ release notes: $(python3 -c "import json;d=json.load(open('$REL/RELEASE.json'));print((d['new'] or ['-'])[0])")"
 "$UV" sync --project "$REL/server" -q
 
 echo "→ building Daylog.app from the frozen copy"

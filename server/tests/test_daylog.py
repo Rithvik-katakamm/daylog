@@ -286,7 +286,8 @@ def test_latest_amend_wins_and_bad_ranges_rejected(client, clock):
     start = db.parse(e["start"])
     client.post(f"/entries/{e['id']}/amend", json={"end": (start + timedelta(minutes=40)).isoformat()})
     client.post(f"/entries/{e['id']}/amend", json={"end": (start + timedelta(minutes=30)).isoformat()})
-    assert client.get("/summary").json()["by_label"]["x"] == 30
+    window = {"start": (start - timedelta(hours=1)).isoformat(), "end": (start + timedelta(hours=2)).isoformat()}
+    assert client.get("/summary", params=window).json()["by_label"]["x"] == 30  # explicit window: no midnight flake
     bad = client.post(f"/entries/{e['id']}/amend", json={"end": (start - timedelta(minutes=1)).isoformat()})
     assert bad.status_code == 422
 
@@ -347,3 +348,21 @@ def test_dev_reset_wipes_only_the_dev_db(tmp_path, monkeypatch):
         assert c.get("/timeline").json()["claims"]
         assert c.post("/dev/reset").status_code == 200
         assert c.get("/timeline").json()["claims"] == []
+
+
+# ---------- RIT-124: version + owner-only release notes on /health ----------
+
+def test_health_reports_version_and_hides_notes_from_non_owners(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from daylog import api
+    monkeypatch.setenv("DAYLOG_DB", str(tmp_path / "t.sqlite"))
+    monkeypatch.setenv("DAYLOG_IMPORTERS", "0")
+    rel = tmp_path / "RELEASE.json"
+    rel.write_text('{"version": "v9.9", "new": ["the bar shows what\'s new"], "try": ["open the bar"]}')
+    monkeypatch.setattr(api, "RELEASE_FILE", rel)
+    with TestClient(api.app) as c:
+        h = c.get("/health").json()
+        assert h["version"] == "v9.9" and h["owner"] is False and "release" not in h
+        (tmp_path / "owner").touch()                       # his Mac only
+        h = c.get("/health").json()
+        assert h["owner"] is True and h["release"]["new"] == ["the bar shows what's new"]

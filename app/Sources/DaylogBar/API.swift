@@ -81,6 +81,19 @@ struct NowState: Decodable {
     var cutOffer: CutOffer? = nil
 }
 
+/// RIT-124: which version is running, and (owner only) what's new in it.
+struct Health: Decodable {
+    let version: String?
+    let owner: Bool?
+    let release: ReleaseInfo?
+}
+
+struct ReleaseInfo: Decodable, Equatable {
+    let version: String
+    var new: [String] = []
+    var `try`: [String] = []
+}
+
 /// RIT-39: the running timer spans a long away; ⌫ on an empty line ends the task when he left.
 struct CutOffer: Decodable, Equatable {
     let timerId: String

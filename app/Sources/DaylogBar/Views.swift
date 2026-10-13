@@ -552,6 +552,10 @@ struct BarView: View {
             let from = Time.clockString(Time.parse(c.awayFrom)), to = Time.clockString(Time.parse(c.awayTo))
             Text("away \(from)–\(to)").foregroundStyle(Theme.text)
             Text("· ⌫ end task at \(from)").foregroundStyle(Theme.muted)
+        } else if !typed, store.mode == .input, store.showWhatsNew, let r = store.release {
+            Text(r.version).foregroundStyle(Theme.text).fontWeight(.semibold)
+            Text("· new: \(r.new.first ?? "")").foregroundStyle(Theme.text)
+            if let t = r.try.first { Text("· try: \(t)").foregroundStyle(Theme.muted) }
         } else if typed, let p = store.preview, p.action == "log", let d = store.describe(p) {
             Text("log").foregroundStyle(Theme.task).fontWeight(.semibold)
             Text(d).foregroundStyle(Theme.text)

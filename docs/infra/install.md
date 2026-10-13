@@ -26,3 +26,14 @@ scripts/uninstall.sh       # remove agents + app (data kept)
 ## Server tests
 
 `cd server && uv run pytest` (temp DB, fake clock).
+
+## What's new after a release (RIT-124)
+
+`scripts/release.sh` writes `RELEASE.json` into the frozen release: the version, commit subjects since the
+previous tag that touched `app/` or `server/` ("new"), and any `Try:` commit trailers ("try"). `/health` serves
+the version to everyone and the notes only to the owner's install. The first time the bar opens after a release it
+shows one line, "v0.13 · new: … · try: …", once; ⌘K → "What's new in this version" shows it again.
+
+**Owner-only features** are on when the file `~/Library/Application Support/daylog/owner` exists. Nothing in the
+repo creates it, so other people installing Day Log never see owner-only features. To get a "try" line in the
+notes, add a trailer to the commit: `Try: open the bar right after a release`.

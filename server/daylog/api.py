@@ -16,9 +16,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 import os
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
@@ -189,9 +191,32 @@ def is_dev() -> bool:
     return os.environ.get("DAYLOG_DEV") == "1"
 
 
+# RIT-124: release.sh writes RELEASE.json at the root of each frozen release (version, what's new, what to
+# try). Running from the working tree (Dev) there is none, so the version is "dev".
+RELEASE_FILE = Path(__file__).resolve().parents[2] / "RELEASE.json"
+
+
+def release_info() -> dict:
+    try:
+        return json.loads(RELEASE_FILE.read_text())
+    except (OSError, ValueError):
+        return {"version": "dev", "new": [], "try": []}
+
+
+def is_owner() -> bool:
+    """Owner-only features (his, not for other installs of the public repo): on when the file
+    `owner` sits next to the database. Nothing in the repo creates it, so other installs never see them."""
+    return (db.db_path().parent / "owner").exists()
+
+
 @app.get("/health")
 async def health():
-    return {"ok": True, "env": "dev" if is_dev() else "real", "db": str(db.db_path())}
+    rel, owner = release_info(), is_owner()
+    out = {"ok": True, "env": "dev" if is_dev() else "real", "db": str(db.db_path()),
+           "version": rel.get("version", "dev"), "owner": owner}
+    if owner:
+        out["release"] = rel  # what's new + what to try: owner-only for now
+    return out
 
 
 @app.post("/dev/reset")

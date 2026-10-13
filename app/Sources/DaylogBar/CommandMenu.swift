@@ -58,6 +58,8 @@ enum Commands {
                     isAvailable: always, run: { store.beginEdit() }),
             Command(id: "dev", group: .go, title: "Open the Dev app (latest build)", shortcut: "⌥D",
                     isAvailable: { _ in openDevApp != nil }, run: { openDevApp?() }),
+            Command(id: "whats-new", group: .go, title: "What's new in this version", shortcut: "",
+                    isAvailable: always, run: { store.whatsNew() }),
             Command(id: "work", group: .go, title: "Back to work (close)", shortcut: "Tab",
                     isAvailable: always, run: { hide() }),
             Command(id: "text-bigger", group: .go, title: "Text bigger", shortcut: "⌘=",

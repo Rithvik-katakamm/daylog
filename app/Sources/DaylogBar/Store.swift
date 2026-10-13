@@ -9,6 +9,9 @@ final class Store: ObservableObject {
     @Published var ghost: GhostInfo?  // ghost mode: offline, logging nothing
     @Published var onBreak: BreakInfo?  // ⌘B walk / ⌘⇧B smoke
     @Published var cutOffer: CutOffer?  // RIT-39: a long away inside the running timer
+    @Published var version = "dev"      // RIT-124: the running release
+    @Published var release: ReleaseInfo?  // owner-only: what's new in it
+    @Published var showWhatsNew = false   // one time per release, on the next open
     @Published var states: Set<String> = []  // substances that are on: outer rings
 
     /// What stays on screen while the bar is closed (his call, Oct 11: try both, then pick).
@@ -401,6 +404,10 @@ final class Store: ObservableObject {
     }
 
     func resetMode() {
+        if showWhatsNew, let r = release {  // seen once: don't show it again for this release
+            UserDefaults.standard.set(r.version, forKey: "seenVersion")
+            showWhatsNew = false
+        }
         editTarget = nil
         mode = .input; fillItem = nil; history = []; index = 0; input = ""; preview = nil
     }
@@ -553,6 +560,22 @@ final class Store: ObservableObject {
         } catch {
             serverDown = true
         }
+    }
+
+    /// RIT-124: on each open, learn the running version; the first open after a new release shows
+    /// "what's new" once (owner-only: the server sends notes only to his install).
+    func refreshHealth() async {
+        guard let h: Health = try? await API.get("health") else { return }
+        version = h.version ?? "dev"
+        release = h.release
+        if let r = h.release, !r.new.isEmpty, UserDefaults.standard.string(forKey: "seenVersion") != r.version {
+            showWhatsNew = true
+        }
+    }
+
+    /// ⌘K "What's new": show the line again, or just the version when there are no notes.
+    func whatsNew() {
+        if let r = release, !r.new.isEmpty { showWhatsNew = true } else { flashBriefly("Day Log \(version)") }
     }
 
     func refreshAll() async {
