@@ -95,6 +95,14 @@ importers (Wispr, Whoop,                                   ─▶ Notion dashboa
 
 ## Working rules
 
+- **How this build runs (his rule, Oct 13): pain first, lesson second.** The order of work comes from real
+  friction while he uses Day Log; each issue solved is a level-up. He's using this project to push what he can
+  build and deploy (AI engineering, backend, security), learning by doing.
+- **Name the fork in the road.** Whenever a slice reaches a real choice (rules vs model, local vs cloud, where a
+  secret lives, data shape), stop and say so in two or three lines: the options, the tradeoff, your pick. Offer a
+  short learn on it; he decides whether to stop and learn or keep building. Put the choice on the card.
+- **Check his foundation before moving on.** After a learn, ask one or two check questions in his own code's
+  terms; move on when the answers hold.
 - **Never disturb the stable app he's using.** Build with `scripts/dev.sh` and test the Dev app
   through `.build/devctl` (no keyboard, no focus). See `docs/infra/install.md`.
 - **For now (his call, Oct 11): stable = dev, always.** After a change is built and checked in
