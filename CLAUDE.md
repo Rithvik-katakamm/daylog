@@ -15,10 +15,10 @@ Built for Rithvik first. Possible portfolio piece later.
 > modify a card when his build direction changes it. When something isn't on the card, say so in one line
 > ("this isn't on the card, and here's how it changes the build") and carry on. When a card is done, move it to
 > Done, move the next one to In Progress, and open it in the Linear app on his MacBook.
-> **Learning goes to Linear Triage too (his rule, Oct 11):** when he says he wants to *learn* or
-> *deep dive* into something, file it in Triage with the `learn` flag (+ Type `Spike`, the right
-> Area, `agent-filed`). Name the layer of the stack it belongs to, quote what was explained, and
-> list a granular learning path. Triage is where he reviews and folds it into what he's learning.
+> **Learning maps to existing learn cards (his rule, Oct 13; replaces Oct 11):** when a build hits a concept,
+> use an existing card (Linear project "Learning", or the `learn` label) and comment "pulled by <build issue>".
+> Always say "existing card RIT-x" vs "new card"; a new one only when he explicitly asks. Name the layer,
+> teach briefly from this repo's code, ask a check question.
 > **Labels:** follow the Linear doc "How we use labels" (team RIT): one Type, at most one
 > Area, plus flags, and **always `agent-filed`** on issues you create.
 > **Vision lives in `docs/product/vision.md`** (public). Personal context and the original
