@@ -133,15 +133,15 @@ Handoff as of 2026-10-12, 8 PM. Start here in a fresh session.
 - **What to work on:** Linear (team RIT), project Day Log. The order is the issue **priority**:
   In Progress first, then Todo from Urgent down. He keeps a Linear board view "what's next?"
   (Todo / In Progress / Done columns, priority rows). Pull the top card. You may re-rank when a decision changes what's next (his call, Oct 12 night); say what you moved.
-- **Right now (Oct 12 night):** working on branch **`experiment/auto-labeler`**, released to stable as **v0.12**
-  (his OK). Main's hand-rolled checkpoint is tag `handrolled-2026-10-12`. Don't merge to main without asking.
-  Shipped tonight: RIT-101 stale reset (v0.9), monitor pill (v0.10), RIT-39 cut offer (v0.11), RIT-120 auto-labeler
-  v1 (v0.12: `server/daylog/autolabel.py`, knobs in `labels.json`, `/auto`, `/auto/score`, MCP `auto_labels`,
-  window title + browser URL capture). First score: category 35%, task 4% (iTerm2 hides the activity).
+- **Right now (Oct 13):** `main` is what he runs (stable **v0.13**). The auto-labeler experiment was merged into
+  main on his OK; the hand-rolled checkpoint stays as tag `handrolled-2026-10-12`. Shipped Oct 12–13: RIT-101 stale
+  reset (v0.9), monitor pill (v0.10), RIT-39 cut offer (v0.11), RIT-120 auto-labeler v1 (v0.12), RIT-124 what's new
+  after a release + owner-only feature flag (v0.13). First score: category 35%, task 4%.
 - **Problem (RIT-116, his framing):** zero-input tracking of his whole day, accurate and reliable; time is the side
   benefit. Narrowed: every Mac minute gets the right label with zero input, scored against what he typed.
-- **Next:** RIT-122 (the bar shows its guess; ⏎ confirms, typing corrects = labels: the data flywheel), then
-  RIT-121 (Dev-mode feedback → headless Claude Code fixes small things on a branch). The model path (baseline lookup
+- **Next (agreed order, RIT-128):** RIT-122 (the bar shows its guess; ⏎ confirms, typing corrects = labels, incl.
+  the label data shape) → RIT-125 (what may leave the Mac) → RIT-52 (one parser) → RIT-126 (agent labeler) →
+  RIT-127 (sync, when cross-device pain is real). Also queued: RIT-121 (Dev-mode feedback → headless Claude Code fixes small things on a branch). The model path (baseline lookup
   table → trees/logistic regression → embeddings → sequence model → active learning) is on RIT-118. He wants a real
   model, not just a lookup table; labels are the bottleneck. Ask him first: did he turn on Accessibility for
   Daylog (window titles)?
