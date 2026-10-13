@@ -11,10 +11,12 @@ phone ──▶ Claude cloud session (Linux VM, clone of GitHub repo)
              ├─ app:    swift build -c release   (macos-15: a fresh Mac VM, compiles the pill, can't show it)
              └─ land:   both green → merge into main, re-test, delete the branch   (no PR to approve)
              ▼
-          his Mac, at the next unlock or wake
+          his Mac, whenever he's at it: unlock, wake, or opening the bar (at most every 5 min)
              app kicks com.rithvik.daylog.autorelease → scripts/autorelease.sh
                fetch main → fast-forward → app/ or server/ changed since releases/current?
-               → pytest → release.sh v0.N+1 → notification; ⌘K shows the version
+               → CI green on GitHub for that commit? (waits up to 10 min) → pytest → release.sh v0.N+1
+               → notification; ⌘K shows the version
+             any skip → a notification (once per new reason) + "update skipped · why · fix" in the pill
 ```
 
 ## Constraints (why it's shaped like this)
@@ -27,6 +29,8 @@ phone ──▶ Claude cloud session (Linux VM, clone of GitHub repo)
 | The cloud VM has no macOS screen | Cloud = backend, data, docs, logic tests; notch/UI work stays at the Mac |
 | His database never leaves the Mac | Cloud sessions can't run evals on his real lines |
 | He may be working in the repo when he unlocks | autorelease skips if the repo isn't on a clean `main`, or if main diverged |
+| CI runs on GitHub even when the Mac is on (his call) | CD releases only a commit with a green CI run; a push from the Mac ships the same way as one from the phone |
+| He wants to know every time CD doesn't ship (his call) | Each skip: a notification with the reason and the fix, and a line in the pill until the next good release |
 
 ## One-time setup (him)
 
