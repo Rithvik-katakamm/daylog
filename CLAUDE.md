@@ -118,7 +118,7 @@ Handoff as of 2026-10-12, 8 PM. Start here in a fresh session.
 
 - **What to work on:** Linear (team RIT), project Day Log. The order is the issue **priority**:
   In Progress first, then Todo from Urgent down. He keeps a Linear board view "what's next?"
-  (Todo / In Progress / Done columns, priority rows). Pull the top card. Don't re-rank or reorganize Linear.
+  (Todo / In Progress / Done columns, priority rows). Pull the top card. You may re-rank when a decision changes what's next (his call, Oct 12 night); say what you moved.
 - **Right now (Oct 12 night):** working on branch **`experiment/auto-labeler`**, released to stable as **v0.12**
   (his OK). Main's hand-rolled checkpoint is tag `handrolled-2026-10-12`. Don't merge to main without asking.
   Shipped tonight: RIT-101 stale reset (v0.9), monitor pill (v0.10), RIT-39 cut offer (v0.11), RIT-120 auto-labeler
@@ -139,8 +139,8 @@ Handoff as of 2026-10-12, 8 PM. Start here in a fresh session.
   workflows, skills or research runs). Start in the editor, not Linear. The week's number is *pieces someone
   other than him used*. Context: `~/workspace/brain/records/plans/2026-10-12-founder-pattern-plan.md`.
 - **Build loop + learn slices are enforced by hooks** (`.claude/settings.json`, Oct 12):
-  `hooks/build-loop.sh` (SessionStart) injects the loop: top Linear issue by priority → state what ships, the
-  check that proves it's done, and the core piece *he* writes → ship → next. `hooks/learn-trigger.py`
+  `hooks/build-loop.sh` (SessionStart) injects the loop: next Linear card (re-ranking allowed) → state what ships,
+  the check that proves it's done, and the layer + components touched → ship → next. Claude writes the code. `hooks/learn-trigger.py`
   (UserPromptSubmit) spots concept gaps ("I don't understand…", "why does…") and attaches the learn-slice
   protocol: name the concept and its layer, teach it in ≤5 sentences from this repo's code, one check question,
   file a Linear Triage `learn` issue related to the build issue, then resume. Triggers are logged to
