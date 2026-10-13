@@ -269,8 +269,6 @@ final class Store: ObservableObject {
     }
 
     /// ⌘H high · ⌘I intoxicated · ⌘C caffeinated: toggle a substance ring. They stack.
-    static let stateNames = ["high": "high", "intoxicated": "intoxicated", "caffeinated": "caffeinated"]
-
     func toggleState(_ name: String) {
         let on = !states.contains(name)
         if on { states.insert(name) } else { states.remove(name) }  // optimistic
