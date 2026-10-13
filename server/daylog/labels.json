@@ -35,6 +35,8 @@
     "sleep_min_hours": 3,
     "sleep_window_local": [22, 11],
     "history_days": 30,
-    "confident": 0.5
+    "confident": 0.5,
+    "ask_below": 0.6,
+    "guess_refresh_seconds": 60
   }
 }

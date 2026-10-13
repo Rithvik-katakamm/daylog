@@ -239,7 +239,42 @@ async def dev_reset():
 async def now():
     timeline.expire_break(conn())  # never show a break that should already be ghost
     timeline.expire_stale(conn())  # nor last night's status (RIT-101)
-    return timeline.now_state(conn())
+    state = timeline.now_state(conn())
+    # RIT-122: with nothing running, the labeler's guess (a prediction; the pill shows it faded).
+    idle = not (state["timer"] or state["ghost"] or state["on_break"])
+    state["guess"] = autolabel.current_guess(conn()) if idle else None
+    return state
+
+
+class Label(BaseModel):
+    action: Literal["confirm", "correct", "shown"]
+    category: str | None = None
+    task: str | None = None
+    text: str | None = None          # a correction: what he typed instead
+    start: datetime | None = None    # the guessed block
+    end: datetime | None = None
+    guess: dict = {}
+    source: str = "api"
+
+
+@app.post("/label", status_code=201)
+async def label(body: Label):
+    """RIT-122: ⏎ confirms the guess, typing corrects it (both claims = labels); every guess shown is
+    logged too (an observation), so acceptance can be measured and auto-confirm decided later."""
+    if body.action == "shown":
+        db.append(conn(), kind="observation", type="guess.shown", source=body.source,
+                  start=db.utcnow(), data={"guess": body.guess})
+        return {"ok": True}
+    end = db.parse(body.end.isoformat()) if body.end else db.utcnow()
+    start = db.parse(body.start.isoformat()) if body.start else end
+    category, task = body.category, body.task
+    if body.action == "correct":
+        task = (body.text or "").strip() or task
+        category = autolabel.claim_category(autolabel.rules(), task or "") or category
+    autolabel._guess_cache.update(at=None)  # the pill should reflect the label right away
+    return db.append(conn(), kind="claim", type="label", source=body.source, start=start, end=end,
+                     label=task or category, data={"action": body.action, "category": category,
+                                                   "task": task, "guess": body.guess})
 
 
 @app.get("/auto")

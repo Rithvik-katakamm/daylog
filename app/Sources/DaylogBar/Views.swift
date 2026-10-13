@@ -228,7 +228,11 @@ struct BarView: View {
                 Text(t.label)
             } else {
                 Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
-                Text("nothing running").foregroundStyle(Theme.muted)
+                if let g = store.guess {  // RIT-122: the labeler's guess, faded
+                    Text(g.ask ? "\(g.category)?" : "probably \(g.category)").foregroundStyle(Theme.muted).italic()
+                } else {
+                    Text("nothing running").foregroundStyle(Theme.muted)
+                }
             }
             if let f = store.timer?.focus, f > 0, store.onBreak == nil, store.ghost == nil {
                 Text(String(repeating: "▲", count: f)).font(.system(size: fs(8), weight: .bold)).foregroundStyle(color)
@@ -265,7 +269,8 @@ struct BarView: View {
                     Text(t.label)
                 } else {
                     Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
-                    Text("idle").foregroundStyle(Theme.muted)
+                    Text(store.guess.map { $0.ask ? "\($0.category)?" : $0.category } ?? "idle")
+                        .foregroundStyle(Theme.muted).italic(store.guess != nil)
                 }
             }
             .lineLimit(1).truncationMode(.tail)
@@ -552,6 +557,14 @@ struct BarView: View {
             let from = Time.clockString(Time.parse(c.awayFrom)), to = Time.clockString(Time.parse(c.awayTo))
             Text("away \(from)–\(to)").foregroundStyle(Theme.text)
             Text("· ⌫ end task at \(from)").foregroundStyle(Theme.muted)
+        } else if !typed, store.mode == .input, store.timer == nil, let g = store.guess, !store.showWhatsNew {
+            if g.ask {
+                Text("looks like \(g.category)?").foregroundStyle(Theme.text).fontWeight(.semibold)
+                Text("· ⏎ yes · or type what you're doing").foregroundStyle(Theme.muted)
+            } else {
+                Text("probably \(g.category)" + (g.task.map { " · \($0)" } ?? "")).foregroundStyle(Theme.text)
+                Text("· ⏎ confirm · type to fix").foregroundStyle(Theme.muted)
+            }
         } else if !typed, store.mode == .input, store.showWhatsNew, let r = store.release {
             Text(r.version).foregroundStyle(Theme.text).fontWeight(.semibold)
             Text("· new: \(r.new.first ?? "")").foregroundStyle(Theme.text)

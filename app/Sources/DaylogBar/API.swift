@@ -79,6 +79,17 @@ struct NowState: Decodable {
     var onBreak: BreakInfo? = nil
     var states: [StateInfo]? = nil
     var cutOffer: CutOffer? = nil
+    var guess: Guess? = nil
+}
+
+/// RIT-122: what the labeler thinks he's doing (only when nothing runs). A prediction, shown faded.
+struct Guess: Decodable, Equatable {
+    let category: String
+    let task: String?
+    let confidence: Double
+    let start: String
+    let end: String
+    let ask: Bool  // unsure: the bar asks "looks like build?"
 }
 
 /// RIT-124: which version is running, and (owner only) what's new in it.

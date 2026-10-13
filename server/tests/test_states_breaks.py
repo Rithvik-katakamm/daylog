@@ -62,11 +62,12 @@ def test_unknown_state_rejected(client):
 
 
 def test_summary_counts_minutes_per_state(client, clock):
+    start = clock.t
     client.post("/state", json={"state": "high"})
     clock.advance(minutes=40)
     client.post("/state", json={"state": "high"})
-    day = clock.t.astimezone().date().isoformat()
-    assert client.get("/summary", params={"date": day}).json()["by_state"] == {"high": 40}
+    window = {"start": db.iso(start - timedelta(hours=1)), "end": db.iso(clock.t + timedelta(hours=1))}
+    assert client.get("/summary", params=window).json()["by_state"] == {"high": 40}  # no midnight flake
 
 
 # ---------- breaks ----------

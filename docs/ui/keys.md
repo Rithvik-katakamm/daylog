@@ -43,6 +43,7 @@ Works with Wispr Flow dictation too (⌥L, dictate, ⏎). Code: `server/daylog/i
 | **⌥D** | anywhere | Open the bar in **dev mode** (separate test database, DEV tag); switches if already open |
 | ⏎ | typing | Start a timer, or log a past block if the text has a time (`15m`, `3:10-3:25`, `since 1pm`) |
 | ⇧⏎ | typing | Force a timer even if the text contains a time |
+| ⏎ | empty line, nothing running, a guess shown | Confirm the guess ("probably build" / "looks like build?"): it becomes a label (RIT-122). Typing a task instead corrects it |
 | ↑ | empty line | Look back through logs, meetings, notes and gaps |
 | ↑ / ↓ | looking back | Earlier / later |
 | ⏎ | on a gap | Fill it in |

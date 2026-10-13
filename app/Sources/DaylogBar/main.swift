@@ -252,7 +252,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if activate { Sound.open.play() }
         // Focus the field once SwiftUI has laid it out.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in self?.store.focusRequest += 1 }
-        Task { await store.refreshAll(); await store.refreshHealth() }
+        Task { await store.refreshAll(); await store.refreshHealth(); store.noteGuessShown() }
         guard activate else { return }
         // Click anywhere outside daylog to dismiss. The click already picked the app you
         // want, so don't hand focus back to the old one.
