@@ -73,8 +73,8 @@ the experience better for someone using it.
   `~/Library/Logs/daylog/snapshots/`), `stop`. Test windows on his screen: 0. On a real window discrepancy
   (glow, focus, animation), ask before setting up a hidden local macOS VM. See `docs/testing/strategy.md`.
 - **Stable = dev, for now (Oct 11), shipped by CD (Oct 13):** after a change is checked in Dev, commit and push.
-  CI on GitHub tests it; `scripts/autorelease.sh` releases it once CI is green (run it to ship now; it also runs
-  at unlock, wake and bar open). Don't run `release.sh` by hand. Every skip notifies him with the reason and the
+  CI on GitHub tests it; `scripts/autorelease.sh` releases GitHub's main once CI is green. A push from this Mac
+  starts it at once (`.githooks/pre-push`); cloud work ships at the next unlock, wake or bar open. Don't run `release.sh` by hand. Every skip notifies him with the reason and the
   fix, and the pill shows it. Then quit Dev (`pkill -f "Daylog Dev.app"`): only one Day Log on his screen.
 - **Data caveat:** label totals before Oct 12 are inflated by stale statuses (fixed in v0.9). Prefer `/auto` or
   `computer_active_minutes`.
