@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# A push to main from this Mac starts CD right away (his call, Oct 13: code on the Mac → CI on GitHub → CD now).
+# Waits in the background until GitHub has the commit, then kicks autorelease, which waits for CI to go green.
+# In a cloud VM there's no launchctl, so this does nothing there: cloud work ships at the next unlock.
+command -v launchctl >/dev/null || exit 0
+SHA=""
+while read -r lref lsha rref rsha; do [ "$rref" = refs/heads/main ] && SHA="$lsha"; done
+[ -n "$SHA" ] || exit 0
+(
+  for _ in $(seq 1 30); do
+    [ "$(git ls-remote origin refs/heads/main 2>/dev/null | cut -f1)" = "$SHA" ] && break
+    sleep 2
+  done
+  launchctl kickstart "gui/$(id -u)/com.rithvik.daylog.autorelease"
+) >/dev/null 2>&1 &
+exit 0

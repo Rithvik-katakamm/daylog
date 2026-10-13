@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # CD: when he unlocks the Mac, bring the founder version up to date with main.
 # Never on a timer (battery; a closed Mac runs nothing anyway). The stable app kicks this job when he's at the Mac:
-# unlock, wake, or opening the bar (launchctl kickstart); launchd also runs it once at login. It releases only
+# unlock, wake, opening the bar, or a push to main from this Mac (.githooks/pre-push); launchd also runs it at login. It releases only
 # commits CI marked green on GitHub, and every skip says why (notification + a line in the pill).
 #   scripts/autorelease.sh            check and release if main moved
 #   scripts/autorelease.sh --install  register the launchd job (on demand only, no schedule)
@@ -26,6 +26,7 @@ PLIST
   launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
   for _ in $(seq 1 50); do launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1 || break; sleep 0.2; done
   launchctl bootstrap "$DOMAIN" "$AGENTS/$LABEL.plist"
+  git -C "$ROOT" config core.hooksPath .githooks   # a push to main from this Mac starts CD (.githooks/pre-push)
   echo "✓ autorelease registered: runs at login and whenever the app kicks it (unlock/wake)"
   exit 0
 fi
@@ -51,20 +52,16 @@ LOCK="$DATA/autorelease.lock"
 mkdir "$LOCK" 2>/dev/null || { say "already running"; exit 0; }
 trap 'rmdir "$LOCK"' EXIT
 
+# What ships is GitHub's main: the exact commit CI tested, frozen by tag. The working tree is never used, so
+# edits in progress, another branch or unpushed commits on the Mac can't block a release or sneak into one.
 cd "$ROOT"
 CUR="$(basename "$(readlink "$DATA/releases/current")")"
-BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-[ "$BRANCH" = main ] || skip "the repo is on branch $BRANCH, not main" "switch back to main"
-[ -z "$(git status --porcelain --untracked-files=no)" ] || skip "uncommitted changes in the repo" "commit or stash them"
 git fetch -q origin main --tags 2>/dev/null || skip "GitHub is unreachable (offline?)" "it retries at the next unlock"
-git merge -q --ff-only origin/main 2>/dev/null || skip "local main and GitHub's main have diverged" "pull --rebase, then push"
-[ -z "$(git log --oneline origin/main..HEAD)" ] || skip "local commits aren't on GitHub yet, so CI hasn't checked them" "push them"
-if git diff --quiet "$CUR" HEAD -- app server; then say "up to date ($CUR)"; status ok; exit 0; fi
+SHA="$(git rev-parse origin/main)"
+if git diff --quiet "$CUR" "$SHA" -- app server; then say "up to date ($CUR)"; status ok; exit 0; fi
 
-# CD releases only what CI marked green on GitHub (his call: CI always runs there, even when the Mac is on).
-SHA="$(git rev-parse HEAD)"
 ci() { gh run list --commit "$SHA" --workflow CI --json status,conclusion -q '.[0] | .status+" "+(.conclusion // "")' 2>/dev/null; }
-say "main moved past $CUR; waiting for CI on ${SHA:0:7}"
+say "GitHub's main moved past $CUR; waiting for CI on ${SHA:0:7}"
 for i in $(seq 1 40); do   # up to 10 minutes; the Mac is awake and he's at it
   s="$(ci)"
   case "$s" in
@@ -82,12 +79,14 @@ for i in $(seq 1 40); do   # up to 10 minutes; the Mac is awake and he's at it
 done
 [ "$s" = "completed success" ] || skip "CI is still running on ${SHA:0:7} after 10 minutes" "it retries at the next unlock or bar open"
 
-if ! (cd server && "$UV" run pytest -q >/dev/null); then
-  skip "tests passed on GitHub but fail on this Mac" "run cd server && uv run pytest"
-fi
 LATEST="$(git tag --list 'v*' --sort=-v:refname | head -1)"
 NEXT="v0.$(( ${LATEST#v0.} + 1 ))"
-say "CI green; releasing $NEXT"
+git tag -a "$NEXT" -m "Day Log $NEXT" "$SHA"   # tag the CI-green commit itself, never whatever HEAD is
+say "CI green; releasing $NEXT (${SHA:0:7})"
 "$ROOT/scripts/release.sh" "$NEXT"
 status released "" ""
 notify "Day Log $NEXT is live. ⌘K shows it."
+# Best effort: if the Mac's repo is a clean main that's behind, catch it up (never blocks a release).
+if [ "$(git rev-parse --abbrev-ref HEAD)" = main ] && [ -z "$(git status --porcelain --untracked-files=no)" ]; then
+  git merge -q --ff-only origin/main 2>/dev/null || true
+fi

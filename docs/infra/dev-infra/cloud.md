@@ -13,8 +13,8 @@ phone ──▶ Claude cloud session (Linux VM, clone of GitHub repo)
              ▼
           his Mac, whenever he's at it: unlock, wake, or opening the bar (at most every 5 min)
              app kicks com.rithvik.daylog.autorelease → scripts/autorelease.sh
-               fetch main → fast-forward → app/ or server/ changed since releases/current?
-               → CI green on GitHub for that commit? (waits up to 10 min) → pytest → release.sh v0.N+1
+               fetch GitHub's main → app/ or server/ changed since releases/current?
+               → CI green on GitHub for that commit? (waits up to 10 min) → tag that commit → release.sh v0.N+1
                → notification; ⌘K shows the version
              any skip → a notification (once per new reason) + "update skipped · why · fix" in the pill
 ```
@@ -28,7 +28,8 @@ phone ──▶ Claude cloud session (Linux VM, clone of GitHub repo)
 | Polling costs battery and does nothing while closed | No timer: the app kicks the job on unlock/wake; launchd also runs it at login |
 | The cloud VM has no macOS screen | Cloud = backend, data, docs, logic tests; notch/UI work stays at the Mac |
 | His database never leaves the Mac | Cloud sessions can't run evals on his real lines |
-| He may be working in the repo when he unlocks | autorelease skips if the repo isn't on a clean `main`, or if main diverged |
+| He may be mid-work on the Mac when CD runs | CD ships GitHub's `main` (the CI-tested commit) from a frozen tag and never touches the working tree, so local edits, branches or unpushed commits neither block it nor ship |
+| Coding on the Mac should ship right away | A push to main from the Mac starts CD at once (`.githooks/pre-push`); cloud work ships at the next unlock / wake / bar open |
 | CI runs on GitHub even when the Mac is on (his call) | CD releases only a commit with a green CI run; a push from the Mac ships the same way as one from the phone |
 | He wants to know every time CD doesn't ship (his call) | Each skip: a notification with the reason and the fix, and a line in the pill until the next good release |
 
