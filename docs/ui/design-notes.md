@@ -31,10 +31,10 @@ v1 is about getting the shape out. Then use it daily, refine from real use, and 
 hand it to a few other people for feedback.
 
 ## Open threads
-- **Color research for focus states:** Linear spike (RIT-75).
+- **Color research for focus states:** Linear spike.
 - **Design + performance talk:** making the pill more beautiful, and measuring and hitting
-  60 Hz (Linear spike RIT-76).
-- **Agentic shape** vs. explicit input, through the knuckle-test lens: RIT-74.
+  60 Hz.
+- **Agentic shape** vs. explicit input, through the knuckle-test lens.
 
 ## Knobs: the monitor pill
 

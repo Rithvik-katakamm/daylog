@@ -79,14 +79,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             hotKey = HotKey(id: 1) { [weak self] in MainActor.assumeIsolated { self?.toggle() } }
             devHotKey = HotKey(keyCode: UInt32(kVK_ANSI_D), id: 2) { MainActor.assumeIsolated { Self.openDevApp() } }
-            ActivityRecorder.requestTitleAccess()  // RIT-120: window titles (asks once)
+            ActivityRecorder.requestTitleAccess()  // window titles (asks once)
             recorder.start()  // only stable records what's in front of you
             Self.watchForCD()
         }
         store.startPolling()
     }
 
-    // MARK: CD on unlock (RIT-87)
+    // MARK: CD on unlock
 
     /// When he's back at the Mac (unlock or wake), start the autorelease job: it pulls main from GitHub and
     /// releases it if the tests pass. Never on a timer: a closed Mac runs nothing, and polling costs battery.
@@ -348,7 +348,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case (29, _) where cmd: store.resizeText(0)                        // ⌘0 reset
         case (51, .browse) where cmd: store.deleteCurrent()                // ⌘⌫ delete
         case (51, .input) where noMods && store.input.isEmpty && store.cutOffer != nil:
-            store.acceptCut()                                              // ⌫ cut at away (RIT-39)
+            store.acceptCut()                                              // ⌫ cut at away
         default: return false
         }
         return true

@@ -82,7 +82,7 @@ struct NowState: Decodable {
     var guess: Guess? = nil
 }
 
-/// RIT-122: what the labeler thinks he's doing (only when nothing runs). A prediction, shown faded.
+/// what the labeler thinks he's doing (only when nothing runs). A prediction, shown faded.
 struct Guess: Decodable, Equatable {
     let category: String
     let task: String?
@@ -92,7 +92,7 @@ struct Guess: Decodable, Equatable {
     let ask: Bool  // unsure: the bar asks "looks like build?"
 }
 
-/// RIT-124: which version is running, and (owner only) what's new in it.
+/// which version is running, and (owner only) what's new in it.
 struct Health: Decodable {
     let version: String?
     let owner: Bool?
@@ -107,7 +107,7 @@ struct ReleaseInfo: Decodable, Equatable {
     var released_at: String? = nil
 }
 
-/// RIT-39: the running timer spans a long away; ⌫ on an empty line ends the task when he left.
+/// the running timer spans a long away; ⌫ on an empty line ends the task when he left.
 struct CutOffer: Decodable, Equatable {
     let timerId: String
     let awayFrom: String

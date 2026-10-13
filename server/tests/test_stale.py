@@ -1,4 +1,4 @@
-"""Stale status (RIT-101): display off and no change for 3h ends last night's task and states."""
+"""Stale status: display off and no change for 3h ends last night's task and states."""
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -120,7 +120,7 @@ def test_ghost_is_left_alone(client, clock):
     assert now["ghost"] is not None and now["states"] != []
 
 
-# ---------- RIT-39: cut offer after a long away ----------
+# ---------- cut offer after a long away ----------
 
 def test_long_away_offers_cut_and_cut_ends_task_when_he_left(client, clock):
     client.post("/log", json={"text": "writing"})

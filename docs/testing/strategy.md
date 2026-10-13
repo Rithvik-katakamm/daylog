@@ -14,7 +14,7 @@ are building now and going to build. If there's any discrepancy… escalate to t
 | **State line** | `test-state …` written to `~/Library/Logs/daylog/app-dev.log` after every devctl command. |
 | **Snapshot** | A PNG of the bar exactly as drawn: `~/Library/Logs/daylog/snapshots/<name>.png`. How a test "sees". |
 | **The lab (VM)** | A hidden macOS VM on his Mac for stubborn real-window checks. **Not set up yet.** |
-| **The gate (CI)** | GitHub Actions checking every push (RIT-130). **Not set up yet.** |
+| **The gate (CI)** | GitHub Actions checking every push. **Not set up yet.** |
 
 ## How it works and why
 

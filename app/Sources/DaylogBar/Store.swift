@@ -8,12 +8,12 @@ final class Store: ObservableObject {
     @Published var timer: TimerInfo?
     @Published var ghost: GhostInfo?  // ghost mode: offline, logging nothing
     @Published var onBreak: BreakInfo?  // ⌘B walk / ⌘⇧B smoke
-    @Published var cutOffer: CutOffer?  // RIT-39: a long away inside the running timer
-    @Published var version = "dev"      // RIT-124: the running release
-    @Published var codeFrom = ""        // RIT-124: where the server's code runs from (releases/v0.17 or the repo)
+    @Published var cutOffer: CutOffer?  // a long away inside the running timer
+    @Published var version = "dev"      // the running release
+    @Published var codeFrom = ""        // where the server's code runs from (releases/v0.17 or the repo)
     @Published var release: ReleaseInfo?  // owner-only: what's new in it
     @Published var showWhatsNew = false   // one time per release, on the next open
-    @Published var guess: Guess?          // RIT-122: the labeler's guess when nothing runs
+    @Published var guess: Guess?          // the labeler's guess when nothing runs
     private var guessShownThisOpen = false
     @Published var states: Set<String> = []  // substances that are on: outer rings
 
@@ -383,7 +383,7 @@ final class Store: ObservableObject {
         let snapped = minutes < 0 ? (ceil(t0 / step) - 1) * step : (floor(t0 / step) + 1) * step
         let earliest = t.start.addingTimeInterval(60)
         editEnd = min(max(Date(timeIntervalSinceReferenceDate: snapped), earliest), Date())
-        // Silent on purpose (his call, Oct 10): sound gets redesigned as a whole (RIT-37).
+        // Silent on purpose (his call, Oct 10): sound gets redesigned as a whole.
     }
 
     private func submitEdit() {
@@ -474,7 +474,7 @@ final class Store: ObservableObject {
         if mode == .ghost { submitGhost(); return }
         if mode == .edit { submitEdit(); return }
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.isEmpty, guess != nil { acceptGuess(); return }  // RIT-122: ⏎ confirms the guess
+        if text.isEmpty, guess != nil { acceptGuess(); return }  // ⏎ confirms the guess
         guard !text.isEmpty else { return }
         // Only trust a preview made for exactly this line (typing fast can outrun it).
         let fresh = preview?.text?.trimmingCharacters(in: .whitespacesAndNewlines) == text ? preview : nil
@@ -492,7 +492,7 @@ final class Store: ObservableObject {
         Sound.saved.play()
         input = ""
         preview = nil
-        if !willLog, let g = guess {  // RIT-122: typing over a guess corrects it (a label for the guessed block)
+        if !willLog, let g = guess {  // typing over a guess corrects it (a label for the guessed block)
             guess = nil
             Task { _ = try? await API.post("label", ["action": "correct", "text": text, "start": g.start, "end": g.end,
                                                     "guess": guessDict(g), "source": "bar"]) }
@@ -573,7 +573,7 @@ final class Store: ObservableObject {
         }
     }
 
-    /// RIT-124: on each open, learn the running version; the first open after a new release shows
+    /// on each open, learn the running version; the first open after a new release shows
     /// "what's new" once (owner-only: the server sends notes only to his install).
     func refreshHealth() async {
         guard let h: Health = try? await API.get("health") else { return }
@@ -589,7 +589,7 @@ final class Store: ObservableObject {
         }
     }
 
-    /// RIT-124: the ⌘K header's version, e.g. "v0.18 · runs releases/v0.18 · 3:26 PM". The version is what
+    /// the ⌘K header's version, e.g. "v0.18 · runs releases/v0.18 · 3:26 PM". The version is what
     /// RELEASE.json claims; "runs" is the folder the server's code actually runs from, so they can be checked
     /// against each other (they should name the same tag).
     var versionLabel: String {
@@ -608,7 +608,7 @@ final class Store: ObservableObject {
         if let r = release, !r.new.isEmpty { showWhatsNew = true } else { flashBriefly("Day Log \(version)") }
     }
 
-    /// RIT-122: log that a guess was shown (once per open), so acceptance can be measured.
+    /// log that a guess was shown (once per open), so acceptance can be measured.
     func noteGuessShown() {
         guard isOpen, !guessShownThisOpen, let g = guess else { return }
         guessShownThisOpen = true
@@ -642,7 +642,7 @@ final class Store: ObservableObject {
 
     // MARK: actions
 
-    /// RIT-39: accept the cut offer (⌫ on an empty line). The task ends when he walked away.
+    /// accept the cut offer (⌫ on an empty line). The task ends when he walked away.
     func acceptCut() {
         guard cutOffer != nil else { return }
         Sound.saved.play()

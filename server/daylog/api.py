@@ -191,7 +191,7 @@ def is_dev() -> bool:
     return os.environ.get("DAYLOG_DEV") == "1"
 
 
-# RIT-124: release.sh writes RELEASE.json at the root of each frozen release (version, what's new, what to
+# release.sh writes RELEASE.json at the root of each frozen release (version, what's new, what to
 # try). Running from the working tree (Dev) there is none, so the version is "dev".
 RELEASE_FILE = Path(__file__).resolve().parents[2] / "RELEASE.json"
 
@@ -239,10 +239,10 @@ async def dev_reset():
 @app.get("/now")
 async def now():
     timeline.expire_break(conn())  # never show a break that should already be ghost
-    timeline.expire_stale(conn())  # nor last night's status (RIT-101)
-    timeline.end_ghost_after_night(conn(), db.utcnow())  # nor a ghost he slept through (RIT-43)
+    timeline.expire_stale(conn())  # nor last night's status
+    timeline.end_ghost_after_night(conn(), db.utcnow())  # nor a ghost he slept through
     state = timeline.now_state(conn())
-    # RIT-122: with nothing running, the labeler's guess (a prediction; the pill shows it faded).
+    # with nothing running, the labeler's guess (a prediction; the pill shows it faded).
     idle = not (state["timer"] or state["ghost"] or state["on_break"])
     state["guess"] = autolabel.current_guess(conn()) if idle else None
     return state
@@ -261,7 +261,7 @@ class Label(BaseModel):
 
 @app.post("/label", status_code=201)
 async def label(body: Label):
-    """RIT-122: ⏎ confirms the guess, typing corrects it (both claims = labels); every guess shown is
+    """⏎ confirms the guess, typing corrects it (both claims = labels); every guess shown is
     logged too (an observation), so acceptance can be measured and auto-confirm decided later."""
     if body.action == "shown":
         db.append(conn(), kind="observation", type="guess.shown", source=body.source,
@@ -281,7 +281,7 @@ async def label(body: Label):
 
 @app.get("/auto")
 async def auto(date: date | None = None, start: datetime | None = None, end: datetime | None = None):
-    """RIT-120: every minute labeled with zero input (derived; never written to the log)."""
+    """every minute labeled with zero input (derived; never written to the log)."""
     lo, hi = _window(date, start, end)
     segs = autolabel.label_day(conn(), lo, hi)
     return {"from": db.iso(lo), "to": db.iso(hi), "segments": segs,
@@ -306,7 +306,7 @@ async def timer_start(body: TimerStart):
 
 @app.post("/timer/cut")
 async def timer_cut(body: TimerStop | None = None):
-    """RIT-39: accept the cut offer. The task ends when he walked away (a backdated timer.stop,
+    """accept the cut offer. The task ends when he walked away (a backdated timer.stop,
     like the stale reset), and nothing is running until he types what he's on now."""
     offer = timeline.cut_offer(conn())
     if not offer:
@@ -391,7 +391,7 @@ async def amend_entry(event_id: str, body: Amend):
 async def add_observation(body: Observation):
     start = db.parse(body.start.isoformat()) if body.start else db.utcnow()
     # Ghost mode means log nothing. Enforced here, so no recorder can leak data by accident.
-    # RIT-43 (his calls, Oct 13): two bare facts get through, so a ghost can't run through the night:
+    # two bare facts get through, so a ghost can't run through the night:
     # the Mac sleeping ({reason} only) and the first app switch after it (no app, title or URL). If that
     # sleep ran through the night, ghost ends when the Mac went to sleep and logging resumes normally.
     if timeline.ghost(conn()):

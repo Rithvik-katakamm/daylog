@@ -21,7 +21,7 @@ echo "→ freezing $VERSION into $REL"
 rm -rf "$REL"; mkdir -p "$REL"
 git archive "$VERSION" | tar -x -C "$REL"
 
-# RIT-124: what's new in this release, for the bar's one-time "what's new" line. "new" = commit subjects since
+# what's new in this release, for the bar's one-time "what's new" line. "new" = commit subjects since
 # the previous tag that touched the app or server; "try" = their `Try:` trailers (add one when a change is worth trying).
 PREV="$(git describe --tags --abbrev=0 "$VERSION^" 2>/dev/null || true)"
 RANGE="${PREV:+$PREV..}$VERSION"

@@ -1,4 +1,4 @@
-"""Auto-labeler (RIT-120): zero-input labels for every minute, derived from the log."""
+"""Auto-labeler: zero-input labels for every minute, derived from the log."""
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -128,7 +128,7 @@ def test_score_reports_accuracy(client, clock):
     assert any("iTerm2" in k for k in s["top_misses"])
 
 
-# ---------- RIT-122: the guess, confirm/correct = labels, and the numbers ----------
+# ---------- the guess, confirm/correct = labels, and the numbers ----------
 
 def test_guess_shows_when_nothing_runs_and_confirm_becomes_a_label(client, clock):
     from daylog import autolabel as al

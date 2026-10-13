@@ -1,6 +1,6 @@
 # Sounds
 
-Sound is a product dimension (Linear **RIT-37**). Code: `app/Sources/DaylogBar/Sound.swift`.
+Sound is a product dimension. Code: `app/Sources/DaylogBar/Sound.swift`.
 
 ## Today (shipped)
 
@@ -22,7 +22,7 @@ All sounds are macOS built-ins from `/System/Library/Sounds`, at 35% volume.
 - The "two sounds on open" bug was macOS's error beep on an unhandled key, not ours. Any
   unexplained sound is probably a key nothing handled.
 
-## Next (RIT-37)
+## Next
 
 Audition sounds one at a time with him, then rewrite the table above as a full sound map:
 action → sound → why.

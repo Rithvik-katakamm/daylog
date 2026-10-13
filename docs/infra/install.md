@@ -27,7 +27,7 @@ scripts/uninstall.sh       # remove agents + app (data kept)
 
 `cd server && uv run pytest` (temp DB, fake clock).
 
-## What's new after a release (RIT-124)
+## What's new after a release
 
 `scripts/release.sh` writes `RELEASE.json` into the frozen release: the version, commit subjects since the
 previous tag that touched `app/` or `server/` ("new"), and any `Try:` commit trailers ("try"). `/health` serves

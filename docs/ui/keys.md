@@ -43,13 +43,13 @@ Works with Wispr Flow dictation too (⌥L, dictate, ⏎). Code: `server/daylog/i
 | **⌥D** | anywhere | Open the bar in **dev mode** (separate test database, DEV tag); switches if already open |
 | ⏎ | typing | Start a timer, or log a past block if the text has a time (`15m`, `3:10-3:25`, `since 1pm`) |
 | ⇧⏎ | typing | Force a timer even if the text contains a time |
-| ⏎ | empty line, nothing running, a guess shown | Confirm the guess ("probably build" / "looks like build?"): it becomes a label (RIT-122). Typing a task instead corrects it |
+| ⏎ | empty line, nothing running, a guess shown | Confirm the guess ("probably build" / "looks like build?"): it becomes a label. Typing a task instead corrects it |
 | ↑ | empty line | Look back through logs, meetings, notes and gaps |
 | ↑ / ↓ | looking back | Earlier / later |
 | ⏎ | on a gap | Fill it in |
 | ⌘⌫ | looking back | Delete that block or note |
 | ↓ | empty line | Edit the running (or last) block |
-| ⌫ | empty line, after a 2h+ away | End the running task when you walked away (shown as "away 2:40–6:10 · ⌫ end task at 2:40"; RIT-39) |
+| ⌫ | empty line, after a 2h+ away | End the running task when you walked away (shown as "away 2:40–6:10 · ⌫ end task at 2:40") |
 | ↓ / ↑ (⇧ = 15m) | editing | Move the end time 5 minutes earlier / later |
 | ⏎ | note, ghost, edit, fill | Save |
 | ⌘N | typing | Note mode |
@@ -75,7 +75,7 @@ screen while the bar is closed.
 
 | Key | Group | Does |
 |---|---|---|
-| ← / → | Navigate | Flip ghost ↔ tracker (RIT-43) |
+| ← / → | Navigate | Flip ghost ↔ tracker |
 
 ## Rules for picking new keys
 

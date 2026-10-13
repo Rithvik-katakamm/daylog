@@ -1,4 +1,4 @@
-"""Substances (RIT-68), breaks (RIT-69 + walk), and a break you never came back from."""
+"""Substances, breaks, and a break you never came back from."""
 from datetime import datetime, timedelta, timezone
 
 import pytest

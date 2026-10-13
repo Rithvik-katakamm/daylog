@@ -7,7 +7,7 @@ here until it feels right, and each change gets a dated line in the log at the b
 ## Two kinds of card
 
 - **Build card:** short, so issue size never slows the build. The shape below.
-- **Think card:** for a raw thought that hides a deeper problem (first one: RIT-118). It should
+- **Think card:** for a raw thought that hides a deeper problem (first one: the inputless Day Log card). It should
   provoke the nuance, bring the data and the outside knowledge, set up **one informed choice**,
   and teach something on the way:
 
@@ -52,7 +52,7 @@ his words, history, links
   to think and work on", so **Think together** was added and Question can replace Ships for spikes.
 - **2026-10-12, 7 PM:** cards carry a **Design lens** line where it matters: *does it understand me / is it
   competent / is it reliable* (his frame, "a bigger thought" than friction). Each card names which leg it serves
-  (e.g. RIT-39 and RIT-117 = reliable). One Linear tab open at a time: the card he's on.
+  (e.g. the cut offer and walk-away inference = reliable). One Linear tab open at a time: the card he's on.
 - **2026-10-12, 7:07 PM:** "each issue card should help with and provoke capture of that nuance, the data, and
   bring in supporting information… help me make a very informed choice right there and learn something in the
   process." → **Think card** type added (principal components, real data, prior art, one choice, learn).

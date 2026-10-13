@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CD (RIT-87): when he unlocks the Mac, bring the founder version up to date with main.
+# CD: when he unlocks the Mac, bring the founder version up to date with main.
 # Never on a timer (battery; a closed Mac runs nothing anyway). The stable app kicks this job on
 # unlock/wake (launchctl kickstart); launchd also runs it once at login.
 #   scripts/autorelease.sh            check and release if main moved

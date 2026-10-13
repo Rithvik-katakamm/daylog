@@ -58,7 +58,7 @@ th{color:var(--faint);font-weight:600;font-size:12px;text-transform:uppercase;le
 </head>
 <body>
 <main>
-  <span class="tag">layer: infra → dev infra</span><span class="tag">RIT-87</span><span class="tag">Oct 13</span>
+  <span class="tag">layer: infra → dev infra</span><span class="tag">Oct 13</span>
   <h1>The cloud loop: close the laptop, keep building</h1>
   <p class="lede">His goal: "close the laptop and continue the work without feeling the difference, and sit back down and open it when I want to." This page follows <b>one change</b> from the phone to ⌘K. Pick a scenario, then step through it.</p>
 
@@ -123,7 +123,7 @@ th{color:var(--faint);font-weight:600;font-size:12px;text-transform:uppercase;le
 <script>
 const S = {
   common: [
-    {lane:"phone", t:"He starts a cloud session from the phone", w:"On a walk: Claude app → Code tab → the daylog repo → \"RIT-45: …\". He steers by chat; the laptop is closed.", c:"Seen in: claude.ai/code session list"},
+    {lane:"phone", t:"He starts a cloud session from the phone", w:"On a walk: Claude app → Code tab → the daylog repo → a backend card. He steers by chat; the laptop is closed.", c:"Seen in: claude.ai/code session list"},
     {lane:"cloud", t:"Claude works in a fresh clone", w:"An Anthropic VM clones GitHub's main, reads CLAUDE.md (the \"Cloud sessions\" rules) and runs `pytest` to check its own work. No macOS, no database, no localhost server.", c:"It can't run release.sh or devctl, and CLAUDE.md says not to"},
     {lane:"cloud", t:"It pushes a claude/… branch", w:"Git goes through GitHub's proxy, which attaches a scoped credential server-side. The VM never holds his token. It pushes a branch, never main.", c:"Seen in: GitHub → branches"}
   ],

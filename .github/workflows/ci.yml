@@ -1,4 +1,4 @@
-# CI (RIT-87): every push is tested on GitHub's machines, so it works while the Mac is closed.
+# CI: every push is tested on GitHub's machines, so it works while the Mac is closed.
 # Cloud sessions push claude/* branches; when both checks are green the branch lands on main by
 # itself, no PR to approve (his call, Oct 13). The Mac picks main up at the next unlock (scripts/autorelease.sh).
 name: CI

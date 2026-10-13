@@ -34,14 +34,14 @@ BREAK_GHOST_AFTER = timedelta(hours=1)
 BREAK_ASSUMED = timedelta(minutes=15)
 BREAK_LABELS = {"walk": "walk", "smoke": "smoke break"}
 
-# Stale status (RIT-101): display off and no status change for STALE_AFTER means last night's
+# Stale status: display off and no status change for STALE_AFTER means last night's
 # task and states are over; they end when the display went off. Idle alone doesn't count:
 # only sleep, display sleep or lock mean the display is off.
 STALE_AFTER = timedelta(hours=3)
 STALE_MIN_OFF = timedelta(hours=1)  # so a quick lock late in a long session never ends the task
 DISPLAY_OFF_REASONS = {"NSWorkspaceScreensDidSleepNotification", "NSWorkspaceWillSleepNotification",
                        "locked"}
-# RIT-43: the only observation that gets through ghost. A display sleeping or the screen locking doesn't
+# the only observation that gets through ghost. A display sleeping or the screen locking doesn't
 # count: that happens at dinner too, which is what ghost is for.
 GHOST_ENDING_REASONS = {"NSWorkspaceWillSleepNotification"}
 # His rule (Oct 13): a sleep ends ghost only if it runs through the night. Ghost at 10 AM, lid closed,
@@ -50,7 +50,7 @@ NIGHT_HOURS = (0, 7)
 STATUS_CHANGE_TYPES = ("timer.start", "timer.stop", "state.set", "focus.set", "break.start",
                        "ghost.start")
 
-# Cut offer (RIT-39): a running timer that spans an away stretch of CUT_OFFER_MIN_AWAY or more
+# Cut offer: a running timer that spans an away stretch of CUT_OFFER_MIN_AWAY or more
 # (idle counts here, unlike the stale reset) gets a one-key offer to end the task when he left.
 CUT_OFFER_MIN_AWAY = timedelta(hours=2)
 
@@ -216,7 +216,7 @@ def end_ghost_after_night(conn: sqlite3.Connection, back_at: datetime) -> dateti
 
 
 def is_stale(display_off_at: datetime | None, last_change_at: datetime, now: datetime) -> bool:
-    """RIT-101, his rule: a status is stale when the display has been off for STALE_MIN_OFF AND
+    """His rule (Oct 12): a status is stale when the display has been off for STALE_MIN_OFF AND
     it's been more than STALE_AFTER since he last changed it. `display_off_at` is None while the
     display is on. `now` is the moment being judged (for a past night, when the display came back)."""
     return (display_off_at is not None and now - display_off_at >= STALE_MIN_OFF
@@ -363,7 +363,7 @@ def activity(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[
     segs: list[dict[str, Any]] = []
     for i, e in enumerate(events):
         if e["type"] != "app.focus" or not e["data"]:
-            continue  # an empty app.focus is a ghost wake mark (RIT-43): it ends an away, it isn't activity
+            continue  # an empty app.focus is a ghost wake mark: it ends an away, it isn't activity
         start = db.parse(e["start"])
         nxt = db.parse(events[i + 1]["start"]) if i + 1 < len(events) else now
         end = min(nxt, start + ACTIVITY_CAP, now)
@@ -371,7 +371,7 @@ def activity(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[
         if not clipped:
             continue
         app = e["data"].get("app") or "unknown"
-        # Window title and browser URL (RIT-120 capture; absent on older events).
+        # Window title and browser URL.
         title, url = e["data"].get("title") or "", e["data"].get("url") or ""
         s, en = clipped
         last = segs[-1] if segs else None

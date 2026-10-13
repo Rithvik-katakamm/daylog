@@ -16,22 +16,22 @@ Technical work → Linear (team RIT). Product/design questions → Notion.
 | **Breath** | ui | Slow pulse while closed when something is on | `Breathing` | Shipped | Watch whether it annoys over hours |
 | **Text size** | ui, ux | ⌘= / ⌘− / ⌘0 | `fs()`, `Store.resizeText` | Shipped v0.3 | Closed pill ears don't grow with it well |
 | **Side ring** | ui | Status ring on the right edge | `SideRing` | Off by default (in the way) | Keep or delete after the UX talk |
-| **Monitor mode** | ux, ui | No notch → one row: full title, ▲s, time | `monitorRow`, `placePanel`, `PillScreen` | Shipped v0.6; ⌘K: pill on MacBook / monitor / follow cursor | Style it further (RIT-82) |
+| **Monitor mode** | ux, ui | No notch → one row: full title, ▲s, time | `monitorRow`, `placePanel`, `PillScreen` | Shipped v0.6; ⌘K: pill on MacBook / monitor / follow cursor | Style it further |
 
 ## UX: commands
 
 | Component | Layer | What it is | Code | State | Open problems |
 |---|---|---|---|---|---|
 | **Key commands** | ux | ⌘F focus, ⌘B/⌘⇧B breaks, ⌘H/⌘I/⌘C substances, ⌘N, ⌘O, ⌘K | `handleKey`, `CommandMenu.swift`, `docs/ui/keys.md` | Shipped; now shortcuts, not the main way | — |
-| **Typed commands** | ux, backend | Say it: "smoke break", "back", "deep focus", "coffee, high, deep focus" (also via Wispr dictation) | `server/daylog/intents.py`, `/parse`, `/log` | MVP shipped v0.6 (keyword rules, 50+ tests) | Rules miss anything unusual; "coffee" anywhere = caffeinated. Next: a model + eval vs these rules (RIT-78) |
-| **Smart capture** | ux, ai | Model-backed: understand anything typed, clean titles, time fixes, juggling | not built (RIT-78, RIT-52) | After living with the MVP | Data shape decided at typing time (data talk, RIT-70) |
+| **Typed commands** | ux, backend | Say it: "smoke break", "back", "deep focus", "coffee, high, deep focus" (also via Wispr dictation) | `server/daylog/intents.py`, `/parse`, `/log` | MVP shipped v0.6 (keyword rules, 50+ tests) | Rules miss anything unusual; "coffee" anywhere = caffeinated. Next: a model + eval vs these rules |
+| **Smart capture** | ux, ai | Model-backed: understand anything typed, clean titles, time fixes, juggling | not built | After living with the MVP | Data shape decided at typing time |
 
 ## Backend
 
 | Component | Layer | What it is | Code | State | Open problems |
 |---|---|---|---|---|---|
 | **Event log** | backend | Append-only SQLite, edits as new events | `db.py` | Shipped | — |
-| **Substances** | backend | `state.set` events, global | `api.py /state`, `timeline.active_states` | Shipped v0.2 | Old labels contain "high" (data talk, RIT-70) |
+| **Substances** | backend | `state.set` events, global | `api.py /state`, `timeline.active_states` | Shipped v0.2 | Old labels contain "high" |
 | **Breaks** | backend | `break.start`; resumes the task; smoke → high; >1h → ~15 min + ghost | `api.py /break`, `timeline.expire_break` | Shipped v0.2 | Learn real break lengths (Smart capture) |
 
 ## Infra
@@ -42,7 +42,7 @@ Technical work → Linear (team RIT). Product/design questions → Notion.
 | **Launch agents** | infra | launchd keeps server + app alive | `scripts/lib.sh write_agent` | Idempotent (no repeat "Background Items Added"). App runs as `ProcessType Interactive` (v0.7): unspecified = CPU-throttled, which made stable stutter while Dev was smooth | — |
 | **Agent status** | backend, ai | Agents set his status in plain words via MCP `set_status` (source `agent:<name>`); the pill polls every 4s | `mcp_server.py`, `Store.startPolling` | MVP v0.7 | Push instead of poll; agent-set status is a claim *on his behalf*, show it differently? |
 
-### Infra → dev infra (the cloud loop, RIT-87): `docs/infra/dev-infra/`
+### Infra → dev infra: `docs/infra/dev-infra/`
 
 | Component | Layer | What it is | Code | State | Open problems |
 |---|---|---|---|---|---|
@@ -59,4 +59,4 @@ Technical work → Linear (team RIT). Product/design questions → Notion.
 | **devctl** | testing | Test remote for the Dev app (no keyboard, no focus) | `tools/devctl.swift`, `AppDelegate` test channel | Shipped; `start`/`stop`/`snap` added Oct 13 | — |
 | **Headless Dev** | testing | Dev app off-screen and silent; snapshots of the bar | `Flavor.headless`, `snapshot(name:)`, `Sound.play` | Shipped Oct 13 (default for all tests) | Snapshot may differ from a real window (glow/blur) |
 | **Lab VM** | testing, infra | Hidden macOS VM for real-window checks | — | Not set up (his call: when needed) | Costs Mac memory/CPU/disk; one-time setup needs him |
-| **CI gate** | testing, infra | GitHub Actions on every push | `.github/workflows/ci.yml` | Shipped Oct 13 (RIT-130); see dev infra above | — |
+| **CI gate** | testing, infra | GitHub Actions on every push | `.github/workflows/ci.yml` | Shipped Oct 13; see dev infra above | — |

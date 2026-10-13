@@ -2,7 +2,7 @@ import AppKit
 
 /// Deliberate, consistent sounds: every action of a kind always makes the same sound.
 /// They come from macOS's built-in palette (/System/Library/Sounds). The full sound design
-/// is RIT-37; a synthesized watch tick was tried and dropped on Oct 10.
+/// is its own card; a synthesized watch tick was tried and dropped on Oct 10.
 enum Sound {
     case open, mode, saved, ghost
 

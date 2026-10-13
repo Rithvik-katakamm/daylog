@@ -228,7 +228,7 @@ struct BarView: View {
                 Text(t.label)
             } else {
                 Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
-                if let g = store.guess {  // RIT-122: the labeler's guess, faded
+                if let g = store.guess {  // the labeler's guess, faded
                     Text(g.ask ? "\(g.category)?" : "probably \(g.category)").foregroundStyle(Theme.muted).italic()
                 } else {
                     Text("nothing running").foregroundStyle(Theme.muted)

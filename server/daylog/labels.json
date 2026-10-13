@@ -1,5 +1,5 @@
 {
-  "_doc": "Auto-labeler knobs (RIT-120). Categories every minute is sorted into, and the rules that sort it. Rules are checked top to bottom; the first match wins. Matching is case-insensitive and on substrings. Edit freely: the auto view is derived, so a change here relabels history on the next read.",
+  "_doc": "Auto-labeler knobs. Categories every minute is sorted into, and the rules that sort it. Rules are checked top to bottom; the first match wins. Matching is case-insensitive and on substrings. Edit freely: the auto view is derived, so a change here relabels history on the next read.",
   "categories": ["build", "learn", "plan", "talk", "watch", "admin", "break", "sleep", "away"],
   "apps": [
     {"match": ["iterm", "terminal", "xcode", "cursor", "visual studio code", "daylog", "warp", "ghostty"], "category": "build"},

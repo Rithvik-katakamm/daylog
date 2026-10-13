@@ -268,7 +268,7 @@ def _focus(client, clock):
 
 
 def test_night_sleep_ends_ghost_replaying_oct_12(client, clock):
-    # RIT-43, his calls (Oct 13): ghost "watching code geass" at 3:17 AM, lid closed 3:57 AM, opened the Mac
+    # His calls (Oct 13): ghost "watching code geass" at 3:17 AM, lid closed 3:57 AM, opened the Mac
     # at the coffee shop at 1:14 PM to a 13-hour ghost. A sleep through 12-7 AM ends ghost when the Mac slept.
     clock.t = datetime(2026, 10, 13, 7, 17, tzinfo=timezone.utc)  # 3:17 AM New York
     client.post("/ghost", json={"status": "watching code geass"})
@@ -319,7 +319,7 @@ def test_display_sleep_or_lock_does_not_end_ghost(client, clock):
 
 
 def test_amend_cuts_a_ghost_back_to_when_he_slept(client, clock):
-    # Oct 13: the Oct 12 ghost ran 13 h before RIT-43 shipped; history gets corrected by an amend.
+    # Oct 13: the Oct 12 ghost ran 13 h before the night rule shipped; history gets corrected by an amend.
     g = client.post("/ghost", json={"status": "watching code geass"}).json()["ghost"]
     clock.advance(hours=13)
     client.post("/timer/start", json={"label": "coffee shop"})
@@ -372,7 +372,7 @@ def test_latest_amend_wins_and_bad_ranges_rejected(client, clock):
     assert bad.status_code == 422
 
 
-# ---------- focus tiers (RIT-38) ----------
+# ---------- focus tiers ----------
 
 def test_focus_layers_on_the_running_task(client, clock):
     assert client.post("/focus", json={"tier": 1}).status_code == 409  # no task yet
@@ -407,14 +407,14 @@ def test_focus_tier_validated(client):
     assert client.post("/focus", json={"tier": 4}).status_code == 422
 
 
-# ---------- dev mode (RIT-58) ----------
+# ---------- dev mode ----------
 
 def test_health_reports_env(client):
     assert client.get("/health").json()["env"] == "real"
 
 
 def test_health_reports_where_its_code_runs_from(client):
-    # RIT-124: the version is a claim from RELEASE.json; `code` is the folder this server actually runs from.
+    # the version is a claim from RELEASE.json; `code` is the folder this server actually runs from.
     from daylog import api
     assert client.get("/health").json()["code"] == str(api.RELEASE_FILE.parent)
 
@@ -436,7 +436,7 @@ def test_dev_reset_wipes_only_the_dev_db(tmp_path, monkeypatch):
         assert c.get("/timeline").json()["claims"] == []
 
 
-# ---------- RIT-124: version + owner-only release notes on /health ----------
+# ---------- version + owner-only release notes on /health ----------
 
 def test_health_reports_version_and_hides_notes_from_non_owners(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient

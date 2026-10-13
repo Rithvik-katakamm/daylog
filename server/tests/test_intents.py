@@ -1,4 +1,4 @@
-"""Typed commands (RIT-78 MVP): the keyword baseline."""
+"""Typed commands: the keyword baseline."""
 import pytest
 from fastapi.testclient import TestClient
 

@@ -5,7 +5,7 @@ import Foundation
 
 /// Passive observations: which app is in front, and when he's away.
 ///
-/// RIT-120: each `app.focus` also carries the front window's title (Accessibility permission)
+/// each `app.focus` also carries the front window's title (Accessibility permission)
 /// and, for Safari/Brave/Chrome, the current tab's URL (Automation permission). A title or
 /// URL change inside the same app posts a new `app.focus`, checked every 30 seconds.
 ///

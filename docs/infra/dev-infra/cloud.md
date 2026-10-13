@@ -1,4 +1,4 @@
-# Cloud loop: work from the phone (RIT-87)
+# Cloud loop: work from the phone
 
 **Goal (his, Oct 13):** close the laptop and keep working without feeling the difference; open it and carry on.
 
@@ -32,7 +32,7 @@ phone ──▶ Claude cloud session (Linux VM, clone of GitHub repo)
 
 1. claude.ai/code → connect GitHub → pick `Rithvik-katakamm/daylog`.
 2. Cloud environment: default network access is enough (PyPI for `uv`). Setup script: `cd server && uv sync`.
-3. From the phone: start a session on the repo with a card, e.g. "RIT-45: …".
+3. From the phone: start a session on the repo with a card, e.g. "…".
 
 ## Knobs and logs
 

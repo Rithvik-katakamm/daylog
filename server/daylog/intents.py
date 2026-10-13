@@ -1,4 +1,4 @@
-"""Say what you mean: typed lines → commands (the MVP of Smart capture, RIT-78).
+"""Say what you mean: typed lines → commands.
 
 Two kinds of match, both plain rules (no model yet):
 1. **Command lines**: the whole line is a command ("smoke break", "back", "deep focus",

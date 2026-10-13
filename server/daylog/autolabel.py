@@ -1,4 +1,4 @@
-"""Auto-labeler (RIT-120): every minute of the day gets a category and a best-guess task,
+"""Auto-labeler: every minute of the day gets a category and a best-guess task,
 with zero input. A derived view: it reads the log and never writes to it, so changing a
 rule in labels.json relabels history on the next read.
 
@@ -90,7 +90,7 @@ def _grid(conn: sqlite3.Connection, lo: datetime, hi: datetime):
         e = db.parse(c["end"]) if c["end"] else min(hi, db.utcnow())
         for i in range(max(0, int((s - lo) / MIN)), min(n, int((e - lo) / MIN) + 1)):
             cover[i] = c
-    # RIT-122: a confirmed or corrected guess is his label for that span (a claim; wins over timers).
+    # a confirmed or corrected guess is his label for that span (a claim; wins over timers).
     for e in db.query(conn, types=["label"], since=lo - timedelta(hours=24), until=hi):
         d = e["data"]
         if d.get("action") not in ("confirm", "correct") or not e["end"]:
@@ -297,7 +297,7 @@ def score(conn: sqlite3.Connection, until: datetime, days: int = 14) -> dict[str
 
 
 def feedback(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> dict[str, Any]:
-    """RIT-122's numbers: how often a guess was shown, confirmed (⏎) or corrected (typed)."""
+    """The guess loop's numbers: how often a guess was shown, confirmed (⏎) or corrected (typed)."""
     hi = hi + timedelta(seconds=1)  # include events recorded this very second
     shown = len(db.query(conn, types=["guess.shown"], since=lo, until=hi))
     acts = Counter(e["data"].get("action") for e in db.query(conn, types=["label"], since=lo, until=hi))
