@@ -101,6 +101,9 @@ importers (Wispr, Whoop,                                   ─▶ Notion dashboa
 - **Name the fork in the road.** Whenever a slice reaches a real choice (rules vs model, local vs cloud, where a
   secret lives, data shape), stop and say so in two or three lines: the options, the tradeoff, your pick. Offer a
   short learn on it; he decides whether to stop and learn or keep building. Put the choice on the card.
+- **Decide with numbers, not feel (his rule, Oct 13).** Every fork names the metric that settles it and the
+  result that would change the decision, written before building (e.g. "LLM only if mode accuracy +X points at
+  p95 ≤ Y ms"). Compare options on the same test set; the simple option may win. Day Log's metrics: RIT-131.
 - **Check his foundation before moving on.** After a learn, ask one or two check questions in his own code's
   terms; move on when the answers hold.
 - **Never disturb the stable app he's using.** Build with `scripts/dev.sh` and test the Dev app
