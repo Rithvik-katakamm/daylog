@@ -171,10 +171,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel = KeyPanel(contentRect: NSRect(origin: .zero, size: Self.windowSize),
                          styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         floating(panel)
-        // At the menu bar's own level: macOS keeps that layer still when you swipe between
-        // desktops (three-finger swipe), so the pill stays put on the notch instead of sliding
-        // away with the old desktop and redrawing on the new one.
-        panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.mainMenuWindow)) + 1)
+        // Above the menu bar, at the screen-saver layer. Oct 13: the menu-bar level (79f84da) wasn't
+        // enough. Modern macOS slides each desktop's menu bar with the three-finger swipe, so a pill at
+        // that level slid away with the old desktop (his photo, IMG_2496). This layer belongs to no
+        // desktop, so the pill should stay pinned on the notch while the desktops move under it.
+        // Needs a real swipe to verify (gestures can't be scripted); roll back with release.sh v0.15.
+        panel.level = .screenSaver
         let host = NSHostingView(rootView: BarView(store: store))
         host.layer?.backgroundColor = .clear
         panel.contentView = host
