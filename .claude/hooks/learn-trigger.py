@@ -16,10 +16,11 @@ PROTOCOL = (
     "LEARN-SLICE TRIGGER (Day Log hook). If Rithvik just hit a concept he doesn't understand, pause the "
     "build and: 1) Name the concept and its stack layer (ui/ux/backend/infra/ai/data). 2) Teach it in 5 "
     "sentences or fewer, using THIS repo's code from the current slice (cite file:line). 3) Ask him ONE "
-    "check question and wait for his answer. 4) File a Linear Triage issue: title 'Learn: <concept>', team "
-    "RIT, project Day Log, labels Spike + learn + agent-filed + the right Area; related to the current "
-    "build issue ('pulled by'); body = what you explained + a 3-step learning path. Tell him the ID. "
-    "5) Resume the slice. If this isn't a concept gap (just a normal question), ignore this note."
+    "check question and wait for his answer. 4) Map it to an EXISTING learn card (Linear project "
+    "'Learning', or a card with the learn label) and comment there 'pulled by <build issue>'. Do NOT create "
+    "a new learn card unless he explicitly asks (his rule, Oct 13). Always say which: 'existing card RIT-x' "
+    "vs 'new card'. If none fits, say so and offer one; don't file it. 5) Resume the slice. If this isn't "
+    "a concept gap (just a normal question), ignore this note."
 )
 
 def main():
