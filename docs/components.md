@@ -41,3 +41,13 @@ Technical work → Linear (team RIT). Product/design questions → Notion.
 | **Channels** | infra | Stable (frozen tag) + Dev; for now stable = dev | `scripts/release.sh`, `dev.sh` | Auto-ship each checked build | Building on the Mac he uses: one instance rule; maybe a test user/VM later |
 | **Launch agents** | infra | launchd keeps server + app alive | `scripts/lib.sh write_agent` | Idempotent (no repeat "Background Items Added"). App runs as `ProcessType Interactive` (v0.7): unspecified = CPU-throttled, which made stable stutter while Dev was smooth | — |
 | **Agent status** | backend, ai | Agents set his status in plain words via MCP `set_status` (source `agent:<name>`); the pill polls every 4s | `mcp_server.py`, `Store.startPolling` | MVP v0.7 | Push instead of poll; agent-set status is a claim *on his behalf*, show it differently? |
+
+## Testing
+
+| Component | Layer | What it is | Code | State | Open problems |
+|---|---|---|---|---|---|
+| **Server tests** | testing, backend | Unit + API tests for the server | `server/tests/` | 136 pass (Oct 13) | Some tests depend on the clock; two midnight bugs fixed Oct 13 |
+| **devctl** | testing | Test remote for the Dev app (no keyboard, no focus) | `tools/devctl.swift`, `AppDelegate` test channel | Shipped; `start`/`stop`/`snap` added Oct 13 | — |
+| **Headless Dev** | testing | Dev app off-screen and silent; snapshots of the bar | `Flavor.headless`, `snapshot(name:)`, `Sound.play` | Shipped Oct 13 (default for all tests) | Snapshot may differ from a real window (glow/blur) |
+| **Lab VM** | testing, infra | Hidden macOS VM for real-window checks | — | Not set up (his call: when needed) | Costs Mac memory/CPU/disk; one-time setup needs him |
+| **CI gate** | testing, infra | GitHub Actions on every push | — | Not set up (RIT-130) | Pain arrives when agents push (RIT-121) |

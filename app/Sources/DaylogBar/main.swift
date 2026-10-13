@@ -19,6 +19,10 @@ enum Flavor {
     static let stableID = "com.rithvik.daylog"
     static let devID = "com.rithvik.daylog.dev"
     static let isDev = Bundle.main.bundleIdentifier == devID
+    /// Headless testing (his default, Oct 13): the Dev app runs with every window off-screen and no sound,
+    /// so tests never appear on his screens. Started by `devctl start` (DAYLOG_HEADLESS=1). See docs/testing/.
+    static let headless = isDev && ProcessInfo.processInfo.environment["DAYLOG_HEADLESS"] == "1"
+    static let offscreen = NSPoint(x: -30000, y: -30000)
 
     /// Stable → Dev: "toggle your bar". Dev ← agent: test commands.
     static let devToggle = Notification.Name("com.rithvik.daylog.dev.toggle")
@@ -123,6 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             if !handleKey(code, mods) && code == 36 { store.submit() }  // ⏎ in the typing line
         case "type": store.input += info["text"] ?? ""
+        case "snap": snapshot(name: info["name"] ?? "latest")
         default: break
         }
         // Report state after every command, so tests can assert on it.
@@ -135,6 +140,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                   + "ghost=\(s.ghost?.status ?? "-") rest=\(s.restStyle.rawValue)")
             fflush(stdout)
         }
+    }
+
+    /// Headless check: save a PNG of the bar exactly as drawn (the panel is off-screen, so this is how
+    /// a test "sees" it). Written to ~/Library/Logs/daylog/snapshots/<name>.png.
+    private func snapshot(name: String) {
+        guard let view = panel.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+        view.cacheDisplay(in: view.bounds, to: rep)
+        let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/daylog/snapshots")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let safe = name.filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
+        let url = dir.appendingPathComponent("\(safe.isEmpty ? "latest" : safe).png")
+        try? rep.representation(using: .png, properties: [:])?.write(to: url)
+        print("test-snap \(url.path)"); fflush(stdout)
     }
 
     // MARK: windows
@@ -177,7 +195,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func applyRest() {
         if store.showsRing {
             let screen = (NSScreen.main ?? NSScreen.screens[0]).visibleFrame
-            ringPanel.setFrameOrigin(NSPoint(x: screen.maxX - 96 + 12, y: screen.midY - 48))
+            ringPanel.setFrameOrigin(Flavor.headless ? Flavor.offscreen : NSPoint(x: screen.maxX - 96 + 12, y: screen.midY - 48))
             ringPanel.orderFrontRegardless()
         } else {
             ringPanel.orderOut(nil)
@@ -219,6 +237,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Flush with the very top of the screen, over the menu bar, centered on the notch.
         panel.setFrame(NSRect(x: f.midX - size.width / 2, y: f.maxY - size.height,
                               width: size.width, height: size.height), display: true)
+        if Flavor.headless { panel.setFrameOrigin(Flavor.offscreen) }  // drawn, never on a screen
     }
 
     // MARK: show / hide

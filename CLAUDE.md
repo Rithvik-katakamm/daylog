@@ -111,6 +111,10 @@ importers (Wispr, Whoop,                                   ─▶ Notion dashboa
   terms; move on when the answers hold.
 - **Never disturb the stable app he's using.** Build with `scripts/dev.sh` and test the Dev app
   through `.build/devctl` (no keyboard, no focus). See `docs/infra/install.md`.
+- **Test headless, always (his preference, Oct 13).** `devctl start` launches the Dev app off-screen and silent;
+  check with the state line and `devctl snap <name>` (PNG in `~/Library/Logs/daylog/snapshots/`); `devctl stop`
+  after. Test windows on his screen: target 0. On a real discrepancy (glow, focus, animation), escalate to a hidden
+  local macOS VM: say so and ask before setting it up. CI later (RIT-130). See `docs/testing/strategy.md`.
 - **For now (his call, Oct 11): stable = dev, always.** After a change is built and checked in
   Dev, ship it with `scripts/release.sh <next tag>` without asking. He uses stable and wants its
   real data (messy data gets cleaned in the data talk, RIT-70). Dev is only for messing around.

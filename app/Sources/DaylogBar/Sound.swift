@@ -21,6 +21,7 @@ enum Sound {
     @MainActor private func load() -> NSSound? { NSSound(named: NSSound.Name(name)) }
 
     @MainActor func play() {
+        guard !Flavor.headless else { return }  // headless tests are silent
         let s = Sound.cache[name] ?? load()
         Sound.cache[name] = s
         s?.stop()
