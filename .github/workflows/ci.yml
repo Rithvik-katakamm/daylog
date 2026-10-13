@@ -8,6 +8,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  actions: write   # land re-runs CI on main, so CD on the Mac can see a green run for the merged commit
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -46,3 +47,9 @@ jobs:
           (cd server && uv run pytest -q)   # test the merged result, not just the branch
           git push origin main
           git push origin --delete "${GITHUB_REF_NAME}"
+      - name: Run CI on main
+        # A push made with the workflow's own token starts no new run, so ask for one: CD releases only
+        # a commit with a green CI run of its own.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run CI --ref main --repo "${GITHUB_REPOSITORY}"

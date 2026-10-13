@@ -413,6 +413,15 @@ def test_health_reports_env(client):
     assert client.get("/health").json()["env"] == "real"
 
 
+def test_health_reports_a_cd_skip_to_the_owner(client, tmp_path):
+    # His rule (Oct 13): if CD is skipped he wants to know why. autorelease.sh writes cd-status.json by the DB.
+    (tmp_path / "owner").touch()
+    (tmp_path / "cd-status.json").write_text(json.dumps(
+        {"state": "skipped", "reason": "uncommitted changes in the repo", "fix": "commit or stash them"}))
+    cd = client.get("/health").json()["cd"]
+    assert cd["state"] == "skipped" and cd["fix"] == "commit or stash them"
+
+
 def test_health_reports_where_its_code_runs_from(client):
     # the version is a claim from RELEASE.json; `code` is the folder this server actually runs from.
     from daylog import api

@@ -10,6 +10,7 @@ final class Store: ObservableObject {
     @Published var onBreak: BreakInfo?  // ⌘B walk / ⌘⇧B smoke
     @Published var cutOffer: CutOffer?  // a long away inside the running timer
     @Published var version = "dev"      // the running release
+    @Published var cdSkip: CDStatus?    // CD skipped at the last unlock: shown until the next good release
     @Published var codeFrom = ""        // where the server's code runs from (releases/v0.17 or the repo)
     @Published var release: ReleaseInfo?  // owner-only: what's new in it
     @Published var showWhatsNew = false   // one time per release, on the next open
@@ -579,6 +580,7 @@ final class Store: ObservableObject {
         guard let h: Health = try? await API.get("health") else { return }
         version = h.version ?? "dev"
         release = h.release
+        cdSkip = h.cd?.state == "skipped" ? h.cd : nil
         if let c = h.code {
             let u = URL(fileURLWithPath: c)
             codeFrom = u.deletingLastPathComponent().lastPathComponent == "releases"

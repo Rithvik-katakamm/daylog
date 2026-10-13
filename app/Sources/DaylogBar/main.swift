@@ -91,16 +91,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// When he's back at the Mac (unlock or wake), start the autorelease job: it pulls main from GitHub and
     /// releases it if the tests pass. Never on a timer: a closed Mac runs nothing, and polling costs battery.
     static func watchForCD() {
-        let kick = {
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/bin/launchctl")
-            p.arguments = ["kickstart", "gui/\(getuid())/com.rithvik.daylog.autorelease"]  // no-op if already running
-            try? p.run()
-        }
         DistributedNotificationCenter.default().addObserver(
-            forName: .init("com.apple.screenIsUnlocked"), object: nil, queue: .main) { _ in kick() }
+            forName: .init("com.apple.screenIsUnlocked"), object: nil, queue: .main) { _ in MainActor.assumeIsolated { kickCD() } }
         NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in kick() }
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in MainActor.assumeIsolated { kickCD() } }
+    }
+
+    private static var lastKick = Date.distantPast
+    static func kickCD(throttle: TimeInterval = 0) {
+        guard Date().timeIntervalSince(lastKick) >= throttle else { return }
+        lastKick = Date()
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        p.arguments = ["kickstart", "gui/\(getuid())/com.rithvik.daylog.autorelease"]  // no-op if already running
+        try? p.run()
     }
 
     // MARK: Dev app handoff (stable's ⌥D)
@@ -266,6 +270,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Trust what's on screen, not just our flag, so the two can never drift apart.
         let open = store.isOpen && panel.isVisible
         print("toggle: \(open ? "close" : "open")"); fflush(stdout)
+        if !open, !Flavor.isDev { Self.kickCD(throttle: 5 * 60) }  // opening the bar = he's at the Mac
         open ? hide() : show()
     }
 

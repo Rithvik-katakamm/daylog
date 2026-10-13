@@ -98,6 +98,14 @@ struct Health: Decodable {
     let owner: Bool?
     let release: ReleaseInfo?
     let code: String?
+    let cd: CDStatus?
+}
+
+/// CD's last result at unlock (scripts/autorelease.sh): a skip stays in the bar, with why and the fix.
+struct CDStatus: Decodable, Equatable {
+    let state: String
+    var reason: String = ""
+    var fix: String = ""
 }
 
 struct ReleaseInfo: Decodable, Equatable {

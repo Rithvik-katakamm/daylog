@@ -217,6 +217,10 @@ async def health():
            "code": str(RELEASE_FILE.parent)}  # where this server's code runs from: proof, not a claim
     if owner:
         out["release"] = rel  # what's new + what to try: owner-only for now
+        try:  # CD's last result (scripts/autorelease.sh writes it next to the DB): the pill shows a skip and why
+            out["cd"] = json.loads((db.db_path().parent / "cd-status.json").read_text())
+        except (OSError, ValueError):
+            pass
     return out
 
 

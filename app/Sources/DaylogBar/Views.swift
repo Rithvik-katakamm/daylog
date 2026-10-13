@@ -557,6 +557,10 @@ struct BarView: View {
             let from = Time.clockString(Time.parse(c.awayFrom)), to = Time.clockString(Time.parse(c.awayTo))
             Text("away \(from)–\(to)").foregroundStyle(Theme.text)
             Text("· ⌫ end task at \(from)").foregroundStyle(Theme.muted)
+        } else if !typed, store.mode == .input, let c = store.cdSkip {
+            Text("update skipped").foregroundStyle(Theme.text).fontWeight(.semibold)
+            Text("· \(c.reason)").foregroundStyle(Theme.text)
+            if !c.fix.isEmpty { Text("· \(c.fix)").foregroundStyle(Theme.muted) }
         } else if !typed, store.mode == .input, store.timer == nil, let g = store.guess, !store.showWhatsNew {
             if g.ask {
                 Text("looks like \(g.category)?").foregroundStyle(Theme.text).fontWeight(.semibold)
