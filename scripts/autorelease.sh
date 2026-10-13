@@ -69,6 +69,12 @@ for i in $(seq 1 40); do   # up to 10 minutes; the Mac is awake and he's at it
   s="$(ci)"
   case "$s" in
     "completed success") break ;;
+    "completed cancelled")   # a newer push replaced this run: check the newer commit instead
+      git fetch -q origin main 2>/dev/null || true
+      if [ "$(git rev-parse origin/main)" != "$SHA" ]; then
+        say "CI on ${SHA:0:7} was replaced by a newer push; rechecking"; rmdir "$LOCK"; trap - EXIT; exec "$0"
+      fi
+      skip "CI on ${SHA:0:7} was cancelled" "run: gh workflow run CI --ref main" ;;
     completed*) skip "CI failed on ${SHA:0:7} (${s#completed })" "see gh run list; a fix pushed to main re-runs it" ;;
     "") [ "$i" -ge 8 ] && skip "no CI run exists for ${SHA:0:7}" "run: gh workflow run CI --ref main" ;;
   esac
