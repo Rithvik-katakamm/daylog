@@ -388,10 +388,17 @@ async def amend_entry(event_id: str, body: Amend):
 
 @app.post("/observations", status_code=201)
 async def add_observation(body: Observation):
-    # Ghost mode means log nothing. Enforced here, so no recorder can leak data by accident.
-    if timeline.ghost(conn()):
-        return {"ignored": "ghost mode"}
     start = db.parse(body.start.isoformat()) if body.start else db.utcnow()
+    # Ghost mode means log nothing. Enforced here, so no recorder can leak data by accident.
+    if g := timeline.ghost(conn()):
+        reason = body.data.get("reason")
+        if body.type != "away.start" or reason not in timeline.GHOST_ENDING_REASONS:
+            return {"ignored": "ghost mode"}
+        # RIT-43, his call (Oct 13): the Mac really sleeping ends ghost at that moment, so a ghost
+        # can't run through the night. Only the bare fact is kept: when, and why (no app, title or URL).
+        db.append(conn(), kind="claim", type="timer.stop", source="auto", start=start, ref=g["id"],
+                  data={"reason": "slept"})
+        body.data = {"reason": reason}
     end = db.parse(body.end.isoformat()) if body.end else None
     row = db.append(conn(), kind="observation", type=body.type, source=body.source,
                     start=start, end=end, data=body.data, source_key=body.source_key)

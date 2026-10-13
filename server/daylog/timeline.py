@@ -41,6 +41,9 @@ STALE_AFTER = timedelta(hours=3)
 STALE_MIN_OFF = timedelta(hours=1)  # so a quick lock late in a long session never ends the task
 DISPLAY_OFF_REASONS = {"NSWorkspaceScreensDidSleepNotification", "NSWorkspaceWillSleepNotification",
                        "locked"}
+# RIT-43: the only observation that gets through ghost, and it ends ghost. A display sleeping or the
+# screen locking doesn't count: that happens at dinner too, which is what ghost is for.
+GHOST_ENDING_REASONS = {"NSWorkspaceWillSleepNotification"}
 STATUS_CHANGE_TYPES = ("timer.start", "timer.stop", "state.set", "focus.set", "break.start",
                        "ghost.start")
 

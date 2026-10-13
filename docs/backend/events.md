@@ -43,7 +43,7 @@ Everything Day Log knows is a row in one SQLite table, `events`. Code: `server/d
 | DELETE | `/entries/{id}` | Tombstone |
 | POST | `/notes` | Note at this moment |
 | POST | `/focus` | Set focus tier on the running task (409 if none) |
-| POST / DELETE | `/ghost` | Go offline / come back (observations refused while ghost) |
+| POST / DELETE | `/ghost` | Go offline / come back (observations refused while ghost, except the Mac sleeping, which ends ghost at that moment and keeps only `{reason}`; RIT-43) |
 | POST | `/observations` | Mac recorder input (`app.focus`, `away.start`) |
 | GET | `/timeline` | Claims, meetings, activity, dictations, notes for a day or range |
 | GET | `/history` | Newest-first stops for scrolling back (entries, meetings, notes, gaps ≥10m) |
