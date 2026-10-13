@@ -318,6 +318,17 @@ def test_display_sleep_or_lock_does_not_end_ghost(client, clock):
     assert client.get("/now").json()["ghost"]["status"] == "dinner with family"
 
 
+def test_amend_cuts_a_ghost_back_to_when_he_slept(client, clock):
+    # Oct 13: the Oct 12 ghost ran 13 h before RIT-43 shipped; history gets corrected by an amend.
+    g = client.post("/ghost", json={"status": "watching code geass"}).json()["ghost"]
+    clock.advance(hours=13)
+    client.post("/timer/start", json={"label": "coffee shop"})
+    slept = (clock.t - timedelta(hours=12, minutes=20)).isoformat()
+    assert client.post(f"/entries/{g['id']}/amend", json={"end": slept}).status_code == 200
+    by = client.get("/summary").json()["by_label"]
+    assert by["ghost: watching code geass"] == 40
+
+
 def test_ghost_off(client):
     client.post("/ghost", json={})
     assert client.get("/now").json()["ghost"]["status"] == "offline"

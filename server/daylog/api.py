@@ -356,8 +356,8 @@ async def amend_entry(event_id: str, body: Amend):
     """Edit a block after the fact: rename it, or move its start/end (e.g. cut back a timer
     that was left running). Appends an `entry.amend` event; the original is never touched."""
     target = db.get(conn(), event_id)
-    if not target or target["type"] not in ("entry.log", "timer.start"):
-        raise HTTPException(404, "no entry or timer with that id")
+    if not target or target["type"] not in ("entry.log", "timer.start", "ghost.start"):
+        raise HTTPException(404, "no entry, timer or ghost with that id")
     current = next((c for c in timeline.claims(conn(), db.parse(target["start"]) - timedelta(days=1),
                                                db.utcnow() + timedelta(seconds=1))
                     if c["id"] == event_id), None)
