@@ -1,0 +1,13 @@
+#!/bin/sh
+# Local code and data stay local (his rule, Oct 13). Refuses a commit that stages private files or secrets.
+# Enabled per clone with: git config core.hooksPath .githooks
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged" ] && exit 0
+bad_files=$(printf '%s\n' "$staged" | grep -Ei '(\.sqlite|\.db$|(^|/)\.env|\.pem$|\.key$|(^|/)owner$|(^|/)RELEASE\.json$|(^|/)\.codex/|\.swp$|(^|/)\.learning/)')
+bad_text=$(git diff --cached -U0 -- $staged ':!.githooks/pre-commit' | grep '^+' | grep -nE 'sk-ant-[A-Za-z0-9_-]{10,}|AKIA[0-9A-Z]{16}|BEGIN [A-Z ]*PRIVATE KEY|ghp_[A-Za-z0-9]{20,}|xox[bp]-[A-Za-z0-9-]+|/Users/[a-z]+/|claude\.ai/artifact/')
+if [ -n "$bad_files$bad_text" ]; then
+  echo "✗ commit blocked: private files or data (local code and data stay local)"
+  [ -n "$bad_files" ] && echo "  files:" && printf '    %s\n' $bad_files
+  [ -n "$bad_text" ] && echo "  lines:" && printf '%s\n' "$bad_text" | head -5 | sed 's/^/    /'
+  exit 1
+fi

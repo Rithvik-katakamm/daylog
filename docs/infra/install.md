@@ -37,3 +37,7 @@ shows one line, "v0.13 · new: … · try: …", once; ⌘K → "What's new in t
 **Owner-only features** are on when the file `~/Library/Application Support/daylog/owner` exists. Nothing in the
 repo creates it, so other people installing Day Log never see owner-only features. To get a "try" line in the
 notes, add a trailer to the commit: `Try: open the bar right after a release`.
+
+## Keeping private things out of git
+
+Local code and data stay local. `.githooks/pre-commit` refuses a commit that stages databases, keys, `.env`, the owner flag, `RELEASE.json`, local tool folders (`.codex/`, `.learning/`), secret-looking strings or a home-folder path. Turn it on in each clone with `git config core.hooksPath .githooks`.

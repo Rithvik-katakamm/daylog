@@ -12,7 +12,7 @@ Built for Rithvik first. Possible portfolio piece later.
 
 > **Work is tracked in Linear** (team RIT, project "Day Log"): pick issues there, move
 > status as you go. **Don't create new Linear issues (his rule, Oct 13):** knock off the ones that exist and
-> modify a card when his build direction changes it. When something isn't on the card, say so in one line
+> modify a card when his build direction changes it, when modification is needed try to fold in the new information into an existing card tastefully only if needed, if this is not possibl ask him how he wants tot handle it. When something isn't on the card, say so in one line
 > ("this isn't on the card, and here's how it changes the build") and carry on. When a card is done, move it to
 > Done, move the next one to In Progress, and open it in the Linear app on his MacBook.
 > **Learning maps to existing learn cards (his rule, Oct 13; replaces Oct 11):** when a build hits a concept,
@@ -147,7 +147,7 @@ Handoff as of 2026-10-12, 8 PM. Start here in a fresh session.
   Daylog (window titles)?
 - **How he works now:** you write the code (no "core piece he writes" step); cards follow `issue-card/shape.md`
   (build cards short, think cards deep). Keep the Linear In Progress card live and open it on his MacBook. The
-  Day Log Map artifact (https://claude.ai/artifact/TLCj9MQKgCzVWsDY2S7Qry) is the visual; update it as things
+  Day Log Map artifact (private link on Linear RIT-120) is the visual; update it as things
   ship. Setup feedback → Notion "Build setup feedback (live log)" under Agent Context.
 - **Build-first commitment (his, Oct 12):** for 7 days, no system/meta work (no Linear reshuffles, views,
   workflows, skills or research runs). Start in the editor, not Linear. The week's number is *pieces someone
