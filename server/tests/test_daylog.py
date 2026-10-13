@@ -333,6 +333,12 @@ def test_health_reports_env(client):
     assert client.get("/health").json()["env"] == "real"
 
 
+def test_health_reports_where_its_code_runs_from(client):
+    # RIT-124: the version is a claim from RELEASE.json; `code` is the folder this server actually runs from.
+    from daylog import api
+    assert client.get("/health").json()["code"] == str(api.RELEASE_FILE.parent)
+
+
 def test_dev_reset_is_refused_on_the_real_server(client):
     assert client.post("/dev/reset").status_code == 404
 

@@ -97,6 +97,7 @@ struct Health: Decodable {
     let version: String?
     let owner: Bool?
     let release: ReleaseInfo?
+    let code: String?
 }
 
 struct ReleaseInfo: Decodable, Equatable {

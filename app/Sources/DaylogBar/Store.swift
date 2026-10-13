@@ -10,6 +10,7 @@ final class Store: ObservableObject {
     @Published var onBreak: BreakInfo?  // ⌘B walk / ⌘⇧B smoke
     @Published var cutOffer: CutOffer?  // RIT-39: a long away inside the running timer
     @Published var version = "dev"      // RIT-124: the running release
+    @Published var codeFrom = ""        // RIT-124: where the server's code runs from (releases/v0.17 or the repo)
     @Published var release: ReleaseInfo?  // owner-only: what's new in it
     @Published var showWhatsNew = false   // one time per release, on the next open
     @Published var guess: Guess?          // RIT-122: the labeler's guess when nothing runs
@@ -578,17 +579,28 @@ final class Store: ObservableObject {
         guard let h: Health = try? await API.get("health") else { return }
         version = h.version ?? "dev"
         release = h.release
+        if let c = h.code {
+            let u = URL(fileURLWithPath: c)
+            codeFrom = u.deletingLastPathComponent().lastPathComponent == "releases"
+                ? "releases/\(u.lastPathComponent)" : "repo"
+        }
         if let r = h.release, !r.new.isEmpty, UserDefaults.standard.string(forKey: "seenVersion") != r.version {
             showWhatsNew = true
         }
     }
 
-    /// RIT-124: the ⌘K header's version, e.g. "v0.17 · released 3:26 PM" (or "Oct 12" if older than today).
+    /// RIT-124: the ⌘K header's version, e.g. "v0.18 · runs releases/v0.18 · 3:26 PM". The version is what
+    /// RELEASE.json claims; "runs" is the folder the server's code actually runs from, so they can be checked
+    /// against each other (they should name the same tag).
     var versionLabel: String {
-        guard let s = release?.released_at, let d = ISO8601DateFormatter().date(from: s) else { return version }
-        let f = DateFormatter()
-        f.dateFormat = Calendar.current.isDateInToday(d) ? "h:mm a" : "MMM d, h:mm a"
-        return "\(version) · released \(f.string(from: d))"
+        var parts = [version]
+        if !codeFrom.isEmpty { parts.append("runs \(codeFrom)") }
+        if let s = release?.released_at, let d = ISO8601DateFormatter().date(from: s) {
+            let f = DateFormatter()
+            f.dateFormat = Calendar.current.isDateInToday(d) ? "h:mm a" : "MMM d, h:mm a"
+            parts.append(f.string(from: d))
+        }
+        return parts.joined(separator: " · ")
     }
 
     /// ⌘K "What's new": show the line again, or just the version when there are no notes.

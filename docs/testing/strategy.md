@@ -35,6 +35,7 @@ setting it up (it costs his Mac memory, CPU and disk).
 |---|---|
 | Use `devctl start` (headless), never a visible Dev app, for tests | Tests looked identical to stable on his screen |
 | Quit with `devctl stop` after testing | Only one Day Log should run on his screen |
+| The Dev server (:7879) runs only between `devctl start` and `devctl stop` | One server day to day: his founder version on :7878 (Oct 13) |
 | Escalate to the VM only on a real discrepancy, and ask first | Resource cost; pain first |
 | The number to watch: test windows on his screen, target **0** | Decide with numbers |
 | ⌥D (opening Dev from stable) stays visible | That's him playing with Dev, not a test |

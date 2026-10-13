@@ -213,7 +213,8 @@ def is_owner() -> bool:
 async def health():
     rel, owner = release_info(), is_owner()
     out = {"ok": True, "env": "dev" if is_dev() else "real", "db": str(db.db_path()),
-           "version": rel.get("version", "dev"), "owner": owner}
+           "version": rel.get("version", "dev"), "owner": owner,
+           "code": str(RELEASE_FILE.parent)}  # where this server's code runs from: proof, not a claim
     if owner:
         out["release"] = rel  # what's new + what to try: owner-only for now
     return out

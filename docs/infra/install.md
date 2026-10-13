@@ -9,7 +9,7 @@ Building and testing must never disturb the version he's using.
 | App | `~/Applications/Daylog.app` (`com.rithvik.daylog`) | `~/Applications/Daylog Dev.app` (`com.rithvik.daylog.dev`) |
 | Opened with | ⌥L | ⌥D (stable hands off to the Dev app) |
 | Code | a **frozen copy of a git tag**: `~/Library/Application Support/daylog/releases/<tag>` (`current` symlink) | the working tree |
-| Server | `com.rithvik.daylog.server` on `:7878` | `com.rithvik.daylog.dev` on `:7879` (`DAYLOG_DEV=1`) |
+| Server | `com.rithvik.daylog.server` on `:7878` | `com.rithvik.daylog.dev` on `:7879` (`DAYLOG_DEV=1`), only while testing (`devctl start` loads it, `devctl stop` unloads it) |
 | Data | `daylog.sqlite` (the real log) | `daylog-dev.sqlite`; importers off; `POST /dev/reset` |
 | Records Mac activity | yes | no |
 | Looks | normal | identical, plus a `DEV` tag |
