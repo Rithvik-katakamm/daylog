@@ -57,3 +57,5 @@ his words, history, links
   bring in supporting information… help me make a very informed choice right there and learn something in the
   process." → **Think card** type added (principal components, real data, prior art, one choice, learn).
   Build cards stay short.
+- **2026-10-13, 1:38 PM:** "the layer preference or tag is important to me." Every card names its Layer; whether it
+  becomes a Linear label is open until the data seasons. Distilled into `docs/skills/linear-management.md`.

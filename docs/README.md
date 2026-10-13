@@ -9,6 +9,7 @@ The map of everything that isn't code. If you can't hold it in your head, it sho
 | `backend/` | The server, the event log, the API | `events.md` |
 | `infra/` | How it's installed, run, signed and released | `install.md` |
 | `testing/` | How changes are checked without touching his screens (his layer, Oct 13) | `strategy.md` |
+| `skills/` | Drafts of skills distilled from how he runs builds (PROPOSED, not installed) | `README.md` |
 
 ## Rules for these docs
 
