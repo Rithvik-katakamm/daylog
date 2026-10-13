@@ -20,8 +20,8 @@ Keyboard only. Press **⌥L** and a black capsule drops down from the top of the
   - ⌘⌫ deletes a logged block. Esc steps back.
 - **⌘N: note.** Jot a thought at this moment without switching tasks. It's tagged with
   the running timer (blue ring), and notes show up when you scroll back.
-- **⌘O: ghost mode.** Go offline with an optional status ("dinner with family"). Closing the lid (the Mac
-  really sleeping) ends it, so a ghost never runs through the night. It stops
+- **⌘O: ghost mode.** Go offline with an optional status ("dinner with family"). If the Mac sleeps through the
+  night (12-7 AM) during ghost, it ends when the lid closed; a daytime ghost survives a closed lid. It stops
   your timer, and the server refuses all Mac activity until you're back. ⌘O again or
   starting a task brings you back.
 - **↓: edit.** Opens the running task (or the last one): the title is editable and ↓↑ move

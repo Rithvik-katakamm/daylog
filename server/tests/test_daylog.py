@@ -250,31 +250,62 @@ def test_ghost_stops_timer_blocks_activity_and_ends_on_new_task(client, clock):
     assert s["by_label"]["ghost: dinner with family"] == 60
 
 
-def test_sleep_ends_ghost_replaying_oct_12_night(client, clock):
-    # RIT-43, his call (Oct 13): ghost logs nothing about what he does, but the bare fact that the Mac
-    # slept ends it. Last night: ghost "watching code geass" at 3:17 AM, lid closed 3:57 AM, ran 13 hours.
-    client.post("/timer/start", json={"label": "daylog builder infra work"})
-    clock.advance(minutes=5)
+def _obs_since(t):
+    from daylog import api
+    rows = api.conn().execute("SELECT type, data FROM events WHERE kind = 'observation' AND start >= ? ORDER BY start",
+                              (db.iso(t),)).fetchall()
+    return [(k, json.loads(d)) for k, d in rows]
+
+
+def _sleep(client, clock):
+    return client.post("/observations", json={"type": "away.start", "start": clock.t.isoformat(),
+                                               "data": {"reason": "NSWorkspaceWillSleepNotification", "app": "Brave"}})
+
+
+def _focus(client, clock):
+    return client.post("/observations", json={"type": "app.focus", "start": clock.t.isoformat(),
+                                               "data": {"app": "Safari", "title": "Day Log Map"}})
+
+
+def test_night_sleep_ends_ghost_replaying_oct_12(client, clock):
+    # RIT-43, his calls (Oct 13): ghost "watching code geass" at 3:17 AM, lid closed 3:57 AM, opened the Mac
+    # at the coffee shop at 1:14 PM to a 13-hour ghost. A sleep through 12-7 AM ends ghost when the Mac slept.
+    clock.t = datetime(2026, 10, 13, 7, 17, tzinfo=timezone.utc)  # 3:17 AM New York
     client.post("/ghost", json={"status": "watching code geass"})
     ghost_at = clock.t
     clock.advance(minutes=20)
-    assert client.post("/observations", json={"type": "app.focus", "data": {"app": "Brave", "title": "Code Geass"}}
-                       ).json() == {"ignored": "ghost mode"}
+    assert _focus(client, clock).json() == {"ignored": "ghost mode"}  # watching: nothing about it is stored
     clock.advance(minutes=20)
-    slept_at = clock.t
-    r = client.post("/observations", json={"type": "away.start", "start": slept_at.isoformat(),
-                                            "data": {"reason": "NSWorkspaceWillSleepNotification", "app": "Brave"}})
-    assert r.status_code == 201
-    clock.advance(hours=9, minutes=17)  # opens the Mac at the coffee shop
-    now = client.get("/now").json()
-    assert now["ghost"] is None and now["timer"] is None
-    s = client.get("/summary").json()
-    assert s["by_label"]["ghost: watching code geass"] == 40  # ended at the real sleep, not 13 h later
-    # Nothing about what he did during ghost was stored; the sleep fact keeps only its reason.
-    from daylog import api
-    obs = api.conn().execute("SELECT type, data FROM events WHERE kind = 'observation' AND start >= ?",
-                             (db.iso(ghost_at),)).fetchall()
-    assert [(t, json.loads(d)) for t, d in obs] == [("away.start", {"reason": "NSWorkspaceWillSleepNotification"})]
+    assert _sleep(client, clock).status_code == 201                   # 3:57 AM
+    clock.advance(hours=9, minutes=17)                                # 1:14 PM, coffee shop
+    _focus(client, clock)
+    assert client.get("/now").json()["ghost"] is None
+    assert client.get("/summary", params={"day": "2026-10-13"}).json()["by_label"]["ghost: watching code geass"] == 40
+    assert _obs_since(ghost_at) == [("away.start", {"reason": "NSWorkspaceWillSleepNotification"}),
+                                    ("app.focus", {"app": "Safari", "title": "Day Log Map"})]  # logging resumed
+
+
+def test_daytime_sleep_keeps_ghost(client, clock):
+    # "If I go ghost at 10 AM and come back at 6, that is valid."
+    clock.t = datetime(2026, 10, 13, 14, 0, tzinfo=timezone.utc)  # 10 AM
+    client.post("/ghost", json={"status": "family day"})
+    ghost_at = clock.t
+    clock.advance(hours=3); _sleep(client, clock)                 # 1 PM lid closed
+    clock.advance(hours=5); _focus(client, clock)                 # 6 PM back
+    assert client.get("/now").json()["ghost"]["status"] == "family day"
+    clock.advance(hours=9)                                        # 3 AM, bar opened: the nap is long over
+    assert client.get("/now").json()["ghost"]["status"] == "family day"
+    assert _obs_since(ghost_at) == [("away.start", {"reason": "NSWorkspaceWillSleepNotification"}),
+                                    ("app.focus", {})]            # just the wake mark, no app or title
+    assert client.get("/timeline", params={"day": "2026-10-13"}).json()["activity"] == []  # the mark isn't activity
+
+
+def test_overnight_ghost_from_the_evening_ends_at_the_sleep(client, clock):
+    clock.t = datetime(2026, 10, 14, 2, 0, tzinfo=timezone.utc)   # 10 PM
+    client.post("/ghost", json={"status": "movie"})
+    clock.advance(hours=1, minutes=30); _sleep(client, clock)    # 11:30 PM lid closed
+    clock.advance(hours=8, minutes=30)                            # 8 AM, opens the bar before switching apps
+    assert client.get("/now").json()["ghost"] is None
 
 
 def test_display_sleep_or_lock_does_not_end_ghost(client, clock):

@@ -240,6 +240,7 @@ async def dev_reset():
 async def now():
     timeline.expire_break(conn())  # never show a break that should already be ghost
     timeline.expire_stale(conn())  # nor last night's status (RIT-101)
+    timeline.end_ghost_after_night(conn(), db.utcnow())  # nor a ghost he slept through (RIT-43)
     state = timeline.now_state(conn())
     # RIT-122: with nothing running, the labeler's guess (a prediction; the pill shows it faded).
     idle = not (state["timer"] or state["ghost"] or state["on_break"])
@@ -390,15 +391,18 @@ async def amend_entry(event_id: str, body: Amend):
 async def add_observation(body: Observation):
     start = db.parse(body.start.isoformat()) if body.start else db.utcnow()
     # Ghost mode means log nothing. Enforced here, so no recorder can leak data by accident.
-    if g := timeline.ghost(conn()):
+    # RIT-43 (his calls, Oct 13): two bare facts get through, so a ghost can't run through the night:
+    # the Mac sleeping ({reason} only) and the first app switch after it (no app, title or URL). If that
+    # sleep ran through the night, ghost ends when the Mac went to sleep and logging resumes normally.
+    if timeline.ghost(conn()):
         reason = body.data.get("reason")
-        if body.type != "away.start" or reason not in timeline.GHOST_ENDING_REASONS:
+        if body.type == "away.start" and reason in timeline.GHOST_ENDING_REASONS:
+            body.data = {"reason": reason}
+        elif body.type == "app.focus" and timeline.ghost_sleep(conn()):
+            if not timeline.end_ghost_after_night(conn(), start):
+                body.data = {}  # back from a daytime sleep: still ghost, just mark the wake
+        else:
             return {"ignored": "ghost mode"}
-        # RIT-43, his call (Oct 13): the Mac really sleeping ends ghost at that moment, so a ghost
-        # can't run through the night. Only the bare fact is kept: when, and why (no app, title or URL).
-        db.append(conn(), kind="claim", type="timer.stop", source="auto", start=start, ref=g["id"],
-                  data={"reason": "slept"})
-        body.data = {"reason": reason}
     end = db.parse(body.end.isoformat()) if body.end else None
     row = db.append(conn(), kind="observation", type=body.type, source=body.source,
                     start=start, end=end, data=body.data, source_key=body.source_key)

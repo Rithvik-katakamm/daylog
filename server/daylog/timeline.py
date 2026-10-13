@@ -41,9 +41,12 @@ STALE_AFTER = timedelta(hours=3)
 STALE_MIN_OFF = timedelta(hours=1)  # so a quick lock late in a long session never ends the task
 DISPLAY_OFF_REASONS = {"NSWorkspaceScreensDidSleepNotification", "NSWorkspaceWillSleepNotification",
                        "locked"}
-# RIT-43: the only observation that gets through ghost, and it ends ghost. A display sleeping or the
-# screen locking doesn't count: that happens at dinner too, which is what ghost is for.
+# RIT-43: the only observation that gets through ghost. A display sleeping or the screen locking doesn't
+# count: that happens at dinner too, which is what ghost is for.
 GHOST_ENDING_REASONS = {"NSWorkspaceWillSleepNotification"}
+# His rule (Oct 13): a sleep ends ghost only if it runs through the night. Ghost at 10 AM, lid closed,
+# back at 6 PM is a valid ghost; lid closed at 3:57 AM and back at 1 PM is a night's sleep. Knob, local time.
+NIGHT_HOURS = (0, 7)
 STATUS_CHANGE_TYPES = ("timer.start", "timer.stop", "state.set", "focus.set", "break.start",
                        "ghost.start")
 
@@ -170,6 +173,46 @@ def expire_break(conn: sqlite3.Connection) -> dict[str, Any] | None:
                      label=f"away after a {b['label']}",
                      data={"from_break": b["id"], "kind": b["data"].get("kind"),
                            "resume": b["data"].get("resume")})
+
+
+def overlaps_night(a: datetime, b: datetime) -> bool:
+    """Does [a, b) touch NIGHT_HOURS on any day, in his local time?"""
+    from zoneinfo import ZoneInfo
+    tz = ZoneInfo("America/New_York")
+    day = a.astimezone(tz).date() - timedelta(days=1)
+    while datetime.combine(day, datetime.min.time(), tz) < b:
+        lo = datetime.combine(day, datetime.min.time(), tz).replace(hour=NIGHT_HOURS[0])
+        hi = datetime.combine(day, datetime.min.time(), tz).replace(hour=NIGHT_HOURS[1])
+        if a < hi and lo < b:
+            return True
+        day += timedelta(days=1)
+    return False
+
+
+def ghost_sleep(conn: sqlite3.Connection) -> dict[str, Any] | None:
+    """The Mac's latest sleep during the current ghost that he hasn't come back from yet (no app.focus after)."""
+    g = ghost(conn)
+    if not g:
+        return None
+    marks = ",".join("?" * len(GHOST_ENDING_REASONS))
+    r = conn.execute(
+        "SELECT * FROM events s WHERE s.type = 'away.start' AND s.start >= ?"
+        f" AND json_extract(s.data, '$.reason') IN ({marks}) AND NOT EXISTS ("
+        "  SELECT 1 FROM events f WHERE f.type = 'app.focus' AND f.start >= s.start)"
+        " ORDER BY s.start DESC LIMIT 1", (g["start"], *GHOST_ENDING_REASONS)).fetchone()
+    return db.to_dict(r) if r else None
+
+
+def end_ghost_after_night(conn: sqlite3.Connection, back_at: datetime) -> datetime | None:
+    """He's back (or the bar opened) at `back_at`: if the Mac slept through the night during ghost, the ghost
+    ends when it went to sleep, logged as an `auto` stop so history stays honest. Returns that time, if so."""
+    s = ghost_sleep(conn)
+    if not s or not overlaps_night(db.parse(s["start"]), back_at):
+        return None
+    slept = db.parse(s["start"])
+    db.append(conn, kind="claim", type="timer.stop", source="auto", start=slept, ref=ghost(conn)["id"],
+              data={"reason": "slept"})
+    return slept
 
 
 def is_stale(display_off_at: datetime | None, last_change_at: datetime, now: datetime) -> bool:
@@ -319,8 +362,8 @@ def activity(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[
     now = db.utcnow()
     segs: list[dict[str, Any]] = []
     for i, e in enumerate(events):
-        if e["type"] != "app.focus":
-            continue
+        if e["type"] != "app.focus" or not e["data"]:
+            continue  # an empty app.focus is a ghost wake mark (RIT-43): it ends an away, it isn't activity
         start = db.parse(e["start"])
         nxt = db.parse(events[i + 1]["start"]) if i + 1 < len(events) else now
         end = min(nxt, start + ACTIVITY_CAP, now)
