@@ -1,0 +1,48 @@
+# CI (RIT-87): every push is tested on GitHub's machines, so it works while the Mac is closed.
+# Cloud sessions push claude/* branches; when both checks are green the branch lands on main by
+# itself, no PR to approve (his call, Oct 13). The Mac picks main up at the next unlock (scripts/autorelease.sh).
+name: CI
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run pytest -q
+        working-directory: server
+
+  app:
+    runs-on: macos-15   # a fresh macOS VM per run: it can compile the pill, not show it
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift build -c release
+        working-directory: app
+
+  land:
+    if: startsWith(github.ref_name, 'claude/')
+    needs: [server, app]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+      - name: Merge the green branch into main
+        run: |
+          git config user.name "daylog-ci"
+          git config user.email "daylog-ci@users.noreply.github.com"
+          git checkout main
+          git merge --no-edit "origin/${GITHUB_REF_NAME}"
+          (cd server && uv run pytest -q)   # test the merged result, not just the branch
+          git push origin main
+          git push origin --delete "${GITHUB_REF_NAME}"

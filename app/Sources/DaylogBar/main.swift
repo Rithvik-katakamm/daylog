@@ -81,8 +81,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             devHotKey = HotKey(keyCode: UInt32(kVK_ANSI_D), id: 2) { MainActor.assumeIsolated { Self.openDevApp() } }
             ActivityRecorder.requestTitleAccess()  // RIT-120: window titles (asks once)
             recorder.start()  // only stable records what's in front of you
+            Self.watchForCD()
         }
         store.startPolling()
+    }
+
+    // MARK: CD on unlock (RIT-87)
+
+    /// When he's back at the Mac (unlock or wake), start the autorelease job: it pulls main from GitHub and
+    /// releases it if the tests pass. Never on a timer: a closed Mac runs nothing, and polling costs battery.
+    static func watchForCD() {
+        let kick = {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+            p.arguments = ["kickstart", "gui/\(getuid())/com.rithvik.daylog.autorelease"]  // no-op if already running
+            try? p.run()
+        }
+        DistributedNotificationCenter.default().addObserver(
+            forName: .init("com.apple.screenIsUnlocked"), object: nil, queue: .main) { _ in kick() }
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in kick() }
     }
 
     // MARK: Dev app handoff (stable's ⌥D)

@@ -54,7 +54,7 @@ the experience better for someone using it.
 - **Explain the why** of every architectural choice; he's learning backend craft through this.
 - **Commits:** one per slice, push roughly every 2. Every commit ends with a `Layer:` trailer (taste, ui, ux,
   product, backend, infra, ai); commits get joined with his Day Log blocks to measure hours per layer. A `Try:` line (what to try, shown
-  after a release) goes in that same last paragraph with `Layer:`: git only reads trailers from the last paragraph.
+  after a release) and a `Where:` line (mac / cloud) go in that same last paragraph with `Layer:`: git only reads trailers from the last paragraph.
 - **Nothing outward** (posts, messages to humans) without his approval.
 - The build loop and learn-slice protocol are injected by hooks (`.claude/hooks/build-loop.sh`,
   `learn-trigger.py`); triggers log to `.learning/triggers.jsonl`.
@@ -72,6 +72,19 @@ the experience better for someone using it.
   without asking. Then quit Dev (`pkill -f "Daylog Dev.app"`): only one Day Log on his screen.
 - **Data caveat:** label totals before Oct 12 are inflated by stale statuses (fixed in v0.9). Prefer `/auto` or
   `computer_active_minutes`.
+
+## Cloud sessions (phone loop, RIT-87)
+
+If you're running in a cloud VM (Linux, no `/Users/rithvik`), you're a cloud session started from his phone:
+- **No macOS here:** don't run `scripts/dev.sh`, `release.sh`, `devctl` or `open linear://…`. Server work, docs and
+  logic tests are yours; UI/notch work waits for the Mac (say so on the card).
+- **Check your work:** `cd server && uv run pytest -q`.
+- **Push a `claude/…` branch, never `main`.** GitHub Actions (`.github/workflows/ci.yml`) runs the server tests
+  and the Swift build on a macOS runner; when both are green it merges the branch into `main` itself (no PR).
+  His Mac pulls `main`, tests and releases at the next unlock (`scripts/autorelease.sh`). He gets the version in ⌘K.
+- **`Where:` trailer** on every commit: `Where: cloud` here, `Where: mac` on the Mac. It answers his question
+  "do I get more done at the Mac or walking?" (joined with his Day Log blocks).
+- His database never leaves the Mac, so evals on his real lines (RIT-52) can't run here.
 
 ## Where we are
 
