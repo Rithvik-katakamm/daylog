@@ -140,3 +140,35 @@ def test_break_you_never_came_back_from_becomes_ghost(client, clock):
 def test_plain_ghost_is_not_ended_by_break_key(client):
     client.post("/ghost", json={"status": "dinner"})
     assert client.delete("/break").status_code == 409
+
+
+# ---------- breaks you name, and take back by typing (his calls, Oct 13) ----------
+
+def test_typing_peeing_starts_a_named_break_and_back_resumes(client, clock):
+    client.post("/timer/start", json={"label": "daylog backend."})
+    clock.advance(minutes=30)
+    now = client.post("/log", json={"text": "peeing"}).json()
+    assert now["on_break"]["label"] == "peeing" and now["timer"] is None
+    clock.advance(minutes=3)
+    now = client.post("/log", json={"text": "back"}).json()
+    assert now["timer"]["label"] == "daylog backend." and now["on_break"] is None
+
+
+def test_didnt_actually_break_takes_the_break_back_replaying_oct_13(client, clock):
+    # 5:41:56 PM: ⌘B walk while on "daylog backend."; 5:47:37 PM he typed "didnt actually break".
+    # It must not become a task: the break goes, and the task runs on from the break's start.
+    client.post("/timer/start", json={"label": "daylog backend."})
+    clock.advance(minutes=60)
+    client.post("/break", json={"kind": "walk"})
+    clock.advance(minutes=5)
+    now = client.post("/log", json={"text": "didnt actually break"}).json()
+    assert now["did"] == "no break after all"
+    assert now["on_break"] is None and now["timer"]["label"] == "daylog backend."
+    by = client.get("/summary").json()["by_label"]
+    assert "didnt actually break" not in by and "walk" not in by
+    assert by["daylog backend."] == 65  # the 5 minutes count as task time
+
+
+def test_take_back_only_means_something_on_a_break(client):
+    client.post("/timer/start", json={"label": "coding"})
+    assert client.post("/log", json={"text": "never mind"}).status_code == 409

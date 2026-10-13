@@ -32,7 +32,7 @@ Technical work → Linear (team RIT). Product/design questions → Notion.
 |---|---|---|---|---|---|
 | **Event log** | backend | Append-only SQLite, edits as new events | `db.py` | Shipped | — |
 | **Substances** | backend | `state.set` events, global | `api.py /state`, `timeline.active_states` | Shipped v0.2 | Old labels contain "high" |
-| **Breaks** | backend | `break.start`; resumes the task; smoke → high; >1h → ~15 min + ghost | `api.py /break`, `timeline.expire_break` | Shipped v0.2 | Learn real break lengths (Smart capture) |
+| **Breaks** | backend | `break.start`; resumes the task; smoke → high; >1h → ~15 min + ghost. Typed: a named break ("peeing"), or take one back ("didnt actually break": tombstone + the task restarts from the break's start, Oct 13) | `api.py /break`, `timeline.expire_break` | Shipped v0.2 | Learn real break lengths (Smart capture) |
 
 ## Infra
 

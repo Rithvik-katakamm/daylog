@@ -7,6 +7,15 @@ from daylog import intents
 
 @pytest.mark.parametrize("text,action,say", [
     ("smoke break", "break", "smoke break"),
+    ("peeing", "break", "peeing"),                       # his line, Oct 13: a break he names
+    ("pee break", "break", "pee"),
+    ("going to the bathroom", "break", "bathroom"),
+    ("lunch break", "break", "lunch"),
+    ("didnt actually break", "undo_break", "no break after all"),   # his line, Oct 13
+    ("didn't actually go on break", "undo_break", "no break after all"),
+    ("never mind", "undo_break", "no break after all"),
+    ("cancel break", "undo_break", "no break after all"),
+    ("false alarm", "undo_break", "no break after all"),
     ("going on a smoke break", "break", "smoke break"),
     ("smoke", "break", "smoke break"),
     ("walk", "break", "walk"),

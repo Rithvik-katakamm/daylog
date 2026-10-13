@@ -24,6 +24,8 @@ Works with Wispr Flow dictation too (⌥L, dictate, ⏎). Code: `server/daylog/i
 | Type (or dictate) | Does |
 |---|---|
 | `smoke break` · `smoke` · `going on a smoke break` | Smoke break (comes back high) |
+| `peeing` · `pee break` · `bathroom` · `lunch break` | A break with that name; the task pauses, `back` resumes it |
+| `didnt actually break` · `never mind` · `cancel break` · `false alarm` (on a break) | Takes the break back: it's removed and the task runs on from when the break started |
 | `walk` · `break` · `brb` · `stepping away` | Walk break |
 | `back` · `I'm back` | End the break and resume the task (or come back from ghost) |
 | `focus` · `locked in` / `deep focus` / `hyperfocus` · `in the zone` / `focus off` | Focus tiers |

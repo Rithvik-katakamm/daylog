@@ -294,11 +294,16 @@ struct BarView: View {
         .foregroundStyle(Theme.text)
     }
 
+    /// "On a walk", "On a smoke break", or a break he named: "On break: peeing".
+    static func breakPhrase(_ label: String) -> String {
+        ["walk", "smoke break"].contains(label) ? "On a \(label)" : "On break: \(label)"
+    }
+
     /// What the single input line asks for, per mode.
     private var prompt: String {
         switch store.mode {
         case .input:
-            store.onBreak != nil ? "On a \(store.onBreak!.label) · ⌘B when you're back"
+            store.onBreak != nil ? "\(Self.breakPhrase(store.onBreak!.label)) · ⌘B when you're back"
                 : store.ghost != nil ? "Type a task to come back"
                 : store.timer == nil ? "What are you doing?" : "Switch, or log: client call 3:10-3:25"
         case .note: "What’s on your mind?"

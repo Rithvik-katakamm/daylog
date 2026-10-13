@@ -39,6 +39,17 @@ _LINES: list[tuple[re.Pattern, callable]] = [
     (re.compile(r"^(?:(?:going|gonna go|stepping out)(?: on| for)? )?(?:a |on a |taking a |quick )*"
                 r"(?:walk|break|breather|stretch)(?: break)?$|^(?:brb|afk|stepping away|be right back)$"),
      lambda m: Command("break", "walk", {"kind": "walk"})),
+    # Take back a break that didn't happen (his line, Oct 13: "didnt actually break"). Only on a break.
+    (re.compile(r"^(?:i )?(?:didn'?t|did not|never) (?:actually |really )?(?:go on |go for |take )?(?:a |the |my )?"
+                r"break(?: after all)?$|^(?:no break(?: after all)?|not on (?:a )?break|cancel(?: the| my)? break|"
+                r"undo(?: the)? break|false alarm|never ?mind|nvm)$"),
+     lambda m: Command("undo_break", "no break after all")),
+    # A break he names (his line, Oct 13: "peeing"): a walk-kind break with his word as its label.
+    (re.compile(r"^(?:(?:going|gonna go|stepping out|quick|taking a|on a|a)\s+)*(?:to )?(?:the )?"
+                r"(?P<what>pee|peeing|piss|bathroom|restroom|toilet|washroom)(?: break)?$"),
+     lambda m: Command("break", m["what"], {"kind": "walk", "label": m["what"]})),
+    (re.compile(r"^(?:(?:going on|taking|on|a|quick)\s+)*(?P<what>[a-z']+(?: [a-z']+)?) break$"),
+     lambda m: Command("break", m["what"], {"kind": "walk", "label": m["what"]})),
     (re.compile(r"^(?:i'?m |i am )?back(?: now)?$|^back from (?:my |the |a )?(?:walk|break|smoke)$"),
      lambda m: Command("back", "back")),
     (re.compile(r"^(?:focus off|unfocus|out of focus|no focus|lost focus|done focusing)$"),

@@ -123,6 +123,7 @@ class StateSet(BaseModel):
 
 class Break(BaseModel):
     kind: Literal["walk", "smoke"] = "walk"
+    label: str | None = Field(default=None, max_length=60)  # his word for it ("peeing"); default: walk / smoke break
     source: str = "api"
 
 
@@ -473,7 +474,8 @@ async def break_start(body: Break):
     _stop_running(body.source)
     resume = running["label"] if running else None
     db.append(conn(), kind="claim", type="break.start", source=body.source, start=db.utcnow(),
-              label=timeline.BREAK_LABELS[body.kind], data={"kind": body.kind, "resume": resume})
+              label=(body.label or "").strip() or timeline.BREAK_LABELS[body.kind],
+              data={"kind": body.kind, "resume": resume})
     return timeline.now_state(conn())
 
 
@@ -524,11 +526,25 @@ async def parse_line(text: str):
     return out
 
 
+def _undo_break(source: str) -> None:
+    """"didnt actually break" (his, Oct 13): the break never happened. It gets a tombstone (append-only), and
+    the task it paused starts again from the break's start, so that time counts as the task."""
+    b = timeline.on_break(conn())
+    if not b:
+        raise HTTPException(409, "you're not on a break")
+    db.append(conn(), kind="claim", type="entry.delete", source=source, start=db.utcnow(), ref=b["id"])
+    if resume := b["data"].get("resume"):
+        db.append(conn(), kind="claim", type="timer.start", source=source, start=db.parse(b["start"]),
+                  label=resume, data={"reason": "break taken back"})
+
+
 async def _run(cmd: intents.Command, source: str) -> dict:
     """Do a typed command through the same rules as its key would."""
     a = cmd.args
     if cmd.action == "break":
-        await break_start(Break(kind=a["kind"], source=source))
+        await break_start(Break(kind=a["kind"], label=a.get("label"), source=source))
+    elif cmd.action == "undo_break":
+        _undo_break(source)
     elif cmd.action == "back":
         b, g = timeline.on_break(conn()), timeline.ghost(conn())
         if b or (g and g["data"].get("from_break")):
