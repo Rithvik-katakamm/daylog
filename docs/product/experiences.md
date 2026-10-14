@@ -19,6 +19,13 @@ Good moments go in too: they show what to protect.
 
 ## Moments
 
+### 2026-10-14
+
+- **4:10 PM · what a break is (product thought).** Doing: reading the smoke-break cap. Friction: the
+  break keys assume he takes breaks; he doesn't think of it that way. Felt: "i never break man tbh i
+  just walk around and come back and i dont want this to feel like a admin system for a compny you
+  know this is for me."
+
 ### 2026-10-13
 
 - **6:00 PM · smoke break · ⌘⇧B on a walk.** Doing: start a smoke break. Steps: ⌘⇧B. Friction: he was

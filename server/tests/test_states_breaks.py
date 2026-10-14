@@ -137,6 +137,44 @@ def test_break_you_never_came_back_from_becomes_ghost(client, clock):
     assert {s["state"] for s in back["states"]} == {"high"}
 
 
+def _break_claim(client, start, clock):
+    tl = client.get("/timeline", params={"start": db.iso(start - timedelta(minutes=1)),
+                                         "end": db.iso(clock.t)}).json()
+    return next(c for c in tl["claims"] if c["type"] == "break")
+
+
+def test_smoke_break_back_late_is_logged_only_to_the_cap(client, clock):
+    # Oct 13: "a 44-min smoke break that wasn't". Smoking is logged to the cap; the rest is a gap.
+    client.post("/log", json={"text": "deep work"})
+    client.post("/break", json={"kind": "smoke"})
+    start = clock.t
+    clock.advance(minutes=44)
+    back = client.delete("/break").json()
+    assert back["timer"]["label"] == "deep work"
+    assert {s["state"] for s in back["states"]} == {"high"}   # smoke still means high
+    brk = _break_claim(client, start, clock)
+    assert db.parse(brk["end"]) - db.parse(brk["start"]) == timeline.BREAK_CAP["smoke"]
+    assert db.parse(back["timer"]["start"]) == clock.t        # nothing claimed in between
+
+
+def test_smoke_break_back_in_time_is_logged_as_is(client, clock):
+    client.post("/break", json={"kind": "smoke"})
+    start = clock.t
+    clock.advance(minutes=6)
+    client.delete("/break")
+    brk = _break_claim(client, start, clock)
+    assert db.parse(brk["end"]) - db.parse(brk["start"]) == timedelta(minutes=6)
+
+
+def test_walks_have_no_cap(client, clock):
+    client.post("/break", json={"kind": "walk"})
+    start = clock.t
+    clock.advance(minutes=35)
+    client.delete("/break")
+    brk = _break_claim(client, start, clock)
+    assert db.parse(brk["end"]) - db.parse(brk["start"]) == timedelta(minutes=35)
+
+
 def test_plain_ghost_is_not_ended_by_break_key(client):
     client.post("/ghost", json={"status": "dinner"})
     assert client.delete("/break").status_code == 409

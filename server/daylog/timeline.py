@@ -33,6 +33,10 @@ STATES = ("intoxicated", "high", "caffeinated")
 BREAK_GHOST_AFTER = timedelta(hours=1)
 BREAK_ASSUMED = timedelta(minutes=15)
 BREAK_LABELS = {"walk": "walk", "smoke": "smoke break"}
+# Back from a break later than its cap: the break is logged only up to the cap, and the rest is a
+# gap (unknown; the Mac's own observations say away). His smoke breaks run ~6 min when he presses
+# back (Oct 11-13), so 15 min of smoking is generous. Walks have no cap: a real one ran 35 min.
+BREAK_CAP = {"smoke": BREAK_ASSUMED}
 
 # Stale status: display off and no status change for STALE_AFTER means last night's
 # task and states are over; they end when the display went off. Idle alone doesn't count:
@@ -156,6 +160,13 @@ def state_spans(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[di
         if c:
             out.append(_seg(c[0], c[1], state=name))
     return out
+
+
+def break_end_at(b: dict[str, Any], back: datetime) -> datetime:
+    """When the break claim ends if he's back at `back`: then, or at its kind's cap."""
+    cap = BREAK_CAP.get(b["data"].get("kind"))
+    start = db.parse(b["start"])
+    return min(back, start + cap) if cap else back
 
 
 def expire_break(conn: sqlite3.Connection) -> dict[str, Any] | None:

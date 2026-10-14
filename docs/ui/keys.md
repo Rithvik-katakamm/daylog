@@ -67,7 +67,7 @@ Works with Wispr Flow dictation too (⌥L, dictate, ⏎). Code: `server/daylog/i
 | Tab | anywhere in the bar | Close and return to the app you were in |
 | Esc | anywhere | Step back one level; closes from the typing line |
 
-Not back from a break within an hour? It's logged as a ~15 min break, then ghost from there.
+Not back from a break within an hour? It’s logged as a ~15 min break, then ghost from there. Back from a smoke break after 15 min: the smoke break is logged as 15 min, and the time after it stays blank (unknown). Walks have no cap.
 ⌘B still brings you back and resumes the task.
 
 Menu-only (⌘K): **Always on: center pill / side ring / pill + ring / off**: what stays on

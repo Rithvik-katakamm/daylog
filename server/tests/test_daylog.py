@@ -280,7 +280,7 @@ def test_night_sleep_ends_ghost_replaying_oct_12(client, clock):
     clock.advance(hours=9, minutes=17)                                # 1:14 PM, coffee shop
     _focus(client, clock)
     assert client.get("/now").json()["ghost"] is None
-    assert client.get("/summary", params={"day": "2026-10-13"}).json()["by_label"]["ghost: watching code geass"] == 40
+    assert client.get("/summary", params={"date": "2026-10-13"}).json()["by_label"]["ghost: watching code geass"] == 40
     assert _obs_since(ghost_at) == [("away.start", {"reason": "NSWorkspaceWillSleepNotification"}),
                                     ("app.focus", {"app": "Safari", "title": "Day Log Map"})]  # logging resumed
 
@@ -297,7 +297,7 @@ def test_daytime_sleep_keeps_ghost(client, clock):
     assert client.get("/now").json()["ghost"]["status"] == "family day"
     assert _obs_since(ghost_at) == [("away.start", {"reason": "NSWorkspaceWillSleepNotification"}),
                                     ("app.focus", {})]            # just the wake mark, no app or title
-    assert client.get("/timeline", params={"day": "2026-10-13"}).json()["activity"] == []  # the mark isn't activity
+    assert client.get("/timeline", params={"date": "2026-10-13"}).json()["activity"] == []  # the mark isn't activity
 
 
 def test_overnight_ghost_from_the_evening_ends_at_the_sleep(client, clock):

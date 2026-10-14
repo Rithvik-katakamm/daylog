@@ -173,11 +173,14 @@ def _end_ghost(source: str):
 
 
 def _end_break(source: str):
+    """End the break at its cap (see timeline.BREAK_CAP) if he's back late; the rest stays a gap."""
     b = timeline.on_break(conn())
     if not b:
         return None
-    return db.append(conn(), kind="claim", type="timer.stop", source=source,
-                     start=db.utcnow(), ref=b["id"])
+    now = db.utcnow()
+    end = timeline.break_end_at(b, now)
+    return db.append(conn(), kind="claim", type="timer.stop", source=source if end == now else "auto",
+                     start=end, ref=b["id"])
 
 
 def _set_state(name: str, on: bool, source: str):
