@@ -73,6 +73,7 @@ def test_summary_counts_minutes_per_state(client, clock):
 # ---------- breaks ----------
 
 def test_walk_pauses_and_resumes_the_task(client, clock):
+    start = clock.t
     client.post("/log", json={"text": "building daylog"})
     clock.advance(minutes=20)
     now = client.post("/break", json={"kind": "walk"}).json()
@@ -83,8 +84,8 @@ def test_walk_pauses_and_resumes_the_task(client, clock):
     assert back["resumed"] == "building daylog"
     assert back["timer"]["label"] == "building daylog" and back["on_break"] is None
     assert "high" not in {s["state"] for s in back["states"]}
-    day = clock.t.astimezone().date().isoformat()
-    assert client.get("/summary", params={"date": day}).json()["by_label"]["walk"] == 8
+    window = {"start": db.iso(start - timedelta(hours=1)), "end": db.iso(clock.t + timedelta(hours=1))}
+    assert client.get("/summary", params=window).json()["by_label"]["walk"] == 8  # no midnight flake
 
 
 def test_smoke_break_comes_back_high(client, clock):

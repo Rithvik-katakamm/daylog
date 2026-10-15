@@ -17,6 +17,13 @@ def client(tmp_path, monkeypatch):
         yield c
 
 
+def day(clock=None):
+    """A window around the (fake) now: the day before it, plus a margin after. A bare /timeline or /summary means the REAL today, so a test that
+    runs just after midnight, or moves the fake clock across it, reads the wrong day. Always pass this."""
+    now = clock.t if clock else datetime.now(timezone.utc)
+    return {"start": db.iso(now - timedelta(hours=24)), "end": db.iso(now + timedelta(hours=12))}
+
+
 class Clock:
     """A controllable clock so tests can say 'ten minutes pass'."""
     def __init__(self):
@@ -70,13 +77,13 @@ def test_timer_start_stop_roundtrip(client, clock):
     assert r.status_code == 201
     assert r.json()["timer"]["label"] == "coding daylog"
 
-    tl = client.get("/timeline").json()
+    tl = client.get("/timeline", params=day(clock)).json()
     assert [c["running"] for c in tl["claims"]] == [True]
 
     clock.advance(minutes=25)
     r = client.post("/timer/stop")
     assert r.status_code == 200 and r.json()["timer"] is None
-    tl = client.get("/timeline").json()
+    tl = client.get("/timeline", params=day(clock)).json()
     assert tl["claims"][0]["running"] is False and tl["claims"][0]["end"]
 
 
@@ -84,7 +91,7 @@ def test_starting_a_timer_stops_the_previous_one(client, clock):
     client.post("/timer/start", json={"label": "a"})
     clock.advance(minutes=10)
     client.post("/timer/start", json={"label": "b"})
-    claims = client.get("/timeline").json()["claims"]
+    claims = client.get("/timeline", params=day(clock)).json()["claims"]
     assert [(c["label"], c["running"]) for c in claims] == [("a", False), ("b", True)]
 
 
@@ -97,7 +104,7 @@ def test_stop_with_nothing_running_is_409(client):
 def test_log_minutes_ending_now(client):
     r = client.post("/entries", json={"label": "ideated about daylog", "minutes": 40})
     assert r.status_code == 201
-    s = client.get("/summary").json()
+    s = client.get("/summary", params=day()).json()
     # The entry may straddle midnight when tests run just after 00:00.
     assert 0 < s["by_label"]["ideated about daylog"] <= 40
 
@@ -112,7 +119,7 @@ def test_future_entries_rejected(client):
 def test_delete_is_a_tombstone_not_an_erase(client):
     e = client.post("/entries", json={"label": "oops", "minutes": 5}).json()
     assert client.delete(f"/entries/{e['id']}").status_code == 200
-    assert client.get("/timeline").json()["claims"] == []
+    assert client.get("/timeline", params=day()).json()["claims"] == []
     # The original row is still in the log.
     from daylog.api import app
     assert db.get(app.state.conn, e["id"])["label"] == "oops"
@@ -191,7 +198,7 @@ def test_log_line_without_time_starts_timer(client):
 def test_parse_preview_does_not_write(client):
     r = client.get("/parse", params={"text": "client call 30m"})
     assert r.json()["action"] == "log" and r.json()["minutes"] == 30
-    assert client.get("/timeline").json()["claims"] == []
+    assert client.get("/timeline", params=day()).json()["claims"] == []
 
 
 # ---------- history (scroll back) ----------
@@ -213,7 +220,7 @@ def test_history_lists_entries_meetings_and_gaps_newest_first(conn, clock):
 def test_history_running_timer_fills_time_but_is_not_a_stop(client, clock):
     client.post("/timer/start", json={"label": "coding"})
     clock.advance(minutes=40)
-    items = client.get("/history").json()["items"]
+    items = client.get("/history", params=day(clock)).json()["items"]
     assert all(i["label"] != "coding" for i in items)
     assert not any(i["kind"] == "gap" and i["end"] == db.iso(clock.t) for i in items)
 
@@ -226,9 +233,9 @@ def test_note_attaches_to_running_timer_without_changing_it(client, clock):
     r = client.post("/notes", json={"text": "history view should show notes"})
     assert r.status_code == 201
     assert client.get("/now").json()["timer"]["label"] == "building daylog"
-    notes = client.get("/timeline").json()["notes"]
+    notes = client.get("/timeline", params=day(clock)).json()["notes"]
     assert [(n["text"], n["during"]) for n in notes] == [("history view should show notes", "building daylog")]
-    kinds = [i["kind"] for i in client.get("/history").json()["items"]]
+    kinds = [i["kind"] for i in client.get("/history", params=day(clock)).json()["items"]]
     assert "note" in kinds
 
 
@@ -246,7 +253,7 @@ def test_ghost_stops_timer_blocks_activity_and_ends_on_new_task(client, clock):
     clock.advance(minutes=60)
     now = client.post("/timer/start", json={"label": "back to coding"}).json()
     assert now["ghost"] is None and now["timer"]["label"] == "back to coding"
-    s = client.get("/summary").json()
+    s = client.get("/summary", params=day(clock)).json()
     assert s["by_label"]["ghost: dinner with family"] == 60
 
 
@@ -280,7 +287,7 @@ def test_night_sleep_ends_ghost_replaying_oct_12(client, clock):
     clock.advance(hours=9, minutes=17)                                # 1:14 PM, coffee shop
     _focus(client, clock)
     assert client.get("/now").json()["ghost"] is None
-    assert client.get("/summary", params={"date": "2026-10-13"}).json()["by_label"]["ghost: watching code geass"] == 40
+    assert client.get("/summary", params=day(clock)).json()["by_label"]["ghost: watching code geass"] == 40
     assert _obs_since(ghost_at) == [("away.start", {"reason": "NSWorkspaceWillSleepNotification"}),
                                     ("app.focus", {"app": "Safari", "title": "Day Log Map"})]  # logging resumed
 
@@ -325,7 +332,7 @@ def test_amend_cuts_a_ghost_back_to_when_he_slept(client, clock):
     client.post("/timer/start", json={"label": "coffee shop"})
     slept = (clock.t - timedelta(hours=12, minutes=20)).isoformat()
     assert client.post(f"/entries/{g['id']}/amend", json={"end": slept}).status_code == 200
-    by = client.get("/summary").json()["by_label"]
+    by = client.get("/summary", params=day(clock)).json()["by_label"]
     assert by["ghost: watching code geass"] == 40
 
 
@@ -348,15 +355,15 @@ def test_amend_cuts_a_running_timer_back(client, clock):
     r = client.post(f"/entries/{tid}/amend", json={"end": cut.isoformat()})
     assert r.status_code == 200
     assert client.get("/now").json()["timer"] is None  # cutting it back also stops it
-    claim = client.get("/timeline").json()["claims"][0]
+    claim = client.get("/timeline", params=day(clock)).json()["claims"][0]
     assert claim["end"] == db.iso(cut) and claim["running"] is False
-    assert client.get("/summary").json()["by_label"]["daylog"] == 50
+    assert client.get("/summary", params=day(clock)).json()["by_label"]["daylog"] == 50
 
 
 def test_amend_renames_and_keeps_the_original(client, clock):
     e = client.post("/entries", json={"label": "client cal", "minutes": 20}).json()
     client.post(f"/entries/{e['id']}/amend", json={"label": "client call"})
-    assert client.get("/timeline").json()["claims"][0]["label"] == "client call"
+    assert client.get("/timeline", params=day(clock)).json()["claims"][0]["label"] == "client call"
     from daylog.api import app
     assert db.get(app.state.conn, e["id"])["label"] == "client cal"  # history kept
 
@@ -385,12 +392,12 @@ def test_focus_layers_on_the_running_task(client, clock):
     now = client.get("/now").json()
     assert now["timer"]["focus"] == 3 and now["timer"]["label"] == "building daylog"
 
-    claim = client.get("/timeline").json()["claims"][0]
+    claim = client.get("/timeline", params=day(clock)).json()["claims"][0]
     assert [f["tier"] for f in claim["focus"]] == [1, 3]
-    s = client.get("/summary").json()
+    s = client.get("/summary", params=day(clock)).json()
     assert s["by_focus"] == {"focused": 20, "hyperfocus": 30}
     client.post("/timer/stop")
-    item = next(i for i in client.get("/history").json()["items"] if i["label"] == "building daylog")
+    item = next(i for i in client.get("/history", params=day(clock)).json()["items"] if i["label"] == "building daylog")
     assert item["focus_peak"] == 3
 
 
@@ -440,9 +447,9 @@ def test_dev_reset_wipes_only_the_dev_db(tmp_path, monkeypatch):
     with TestClient(app) as c:
         assert c.get("/health").json()["env"] == "dev"
         c.post("/entries", json={"label": "test", "minutes": 5})
-        assert c.get("/timeline").json()["claims"]
+        assert c.get("/timeline", params=day()).json()["claims"]
         assert c.post("/dev/reset").status_code == 200
-        assert c.get("/timeline").json()["claims"] == []
+        assert c.get("/timeline", params=day()).json()["claims"] == []
 
 
 # ---------- version + owner-only release notes on /health ----------
