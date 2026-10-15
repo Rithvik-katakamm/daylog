@@ -17,7 +17,7 @@ import httpx
 from pydantic import BaseModel, Field, ValidationError
 
 OLLAMA = "http://localhost:11434"   # Ollama's local server; nothing leaves the Mac
-MODEL = "llama3.2:3b"               # knob: which local model reads the line
+MODEL = "qwen2.5-coder:7b"          # knob: which local model reads the line (best of 5 on Oct 15)
 TIMEOUT_S = 10.0                    # knob: give up and fall back to the rules after this
 
 Mode = Literal["task", "note", "ghost", "break", "back", "focus", "state", "stop"]
@@ -81,6 +81,7 @@ def read_line(line: str, examples: Sequence[tuple[str, Reading]] = (), model: st
         "messages": messages(line, examples),
         "format": Reading.model_json_schema(),   # Ollama constrains the output to this shape
         "stream": False,
+        "think": False,                          # models that reason first (qwen3.5) answer directly
         "options": {"temperature": 0},           # same line in, same answer out
     }
     started = time.perf_counter()

@@ -50,6 +50,7 @@ def test_his_past_corrections_ride_in_the_prompt():
     assert sent[-1]["content"] == "geass again"
     assert seen[0]["format"]["properties"]["mode"]   # the output shape is sent too
     assert seen[0]["options"]["temperature"] == 0
+    assert seen[0]["think"] is False   # the bar can't wait for a model to reason out loud
 
 
 def test_the_shape_rejects_unknown_states():
