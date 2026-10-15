@@ -195,6 +195,7 @@ def test_typing_peeing_starts_a_named_break_and_back_resumes(client, clock):
 def test_didnt_actually_break_takes_the_break_back_replaying_oct_13(client, clock):
     # 5:41:56 PM: ⌘B walk while on "daylog backend."; 5:47:37 PM he typed "didnt actually break".
     # It must not become a task: the break goes, and the task runs on from the break's start.
+    start = clock.t
     client.post("/timer/start", json={"label": "daylog backend."})
     clock.advance(minutes=60)
     client.post("/break", json={"kind": "walk"})
@@ -202,7 +203,8 @@ def test_didnt_actually_break_takes_the_break_back_replaying_oct_13(client, cloc
     now = client.post("/log", json={"text": "didnt actually break"}).json()
     assert now["did"] == "no break after all"
     assert now["on_break"] is None and now["timer"]["label"] == "daylog backend."
-    by = client.get("/summary").json()["by_label"]
+    window = {"start": db.iso(start - timedelta(hours=1)), "end": db.iso(clock.t + timedelta(hours=1))}
+    by = client.get("/summary", params=window).json()["by_label"]  # no midnight flake
     assert "didnt actually break" not in by and "walk" not in by
     assert by["daylog backend."] == 65  # the 5 minutes count as task time
 
