@@ -249,42 +249,7 @@ async def now():
     timeline.expire_break(conn())  # never show a break that should already be ghost
     timeline.expire_stale(conn())  # nor last night's status
     timeline.end_ghost_after_night(conn(), db.utcnow())  # nor a ghost he slept through
-    state = timeline.now_state(conn())
-    # with nothing running, the labeler's guess (a prediction; the pill shows it faded).
-    idle = not (state["timer"] or state["ghost"] or state["on_break"])
-    state["guess"] = autolabel.current_guess(conn()) if idle else None
-    return state
-
-
-class Label(BaseModel):
-    action: Literal["confirm", "correct", "shown"]
-    category: str | None = None
-    task: str | None = None
-    text: str | None = None          # a correction: what he typed instead
-    start: datetime | None = None    # the guessed block
-    end: datetime | None = None
-    guess: dict = {}
-    source: str = "api"
-
-
-@app.post("/label", status_code=201)
-async def label(body: Label):
-    """⏎ confirms the guess, typing corrects it (both claims = labels); every guess shown is
-    logged too (an observation), so acceptance can be measured and auto-confirm decided later."""
-    if body.action == "shown":
-        db.append(conn(), kind="observation", type="guess.shown", source=body.source,
-                  start=db.utcnow(), data={"guess": body.guess})
-        return {"ok": True}
-    end = db.parse(body.end.isoformat()) if body.end else db.utcnow()
-    start = db.parse(body.start.isoformat()) if body.start else end
-    category, task = body.category, body.task
-    if body.action == "correct":
-        task = (body.text or "").strip() or task
-        category = autolabel.claim_category(autolabel.rules(), task or "") or category
-    autolabel._guess_cache.update(at=None)  # the pill should reflect the label right away
-    return db.append(conn(), kind="claim", type="label", source=body.source, start=start, end=end,
-                     label=task or category, data={"action": body.action, "category": category,
-                                                   "task": task, "guess": body.guess})
+    return timeline.now_state(conn())
 
 
 @app.get("/auto")
@@ -309,18 +274,6 @@ async def timer_start(body: TimerStart):
     _end_break(body.source)
     db.append(conn(), kind="claim", type="timer.start", source=body.source,
               start=db.utcnow(), label=body.label.strip())
-    return timeline.now_state(conn())
-
-
-@app.post("/timer/cut")
-async def timer_cut(body: TimerStop | None = None):
-    """accept the cut offer. The task ends when he walked away (a backdated timer.stop,
-    like the stale reset), and nothing is running until he types what he's on now."""
-    offer = timeline.cut_offer(conn())
-    if not offer:
-        raise HTTPException(409, "no cut to offer")
-    db.append(conn(), kind="claim", type="timer.stop", source=body.source if body else "api",
-              start=db.parse(offer["away_from"]), ref=offer["timer_id"], data={"reason": "cut"})
     return timeline.now_state(conn())
 
 

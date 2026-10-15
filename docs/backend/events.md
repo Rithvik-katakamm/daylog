@@ -20,6 +20,8 @@ Everything Day Log knows is a row in one SQLite table, `events`. Code: `server/d
 | `entry.log` | claim | A past block with start + end | — |
 | `entry.delete` | claim | Tombstone: hide that entry/timer/note | the target |
 | `entry.amend` | claim | Edit: new label/start/end (newest wins) | the target |
+| `label` | claim | He confirmed or corrected the bar's guess for a block. **No longer written** (the guess was removed Oct 15); old ones still count as his claim | — |
+| `guess.shown` | observation | The bar showed a guess. **No longer written** (Oct 15) | — |
 | `note` | claim | A thought at a moment | the running timer (if any) |
 | `focus.set` | claim | Focus tier 0–3 from now on | the running timer |
 | `ghost.start` | claim | Went offline, with a status | — |

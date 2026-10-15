@@ -54,10 +54,6 @@ NIGHT_HOURS = (0, 7)
 STATUS_CHANGE_TYPES = ("timer.start", "timer.stop", "state.set", "focus.set", "break.start",
                        "ghost.start")
 
-# Cut offer: a running timer that spans an away stretch of CUT_OFFER_MIN_AWAY or more
-# (idle counts here, unlike the stale reset) gets a one-key offer to end the task when he left.
-CUT_OFFER_MIN_AWAY = timedelta(hours=2)
-
 # Focus is a layer on a task: focus.set events reference the task and carry a tier.
 FOCUS_NAMES = {1: "focused", 2: "deep", 3: "hyperfocus"}
 
@@ -272,33 +268,6 @@ def expire_stale(conn: sqlite3.Connection) -> datetime | None:
         db.append(conn, kind="claim", type="state.set", source="auto", start=stale_at,
                   data={"state": s["state"], "on": False, "reason": "stale"})
     return stale_at
-
-
-def away_spans(conn: sqlite3.Connection, since: datetime) -> list[tuple[datetime, datetime]]:
-    """Finished away stretches since `since`: from the first away.start after he was last
-    active to the next app.focus. One still going (he hasn't come back) isn't included."""
-    spans, off = [], None
-    for r in conn.execute("SELECT type, start FROM events WHERE type IN ('app.focus', 'away.start')"
-                          " AND start >= ? ORDER BY start", (db.iso(since),)):
-        if r["type"] == "away.start":
-            off = off or db.parse(r["start"])
-        elif off:
-            spans.append((off, db.parse(r["start"])))
-            off = None
-    return spans
-
-
-def cut_offer(conn: sqlite3.Connection) -> dict[str, Any] | None:
-    """The most recent long away inside the running timer, offered as a cut point."""
-    timer = running_timer(conn)
-    if not timer:
-        return None
-    long = [(a, b) for a, b in away_spans(conn, db.parse(timer["start"]))
-            if b - a >= CUT_OFFER_MIN_AWAY]
-    if not long:
-        return None
-    away_from, away_to = long[-1]
-    return {"timer_id": timer["id"], "away_from": db.iso(away_from), "away_to": db.iso(away_to)}
 
 
 def claims(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> list[dict[str, Any]]:
@@ -584,5 +553,4 @@ def now_state(conn: sqlite3.Connection) -> dict[str, Any]:
             if b else None
         ),
         "states": active_states(conn),
-        "cut_offer": cut_offer(conn),
     }

@@ -78,18 +78,6 @@ struct NowState: Decodable {
     let ghost: GhostInfo?
     var onBreak: BreakInfo? = nil
     var states: [StateInfo]? = nil
-    var cutOffer: CutOffer? = nil
-    var guess: Guess? = nil
-}
-
-/// what the labeler thinks he's doing (only when nothing runs). A prediction, shown faded.
-struct Guess: Decodable, Equatable {
-    let category: String
-    let task: String?
-    let confidence: Double
-    let start: String
-    let end: String
-    let ask: Bool  // unsure: the bar asks "looks like build?"
 }
 
 /// which version is running, and (owner only) what's new in it.
@@ -113,13 +101,6 @@ struct ReleaseInfo: Decodable, Equatable {
     var new: [String] = []
     var `try`: [String] = []
     var released_at: String? = nil
-}
-
-/// the running timer spans a long away; ⌫ on an empty line ends the task when he left.
-struct CutOffer: Decodable, Equatable {
-    let timerId: String
-    let awayFrom: String
-    let awayTo: String
 }
 
 struct GhostInfo: Decodable, Equatable {

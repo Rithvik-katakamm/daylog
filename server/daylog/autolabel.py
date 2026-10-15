@@ -292,37 +292,4 @@ def score(conn: sqlite3.Connection, until: datetime, days: int = 14) -> dict[str
         "task_accuracy_pct": round(100 * task_hit / task_n) if task_n else None,
         "top_misses": dict(misses.most_common(6)),
         "labels_typed": len({c["id"] for c in cover if c and c["type"] == "timer"}),
-        "label_feedback": feedback(conn, lo, until),
     }
-
-
-def feedback(conn: sqlite3.Connection, lo: datetime, hi: datetime) -> dict[str, Any]:
-    """The guess loop's numbers: how often a guess was shown, confirmed (⏎) or corrected (typed)."""
-    hi = hi + timedelta(seconds=1)  # include events recorded this very second
-    shown = len(db.query(conn, types=["guess.shown"], since=lo, until=hi))
-    acts = Counter(e["data"].get("action") for e in db.query(conn, types=["label"], since=lo, until=hi))
-    return {"shown": shown, "confirmed": acts["confirm"], "corrected": acts["correct"],
-            "acceptance_pct": round(100 * acts["confirm"] / shown) if shown else None}
-
-
-_guess_cache: dict[str, Any] = {"at": None, "guess": None}
-
-
-def current_guess(conn: sqlite3.Connection) -> dict[str, Any] | None:
-    """What the labeler thinks he's doing right now, for the pill when nothing is running.
-    Recomputed at most every guess_refresh_seconds (the bar polls /now every 4 s)."""
-    K = rules()["knobs"]
-    now = db.utcnow()
-    at = _guess_cache["at"]
-    if at and (now - at).total_seconds() < K["guess_refresh_seconds"]:
-        return _guess_cache["guess"]
-    segs = label_day(conn, now - timedelta(hours=6), now)
-    g = None
-    if segs:
-        last = segs[-1]
-        fresh = db.parse(last["end"]) >= now - timedelta(minutes=2)
-        if fresh and last["source"] != "claim" and last["category"] not in ("away", "sleep"):
-            g = {"category": last["category"], "task": last["task"], "confidence": last["confidence"],
-                 "start": last["start"], "end": last["end"], "ask": last["confidence"] < K["ask_below"]}
-    _guess_cache.update(at=now, guess=g)
-    return g

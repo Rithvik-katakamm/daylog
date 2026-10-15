@@ -8,14 +8,11 @@ final class Store: ObservableObject {
     @Published var timer: TimerInfo?
     @Published var ghost: GhostInfo?  // ghost mode: offline, logging nothing
     @Published var onBreak: BreakInfo?  // ⌘B walk / ⌘⇧B smoke
-    @Published var cutOffer: CutOffer?  // a long away inside the running timer
     @Published var version = "dev"      // the running release
     @Published var cdSkip: CDStatus?    // CD skipped at the last unlock: shown until the next good release
     @Published var codeFrom = ""        // where the server's code runs from (releases/v0.17 or the repo)
     @Published var release: ReleaseInfo?  // owner-only: what's new in it
     @Published var showWhatsNew = false   // one time per release, on the next open
-    @Published var guess: Guess?          // the labeler's guess when nothing runs
-    private var guessShownThisOpen = false
     @Published var states: Set<String> = []  // substances that are on: outer rings
 
     /// What stays on screen while the bar is closed (his call, Oct 11: try both, then pick).
@@ -406,7 +403,6 @@ final class Store: ObservableObject {
     }
 
     func resetMode() {
-        guessShownThisOpen = false
         if showWhatsNew, let r = release {  // seen once: don't show it again for this release
             UserDefaults.standard.set(r.version, forKey: "seenVersion")
             showWhatsNew = false
@@ -473,7 +469,6 @@ final class Store: ObservableObject {
         if mode == .ghost { submitGhost(); return }
         if mode == .edit { submitEdit(); return }
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.isEmpty, guess != nil { acceptGuess(); return }  // ⏎ confirms the guess
         guard !text.isEmpty else { return }
         // Only trust a preview made for exactly this line (typing fast can outrun it).
         let fresh = preview?.text?.trimmingCharacters(in: .whitespacesAndNewlines) == text ? preview : nil
@@ -491,11 +486,6 @@ final class Store: ObservableObject {
         Sound.saved.play()
         input = ""
         preview = nil
-        if !willLog, let g = guess {  // typing over a guess corrects it (a label for the guessed block)
-            guess = nil
-            Task { _ = try? await API.post("label", ["action": "correct", "text": text, "start": g.start, "end": g.end,
-                                                    "guess": guessDict(g), "source": "bar"]) }
-        }
         run { try await API.post("log", ["text": text, "timer": forceTimer, "source": "button"]) }
         Task {
             try? await Task.sleep(for: .seconds(flash != nil ? 1.2 : 0.5))
@@ -553,8 +543,6 @@ final class Store: ObservableObject {
             if now.timer != timer { timer = now.timer }
             if now.ghost != ghost { ghost = now.ghost }
             if now.onBreak != onBreak { onBreak = now.onBreak }
-            if now.cutOffer != cutOffer { cutOffer = now.cutOffer }
-            if now.guess != guess { guess = now.guess }
             let on = Set((now.states ?? []).map(\.state))
             if on != states { states = on }
             serverDown = false
@@ -608,47 +596,12 @@ final class Store: ObservableObject {
         if let r = release, !r.new.isEmpty { showWhatsNew = true } else { flashBriefly("Day Log \(version)") }
     }
 
-    /// log that a guess was shown (once per open), so acceptance can be measured.
-    func noteGuessShown() {
-        guard isOpen, !guessShownThisOpen, let g = guess else { return }
-        guessShownThisOpen = true
-        Task { _ = try? await API.post("label", ["action": "shown", "guess": guessDict(g), "source": "bar"]) }
-    }
-
-    /// ⏎ on an empty line: yes, that's what I was doing. A label (claim) for the guessed block.
-    func acceptGuess() {
-        guard let g = guess else { return }
-        Sound.saved.play()
-        flash = "labeled: \(g.category)" + (g.task.map { " · \($0)" } ?? "")
-        guess = nil
-        Task {
-            _ = try? await API.post("label", ["action": "confirm", "category": g.category, "task": g.task ?? NSNull(),
-                                             "start": g.start, "end": g.end, "guess": guessDict(g), "source": "bar"])
-            await refreshAll()
-            try? await Task.sleep(for: .seconds(0.9))
-            onSubmitted?(); flash = nil
-        }
-    }
-
-    private func guessDict(_ g: Guess) -> [String: Any] {
-        ["category": g.category, "task": g.task ?? NSNull(), "confidence": g.confidence,
-         "start": g.start, "end": g.end, "ask": g.ask]
-    }
-
     func refreshAll() async {
         await refreshNow()
         await refreshDay()
     }
 
     // MARK: actions
-
-    /// accept the cut offer (⌫ on an empty line). The task ends when he walked away.
-    func acceptCut() {
-        guard cutOffer != nil else { return }
-        Sound.saved.play()
-        timer = nil; cutOffer = nil  // optimistic
-        run { try await API.post("timer/cut", ["source": "bar"]) }
-    }
 
     func stop() {
         guard timer != nil else { return }
