@@ -60,10 +60,8 @@ the experience better for someone using it.
   product, backend, infra, ai); commits get joined with his Day Log blocks to measure hours per layer. A `Try:` line (what to try, shown
   after a release) and a `Where:` line (mac / cloud) go in that same last paragraph with `Layer:`: git only reads trailers from the last paragraph.
 - **Nothing outward** (posts, messages to humans) without his approval.
-- The build loop is injected by `.claude/hooks/build-loop.sh`. Learning runs on the **build-learn pilot
-  (Oct 14)**: skills `build-learn` + `learning-card-development`, ledger `.learning/build-learn.sqlite3`
-  via `.claude/build-learn/runtime.py` (see its README). Its hooks block a new card, and a learn card's
-  text or close, until a permit is recorded; build cards move freely.
+- The build loop and learn-slice protocol are injected by hooks (`.claude/hooks/build-loop.sh`,
+  `learn-trigger.py`); triggers log to `.learning/triggers.jsonl`.
 
 ## Build, test, ship
 
