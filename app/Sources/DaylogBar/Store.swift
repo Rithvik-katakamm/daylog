@@ -134,10 +134,11 @@ final class Store: ObservableObject {
     var current: HistoryItem? { history.indices.contains(index) ? history[index] : nil }
 
     private var previewTask: Task<Void, Never>?
+    private var readTask: Task<Void, Never>?
     var onSubmitted: (() -> Void)?  // the window closes itself after a submit
 
     private func schedulePreview() {
-        previewTask?.cancel()
+        previewTask?.cancel(); readTask?.cancel()
         let text = input.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { preview = nil; return }
         previewTask = Task {
@@ -145,6 +146,16 @@ final class Store: ObservableObject {
             guard !Task.isCancelled else { return }
             if let p: LinePreview = try? await API.get("parse", query: ["text": text]), !Task.isCancelled {
                 preview = p
+            }
+        }
+        // The model's reading (~1 s) replaces the rules' preview once he pauses typing. ⏎ before it
+        // arrives just uses the rules, so the bar never waits on the model.
+        readTask = Task {
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled else { return }
+            if let r: LinePreview = try? await API.get("read", query: ["text": text], slow: true), !Task.isCancelled,
+               r.action != "none", input.trimmingCharacters(in: .whitespaces) == text {
+                preview = r
             }
         }
     }

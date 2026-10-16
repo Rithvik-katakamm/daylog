@@ -10,11 +10,15 @@ A model call remembers nothing. Everything it knows about him is what this promp
 
 from __future__ import annotations
 
+import re
 import time
+from dataclasses import dataclass, field
 from typing import Literal, Sequence
 
 import httpx
 from pydantic import BaseModel, Field, ValidationError
+
+from .intents import Command
 
 OLLAMA = "http://localhost:11434"   # Ollama's local server; nothing leaves the Mac
 MODEL = "qwen2.5-coder:7b"          # knob: which local model reads the line (best of 5 on Oct 15)
@@ -93,3 +97,51 @@ def read_line(line: str, examples: Sequence[tuple[str, Reading]] = (), model: st
     except (httpx.HTTPError, KeyError, ValueError, ValidationError):
         reading = None
     return reading, (time.perf_counter() - started) * 1000
+
+
+# ---------- from a reading to what Day Log does ----------
+
+_FOCUS_SAY = {0: "focus off", 1: "focused", 2: "deep focus", 3: "hyperfocus"}
+_SMOKE = re.compile(r"smok|cig|blunt|joint", re.I)
+
+
+@dataclass
+class Plan:
+    """What a reading means for Day Log, in its own terms: an optional task or note, then
+    commands run through the same code as their keys. Code decides this; the model only read."""
+    task: str | None = None
+    note: str | None = None
+    commands: list[Command] = field(default_factory=list)
+
+    @property
+    def say(self) -> str:
+        parts = [f"task: {self.task}"] if self.task else [f"note: {self.note}"] if self.note else []
+        return " · ".join(parts + [c.say for c in self.commands])
+
+
+def plan(reading: Reading, text: str) -> Plan | None:
+    """Turn a reading into a plan, or None when it says nothing Day Log can act on."""
+    states = [(s.state, s.on) for s in reading.states]
+    state_cmd = ([Command("state", ", ".join(f"{n} {'on' if on else 'off'}" for n, on in states),
+                          {"states": states})] if states else [])
+    focus_cmd = ([Command("focus", _FOCUS_SAY[reading.focus], {"tier": reading.focus})]
+                 if reading.focus is not None else [])
+    m = reading.mode
+    if m == "task":
+        return Plan(task=(reading.task or text).strip(), commands=state_cmd + focus_cmd)
+    if m == "note":
+        return Plan(note=text.strip(), commands=state_cmd + focus_cmd)
+    if m == "ghost":
+        status = (reading.ghost_status or text).strip()
+        return Plan(commands=[Command("ghost", f"ghost: {status}", {"status": status})] + state_cmd)
+    if m == "break":
+        kind = "smoke" if _SMOKE.search(text) else "walk"
+        return Plan(commands=[Command("break", "smoke break" if kind == "smoke" else "walk", {"kind": kind})])
+    if m == "back":
+        return Plan(commands=[Command("back", "back")] + state_cmd)
+    if m == "focus":
+        tier = 1 if reading.focus is None else reading.focus
+        return Plan(commands=[Command("focus", _FOCUS_SAY[tier], {"tier": tier})] + state_cmd)
+    if m == "stop":
+        return Plan(commands=[Command("stop", "stop the timer")])
+    return Plan(commands=state_cmd) if state_cmd else None   # "state" with no states: nothing to do

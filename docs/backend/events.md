@@ -23,6 +23,7 @@ Everything Day Log knows is a row in one SQLite table, `events`. Code: `server/d
 | `label` | claim | He confirmed or corrected the bar's guess for a block. **No longer written** (the guess was removed Oct 15); old ones still count as his claim | — |
 | `guess.shown` | observation | The bar showed a guess. **No longer written** (Oct 15) | — |
 | `note` | claim | A thought at a moment | the running timer (if any) |
+| `line.read` | prediction | What the local model read from a line he sent (`data.reading`, `data.ms`); what got done from it are ordinary claims | — |
 | `focus.set` | claim | Focus tier 0–3 from now on | the running timer |
 | `ghost.start` | claim | Went offline, with a status | — |
 | `app.focus` | observation | App in front (plus a heartbeat every 5 min) | — |
@@ -40,6 +41,7 @@ Everything Day Log knows is a row in one SQLite table, `events`. Code: `server/d
 | POST | `/timer/start`, `/timer/stop` | Start (auto-stops the old timer, ends ghost) / stop |
 | POST | `/log` | One line in: logs a past block if it has a time, else starts a timer |
 | GET | `/parse` | What `/log` would do (live preview, no write) |
+| GET | `/read` | The local model's reading of a line (~1 s; see `harness.md`). `/log` uses it for that exact line within 5 min |
 | POST | `/entries` | Log a past block (`minutes` or `start`+`end`) |
 | POST | `/entries/{id}/amend` | Rename or move start/end |
 | DELETE | `/entries/{id}` | Tombstone |

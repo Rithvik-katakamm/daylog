@@ -19,6 +19,7 @@ import contextlib
 import json
 import logging
 import os
+import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Literal
@@ -26,7 +27,7 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from . import autolabel, db, intents, parse, timeline, wispr
+from . import autolabel, db, harness, intents, parse, timeline, wispr
 
 log = logging.getLogger("daylog")
 
@@ -482,6 +483,49 @@ async def parse_line(text: str):
     return out
 
 
+# What the model read for lines typed in the last few minutes, so ⏎ uses the reading the bar showed
+# without waiting for the model again. Keyed by the exact line.
+READ_KEEP_S = 300
+_readings: dict[str, tuple[float, harness.Reading, float]] = {}
+
+
+@app.get("/read")
+async def read_line(text: str):
+    """The model's reading of a line, for the bar's preview (~1 s; the rules preview shows first).
+    Lines with times stay with the rules (exact time math is code's job), and so does everything
+    when the model is down: then the answer is action "none"."""
+    text = text.strip()
+    if not text or parse.parse(text).is_range:
+        return {"action": "none", "label": "", "text": text}
+    reading, ms = await asyncio.to_thread(harness.read_line, text)
+    p = harness.plan(reading, text) if reading else None
+    if not p:
+        return {"action": "none", "label": "", "text": text}
+    now = time.monotonic()
+    for k in [k for k, (at, _, _) in _readings.items() if now - at > READ_KEEP_S]:
+        del _readings[k]
+    _readings[text] = (now, reading, ms)
+    return {"action": "command", "label": p.say, "text": text, "by": harness.MODEL, "ms": round(ms)}
+
+
+async def _apply_reading(text: str, reading: harness.Reading, ms: float, source: str) -> dict:
+    """Do what the model read, through the same code the keys use. The reading itself is kept as a
+    prediction (never a claim), so his later corrections can be measured against it."""
+    p = harness.plan(reading, text)
+    db.append(conn(), kind="prediction", type="line.read", source=harness.MODEL, start=db.utcnow(),
+              label=text, data={"reading": reading.model_dump(exclude_none=True), "ms": round(ms)})
+    if p.task:
+        await timer_start(TimerStart(label=p.task, source=source))
+    if p.note:
+        await add_note(Note(text=p.note, source=source))
+    out: dict = {}
+    for c in p.commands:
+        if c.action == "focus" and not timeline.running_timer(conn()):
+            continue  # focus is a layer on a task; with none running there's nothing to deepen
+        out = await _run(c, source)
+    return {"action": "read", "did": p.say, **(out or timeline.now_state(conn()))}
+
+
 def _undo_break(source: str) -> None:
     """"didnt actually break" (his, Oct 13): the break never happened. It gets a tombstone (append-only), and
     the task it paused starts again from the break's start, so that time counts as the task."""
@@ -530,6 +574,9 @@ async def log_line(body: Line):
     """One line in, the right thing out: a command ("smoke break", "deep focus") does it; a time
     in the text logs a past block; anything else starts a timer, turning on any substance it
     mentions ("working on daylog, little high"). The same endpoint the bar, phone or an agent uses."""
+    hit = None if body.timer else _readings.pop(body.text.strip(), None)
+    if hit:
+        return await _apply_reading(body.text.strip(), hit[1], hit[2], body.source)
     cmds = None if body.timer else intents.commands(body.text)
     if cmds:
         out: dict = {}

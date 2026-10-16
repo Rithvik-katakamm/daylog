@@ -20,6 +20,13 @@ enum API {
         return URLSession(configuration: c)
     }()
 
+    /// For the model's reading (/read): a model that was just loaded can take several seconds.
+    private static let slowSession: URLSession = {
+        let c = URLSessionConfiguration.ephemeral
+        c.timeoutIntervalForRequest = 12
+        return URLSession(configuration: c)
+    }()
+
     private static let decoder: JSONDecoder = {
         let d = JSONDecoder()
         d.keyDecodingStrategy = .convertFromSnakeCase
@@ -32,9 +39,15 @@ enum API {
         var errorDescription: String? { message }
     }
 
-    static func get<T: Decodable>(_ path: String, query: [String: String] = [:], env: Env? = nil) async throws -> T {
+    static func get<T: Decodable>(_ path: String, query: [String: String] = [:], env: Env? = nil,
+                                  slow: Bool = false) async throws -> T {
         var comps = URLComponents(url: base(env).appendingPathComponent(path), resolvingAgainstBaseURL: false)!
         if !query.isEmpty { comps.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) } }
+        if slow {
+            let (data, resp) = try await slowSession.data(for: URLRequest(url: comps.url!))
+            guard (resp as? HTTPURLResponse)?.statusCode ?? 500 < 300 else { throw Failure(status: 500, message: "read failed") }
+            return try decoder.decode(T.self, from: data)
+        }
         return try await send(URLRequest(url: comps.url!))
     }
 
@@ -164,6 +177,7 @@ struct LinePreview: Decodable, Equatable {
     let untilNow: Bool?
     var text: String? = nil      // the line this preview is for (to ignore a stale preview)
     var also: [String]? = nil    // substances a task line turns on/off: ["high on"]
+    var by: String? = nil        // the local model that read the line (nil: the rules did)
 }
 
 /// One stop when scrolling back: a logged block, a meeting, or an untracked gap.

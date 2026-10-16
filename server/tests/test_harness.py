@@ -60,3 +60,76 @@ def test_the_shape_rejects_unknown_states():
         assert False, "unknown state accepted"
     except ValueError:
         pass
+
+
+# ---------- wired into /read and /log (the model is faked; no Ollama needed) ----------
+
+import pytest
+from fastapi.testclient import TestClient
+
+
+@pytest.fixture
+def client(tmp_path, monkeypatch):
+    monkeypatch.setenv("DAYLOG_DB", str(tmp_path / "t.sqlite"))
+    monkeypatch.setenv("DAYLOG_IMPORTERS", "0")
+    from daylog import api
+    api._readings.clear()
+    with TestClient(api.app) as c:
+        yield c
+
+
+def model_reads(monkeypatch, reading):
+    monkeypatch.setattr(harness, "read_line", lambda text, **kw: (reading, 900.0))
+
+
+def test_his_drunk_daylog_line_starts_the_task_with_both_states(client, monkeypatch):
+    line = "working on daylog drunk as shit little high too"
+    model_reads(monkeypatch, Reading(mode="task", task="Working on Day Log",
+                                     states=[StateChange(state="intoxicated", on=True),
+                                             StateChange(state="high", on=True)]))
+    preview = client.get("/read", params={"text": line}).json()
+    assert preview["action"] == "command" and preview["label"].startswith("task: Working on Day Log")
+    now = client.post("/log", json={"text": line}).json()
+    assert now["timer"]["label"] == "Working on Day Log"
+    assert {s["state"] for s in now["states"]} == {"intoxicated", "high"}
+
+
+def test_drinking_with_friends_goes_ghost_and_the_reading_is_kept_as_a_prediction(client, monkeypatch):
+    line = "having fun with friends roommates drinking"
+    model_reads(monkeypatch, Reading(mode="ghost", ghost_status="drinking with friends",
+                                     states=[StateChange(state="intoxicated", on=True)]))
+    client.get("/read", params={"text": line})
+    now = client.post("/log", json={"text": line}).json()
+    assert now["ghost"]["status"] == "drinking with friends"
+    from datetime import datetime, timedelta, timezone
+    from daylog import api, db
+    t = datetime.now(timezone.utc)
+    read = db.query(api.conn(), types=["line.read"], since=t - timedelta(hours=1), until=t + timedelta(hours=1))
+    assert read and read[0]["kind"] == "prediction" and read[0]["label"] == line
+
+
+def test_focused_rn_deepens_the_running_task(client, monkeypatch):
+    client.post("/log", json={"text": "working on daylog"})
+    model_reads(monkeypatch, Reading(mode="focus", focus=1))
+    client.get("/read", params={"text": "focused rn"})
+    now = client.post("/log", json={"text": "focused rn"}).json()
+    assert now["timer"]["label"] == "working on daylog" and now["timer"]["focus"] == 1
+
+
+def test_no_model_means_the_rules_do_it_like_before(client, monkeypatch):
+    model_reads(monkeypatch, None)
+    assert client.get("/read", params={"text": "smoke break"}).json()["action"] == "none"
+    assert client.post("/log", json={"text": "smoke break"}).json()["on_break"]["kind"] == "smoke"
+
+
+def test_a_line_with_times_never_goes_to_the_model(client, monkeypatch):
+    def boom(*a, **kw):
+        raise AssertionError("the model was asked about a time range")
+    monkeypatch.setattr(harness, "read_line", boom)
+    assert client.get("/read", params={"text": "client call 3:10-3:25"}).json()["action"] == "none"
+
+
+def test_without_a_preview_log_uses_the_rules(client, monkeypatch):
+    # ⏎ before the reading arrived: nothing cached, so the rules handle the line.
+    now = client.post("/log", json={"text": "working on daylog, little high"}).json()
+    assert now["timer"]["label"] == "working on daylog, little high"

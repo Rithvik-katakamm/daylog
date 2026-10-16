@@ -1,7 +1,7 @@
 # The harness: a local model reads what he types
 
-Layer: backend + ai. Code: `server/daylog/harness.py`. **Status: step 1 of 4, not wired into the
-bar yet.** The bar still uses the rules in `intents.py`.
+Layer: backend + ai. Code: `server/daylog/harness.py`. **Status: wired into the bar (Oct 15).** The rules
+preview instantly; the model's reading replaces it about a second after he pauses typing.
 
 ## The shape
 
@@ -56,6 +56,9 @@ Five lines is a smoke test, not an eval. Step 3 scores readers on his real lines
 ## Steps
 
 1. **A model reads one line into a fixed shape** (done).
-2. **Memory:** his past corrections from the event log become the prompt's examples.
-3. **Eval:** rules vs models on his labeled lines, accuracy plus p95 time, bar set before measuring.
-4. **The bar:** rules preview instantly; the model's reading follows in the background.
+2. **The bar** (done, his pick to do it before memory and eval: feel it first). `GET /read` asks the
+   model in a background thread; the bar shows its reading marked "read by the model"; ⏎ applies it
+   through the same command code as the keys (`harness.plan` → `api._run`), and the reading is kept as
+   a `line.read` prediction. ⏎ before the reading arrives, a line with times, or no model: the rules.
+3. **Memory:** his past corrections from the event log become the prompt's examples.
+4. **Eval:** rules vs models on his labeled lines, accuracy plus p95 time, bar set before measuring.
