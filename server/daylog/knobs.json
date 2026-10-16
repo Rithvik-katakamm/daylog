@@ -1,0 +1,7 @@
+{
+  "_what": "Turn these and feel the product. Read on every decision: no restart needed. See docs/backend/knobs.md.",
+  "word_model": "qwen2.5-coder:7b",
+  "word_temperature": 1.0,
+  "display_temperature": 0.8,
+  "display_timeout_s": 25
+}

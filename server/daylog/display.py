@@ -87,6 +87,43 @@ def key(state: dict) -> str:
                        notes[-1]["id"] if notes else None])   # a new note = a new look
 
 
+KNOBS = Path(__file__).with_name("knobs.json")
+
+
+def knob(name: str, default):
+    """A knob from knobs.json, read fresh each time so turning it takes effect on the next decision."""
+    try:
+        return json.loads(KNOBS.read_text()).get(name, default)
+    except (OSError, ValueError):
+        return default
+
+
+async def _coin_word(state: dict, why: str, model: str) -> tuple[str | None, float]:
+    """The word model's one job (his experiment, Oct 16): coin the pill's word, playfully, like "WorkTrix".
+    A second model can't sit in memory beside the first on 16 GB, so this swaps it in (slower)."""
+    import httpx
+    started = time.perf_counter()
+    body = {"model": model, "stream": False, "think": False, "keep_alive": "5m",
+            "options": {"temperature": float(knob("word_temperature", 1.0))},
+            "format": {"type": "object", "properties": {"word": {"type": "string", "pattern": "^[A-Za-z]{1,12}$"}},
+                       "required": ["word"]},
+            "messages": [{"role": "system", "content": WORD_INSTRUCTIONS},
+                         {"role": "user", "content": f"Status: {describe(state)}\nWhat it means: {why}"}]}
+    try:
+        async with httpx.AsyncClient(base_url=harness.OLLAMA, timeout=TIMEOUT_S) as c:
+            r = await c.post("/api/chat", json=body)
+            word = json.loads(r.json()["message"]["content"])["word"]
+        word = word if re.fullmatch(r"[A-Za-z]{1,12}", word or "") else None
+    except Exception:
+        word = None
+    return word, (time.perf_counter() - started) * 1000
+
+
+WORD_INSTRUCTIONS = ("Coin ONE word (letters only, at most 12) for a tiny status pill on a Mac. Be playful and "
+                     "inventive: mash words together or invent one, like WorkTrix, Geassed, CigASmoke. Never "
+                     "Working. Answer as JSON.")
+
+
 _agent: Agent | None = None
 _IDLE_WORDS = {"idle", "empty", "nothing", "none", "blank", "rest", "void", "waiting"}
 
@@ -118,9 +155,20 @@ async def decide(state: dict) -> tuple[Display | None, float]:
     started = time.perf_counter()
     try:
         idle = not (state.get("timer") or state.get("ghost") or state.get("on_break"))
-        result = await asyncio.wait_for(_get_agent().run(f"Status: {describe(state)}", deps=idle),
-                                        timeout=TIMEOUT_S)
+        result = await asyncio.wait_for(
+            _get_agent().run(f"Status: {describe(state)}", deps=idle,
+                             model_settings={"temperature": float(knob("display_temperature", 0.8))}),
+            timeout=float(knob("display_timeout_s", TIMEOUT_S)))
         choice = result.output
+        word_model = knob("word_model", None)
+        if word_model and word_model != MODEL:   # the experiment: another model coins the word
+            from . import telemetry
+            with telemetry.tracer.start_as_current_span("word") as sp:
+                word, wms = await _coin_word(state, choice.why, word_model)
+                sp.set_attribute("model", word_model)
+                sp.set_attribute("coined", word or f"nothing; kept {choice.word}")
+            if word and (idle or word.lower() not in _IDLE_WORDS):
+                choice = choice.model_copy(update={"word": word})
     except Exception:   # model down, too slow, or broke the shape twice: plain colors stay
         choice = None
     return choice, (time.perf_counter() - started) * 1000
