@@ -311,6 +311,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let cmd = flags.contains(.command)
         let shift = flags.contains(.shift)
         let noMods = flags.intersection([.command, .option, .control, .shift]).isEmpty
+        // Text selected in the typing line: ⌘C copies like any text box (the Edit menu handles it).
+        let hasSelection = ((panel.firstResponder as? NSTextView)?.selectedRange().length ?? 0) > 0
         switch (code, store.mode) {
         // Command menu: ⌘K anywhere, or / on an empty line.
         case (40, let m) where cmd && m != .menu: store.openMenu()
@@ -340,7 +342,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case (11, .input) where cmd: store.breakKey(smoke: shift)          // ⌘B walk · ⌘⇧B smoke
         case (4, .input) where cmd: store.toggleState("high")              // ⌘H high (bar wins over Hide)
         case (34, .input) where cmd: store.toggleState("intoxicated")      // ⌘I
-        case (8, .input) where cmd: store.toggleState("caffeinated")       // ⌘C coffee (bar wins over Copy)
+        case (8, .input) where cmd && !hasSelection: store.toggleState("caffeinated")  // ⌘C coffee; copies if text is selected
         case (47, _) where cmd: store.stop()                               // ⌘. stop
         case (24, _) where cmd: store.resizeText(1)                        // ⌘= bigger text
         case (27, _) where cmd: store.resizeText(-1)                       // ⌘− smaller

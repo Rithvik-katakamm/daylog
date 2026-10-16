@@ -59,7 +59,7 @@ Works with Wispr Flow dictation too (⌥L, dictate, ⏎). Code: `server/daylog/i
 | ⌘⇧B | typing | Smoke break: same, and you come back **high** |
 | ⌘H | typing | Toggle **high** (bar wins over macOS Hide, Oct 13) |
 | ⌘I | typing | Toggle **intoxicated** |
-| ⌘C | typing | Toggle **caffeinated** (C for coffee; bar wins over Copy, Oct 13) |
+| ⌘C | typing | Toggle **caffeinated** (C for coffee, Oct 13). With text selected it copies instead (Oct 16) |
 | ⌘. | typing | Stop the timer |
 | Tab | anywhere in the bar | Close and return to the app you were in |
 | Esc | anywhere | Step back one level; closes from the typing line |
@@ -68,7 +68,7 @@ Not back from a break within an hour? It’s logged as a ~15 min break, then gho
 ⌘B still brings you back and resumes the task.
 
 Text editing in the typing line works as anywhere on a Mac: **⌘V** paste (also how Wispr Flow types
-into the bar), **⌘X**, **⌘A**, **⌘Z** / **⌘⇧Z**. **⌘C** stays caffeinated.
+into the bar), **⌘X**, **⌘A**, **⌘Z** / **⌘⇧Z**. **⌘C** copies when text is selected; with nothing selected it's caffeinated.
 
 Menu-only (⌘K): **Always on: center pill / side ring / pill + ring / off**: what stays on
 screen while the bar is closed.
