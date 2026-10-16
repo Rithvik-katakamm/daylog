@@ -29,7 +29,7 @@ def test_the_shape_holds_the_model_to_one_word_and_a_color():
 
 def test_describe_is_what_the_agent_sees():
     s = {"timer": {"label": "daylog backend", "elapsed_minutes": 12, "focus": 2}, "states": [{"state": "high"}]}
-    assert display.describe(s) == 'working on "daylog backend" for 12 min, in deep focus, also high'
+    assert display.describe(s) == 'doing "daylog backend" for 12 min, in deep focus, also high'
     assert display.describe({}) == "nothing running: idle"
 
 
@@ -58,3 +58,8 @@ def test_now_says_thinking_then_shows_the_agents_choice(client, monkeypatch):
 def test_a_junk_line_is_not_a_status(client):
     assert client.post("/log", json={"text": "\\"}).status_code == 422
     assert client.get("/now").json()["timer"] is None
+
+
+def test_just_started_is_not_zero_minutes():
+    s = {"timer": {"label": "Code Geass", "elapsed_minutes": 0, "focus": 0}}
+    assert display.describe(s) == 'doing "Code Geass", just started'

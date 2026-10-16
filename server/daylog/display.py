@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, NativeOutput
+from pydantic_ai import Agent, ModelRetry, NativeOutput, RunContext
 from pydantic_ai.models.instrumented import InstrumentationSettings
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.ollama import OllamaProvider
@@ -58,7 +58,8 @@ def describe(state: dict) -> str:
         parts.append(f'off the clock (ghost): "{g["status"]}" for {g.get("elapsed_minutes", 0)} min')
     elif state.get("timer"):
         t = state["timer"]
-        parts.append(f'working on "{t["label"]}" for {t.get("elapsed_minutes", 0)} min')
+        mins = t.get("elapsed_minutes", 0)
+        parts.append(f'doing "{t["label"]}"' + (f" for {mins} min" if mins else ", just started"))
         if t.get("focus"):
             parts.append(["", "focused", "in deep focus", "in hyperfocus"][t["focus"]])
     else:
@@ -96,6 +97,7 @@ class _FileExporter:
 
 
 _agent: Agent | None = None
+_IDLE_WORDS = {"idle", "empty", "nothing", "none", "blank", "rest", "void", "waiting"}
 
 
 def _get_agent() -> Agent:
@@ -107,7 +109,16 @@ def _get_agent() -> Agent:
         provider.add_span_processor(SimpleSpanProcessor(_FileExporter()))
         model = OpenAIChatModel(MODEL, provider=OllamaProvider(base_url=f"{harness.OLLAMA}/v1"))
         _agent = Agent(model, output_type=NativeOutput(Display), instructions=INSTRUCTIONS, retries=1,
-                       name="display")
+                       name="display", deps_type=bool)
+
+        @_agent.output_validator
+        def _alive(ctx: RunContext[bool], out: Display) -> Display:
+            # deps = "nothing is running". Something running is never idle: the model is told why and
+            # decides again itself (PydanticAI sends this message back as a retry). Not a rule picking the look.
+            if not ctx.deps and out.word.lower() in _IDLE_WORDS:
+                raise ModelRetry(f'"{out.word}" says nothing is happening, but something is running. '
+                                 "Pick a word for what it is.")
+            return out
         Agent.instrument_all(InstrumentationSettings(tracer_provider=provider))
     return _agent
 
@@ -117,7 +128,9 @@ async def decide(state: dict) -> tuple[Display | None, float]:
     import asyncio
     started = time.perf_counter()
     try:
-        result = await asyncio.wait_for(_get_agent().run(f"Status: {describe(state)}"), timeout=TIMEOUT_S)
+        idle = not (state.get("timer") or state.get("ghost") or state.get("on_break"))
+        result = await asyncio.wait_for(_get_agent().run(f"Status: {describe(state)}", deps=idle),
+                                        timeout=TIMEOUT_S)
         choice = result.output
     except Exception:   # model down, too slow, or broke the shape twice: plain colors stay
         choice = None

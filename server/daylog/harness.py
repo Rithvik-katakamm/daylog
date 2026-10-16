@@ -72,6 +72,8 @@ EXAMPLES: list[tuple[str, str, Reading]] = [
     (_RUN, "had an espresso", Reading(why="caffeine", mode="state", states=[StateChange(state="caffeinated", on=True)])),
     (_IDLE, "took a nap, back on the api now", Reading(why="the nap is over; starting the API work", mode="task",
                                                        task="Working on the API", word="Building")),
+    (_IDLE, "attack on titan", Reading(why="a show's name on its own: watching it, off the clock", mode="ghost",
+                                       ghost_status="watching Attack on Titan")),
 ]
 
 
