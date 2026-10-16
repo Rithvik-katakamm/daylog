@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "daylog": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "--project", "server", "python", "-m", "daylog.mcp_server"],
+      "env": {}
+    }
+  }
+}
