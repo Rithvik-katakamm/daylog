@@ -184,7 +184,7 @@ def test_context_rides_with_the_line():
 # ---------- guardrails: code keeps only what the words support ----------
 
 def test_coffee_is_never_intoxicated():
-    r = Reading(mode="note", states=[StateChange(state="intoxicated", on=True)])
+    r = Reading(mode="continue", states=[StateChange(state="intoxicated", on=True)])
     kept = harness.check(r, "still drinking coffee and im at starbucks", running=True, away=False)
     assert {s.state for s in kept.states} == {"caffeinated"}   # the rules add caffeinated; drunk is dropped
 
@@ -259,3 +259,37 @@ def test_log_with_read_and_no_model_uses_the_rules(client, monkeypatch):
     model_reads(monkeypatch, None)
     now = client.post("/log", json={"text": "working on daylog", "read": True}).json()
     assert now["timer"]["label"] == "working on daylog"
+
+
+# ---------- one input (Oct 16): no notes; several things at once; conflicts don't sink the line ----------
+
+def test_a_feeling_keeps_the_status_and_is_no_longer_a_note_mode(client, monkeypatch):
+    started = client.post("/log", json={"text": "daylog backend"}).json()["timer"]
+    with pytest.raises(ValueError):
+        Reading(mode="note")
+    model_reads(monkeypatch, Reading(why="a feeling; the task keeps going", mode="continue"))
+    client.get("/read", params={"text": "kinda fried"})
+    now = client.post("/log", json={"text": "kinda fried"}).json()
+    assert now["timer"]["id"] == started["id"]
+
+
+def test_two_things_at_once_are_kept_as_a_list(client, monkeypatch):
+    client.post("/log", json={"text": "daylog"})
+    model_reads(monkeypatch, Reading(mode="rename", task="Day Log + LinkedIn posts", tasks=["Day Log", "LinkedIn posts"],
+                                     word="Creating"))
+    client.get("/read", params={"text": "doing linkedin posts with muse on the side too"})
+    client.post("/log", json={"text": "doing linkedin posts with muse on the side too"})
+    from datetime import datetime, timedelta, timezone
+    from daylog import api, db
+    t = datetime.now(timezone.utc)
+    amend = db.query(api.conn(), types=["entry.amend"], since=t - timedelta(hours=1), until=t + timedelta(hours=1))[-1]
+    assert amend["data"]["tasks"] == ["Day Log", "LinkedIn posts"]
+
+
+def test_an_impossible_part_is_skipped_and_the_rest_applies(client, monkeypatch):
+    client.post("/log", json={"text": "working on daylog"})
+    client.post("/break", json={"kind": "walk"})
+    model_reads(monkeypatch, Reading(mode="break"))
+    client.get("/read", params={"text": "taking a smoke break"})
+    r = client.post("/log", json={"text": "taking a smoke break"})   # already on a break: skipped, not "log failed"
+    assert r.status_code == 201 and r.json()["on_break"]["kind"] == "walk"

@@ -80,6 +80,7 @@ def conn():
 class TimerStart(BaseModel):
     label: str = Field(min_length=1, max_length=500)
     word: str | None = Field(default=None, max_length=12)   # the model's one word for the pill
+    tasks: list[str] = []                                    # everything he's doing at once (the model's list)
     source: str = "api"
 
 
@@ -105,6 +106,7 @@ class Line(BaseModel):
 class Amend(BaseModel):
     label: str | None = Field(default=None, min_length=1, max_length=500)
     word: str | None = Field(default=None, max_length=12)   # a new one-word pill title, with a rename
+    tasks: list[str] = []                                    # what he's doing at once, with a rename
     start: datetime | None = None
     end: datetime | None = None
     source: str = "api"
@@ -276,12 +278,12 @@ async def _decide_look(k: str, state: dict, again: bool = False) -> None:
 
 
 def _recent_notes(state: dict, limit: int = 3) -> list[dict]:
-    """His notes since the current status began (at most the last 3, within 3 hours): the display
-    agent rethinks the look when he writes one."""
+    """What he wrote since the current status began: his typed lines (one input, Oct 16) and any notes, the
+    last 3 within 3 hours. The display agent rethinks the look whenever he writes one."""
     cur = state.get("timer") or state.get("ghost") or state.get("on_break")
     now = db.utcnow()
     since = max(db.parse(cur["start"]), now - timedelta(hours=3)) if cur else now - timedelta(hours=1)
-    rows = db.query(conn(), types=["note"], since=since, until=now + timedelta(seconds=1))
+    rows = db.query(conn(), types=["note", "line.read"], since=since, until=now + timedelta(seconds=1))
     return [{"id": r["id"], "text": r["label"]} for r in rows[-limit:]]
 
 
@@ -329,7 +331,8 @@ async def timer_start(body: TimerStart):
     _end_ghost(body.source)     # starting a task means you're back
     _end_break(body.source)
     db.append(conn(), kind="claim", type="timer.start", source=body.source,
-              start=db.utcnow(), label=body.label.strip(), data={"word": body.word} if body.word else {})
+              start=db.utcnow(), label=body.label.strip(),
+              data={k: v for k, v in {"word": body.word, "tasks": body.tasks}.items() if v})
     return timeline.now_state(conn())
 
 
@@ -391,6 +394,7 @@ async def amend_entry(event_id: str, body: Amend):
     fields = {k: v for k, v in {
         "label": body.label.strip() if body.label else None,
         "word": body.word,
+        "tasks": body.tasks or None,
         "start": db.iso(start) if body.start else None,
         "end": db.iso(end) if body.end else None,
     }.items() if v}
@@ -544,7 +548,7 @@ async def parse_line(text: str):
 # What the model read for lines typed in the last few minutes, so ⏎ uses the reading the bar showed
 # without waiting for the model again. Keyed by the exact line.
 READ_KEEP_S = 300
-READ_WAIT_S = 4.0   # knob: how long /log waits for the model when the bar sends read=True
+READ_WAIT_S = 8.0   # knob: how long /log waits for the model when the bar sends read=True (gemma4: ~3-6 s)
 _readings: dict[str, tuple[float, harness.Reading, float]] = {}
 
 # "and brain global config" / "also X" while a task runs: same session, the title grows. A rule, so it's
@@ -572,12 +576,12 @@ def _now_context() -> str:
     return "nothing is running."
 
 
-async def _rename_running(title: str, source: str, word: str | None = None) -> None:
+async def _rename_running(title: str, source: str, word: str | None = None, tasks: list[str] = ()) -> None:
     running = timeline.running_timer(conn())
     if running:
-        await amend_entry(running["id"], Amend(label=title, word=word, source=source))
+        await amend_entry(running["id"], Amend(label=title, word=word, tasks=list(tasks), source=source))
     else:
-        await timer_start(TimerStart(label=title, word=word, source=source))
+        await timer_start(TimerStart(label=title, word=word, tasks=list(tasks), source=source))
 
 
 @app.get("/read")
@@ -627,16 +631,20 @@ async def _apply_reading(text: str, reading: harness.Reading, ms: float, source:
               label=text, data={"reading": reading.model_dump(exclude_none=True), "ms": round(ms),
                                 "model": harness.MODEL})
     if p.task:
-        await timer_start(TimerStart(label=p.task, word=p.word, source=source))
+        await timer_start(TimerStart(label=p.task, word=p.word, tasks=p.tasks, source=source))
     if p.rename:
-        await _rename_running(p.rename, source, word=p.word)
+        await _rename_running(p.rename, source, word=p.word, tasks=p.tasks)
     if p.note:
         await add_note(Note(text=p.note, source=source))
     out: dict = {}
     for c in p.commands:
         if c.action == "focus" and not timeline.running_timer(conn()):
             continue  # focus is a layer on a task; with none running there's nothing to deepen
-        out = await _run(c, source)
+        try:
+            out = await _run(c, source)
+        except HTTPException as e:   # e.g. "already on a break": skip that part, keep the rest (Oct 16 "log failed")
+            if e.status_code != 409:
+                raise
     return {"action": "read", "did": p.say, **(out or timeline.now_state(conn()))}
 
 

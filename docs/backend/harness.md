@@ -35,10 +35,19 @@ reading, with its reason, replaces the preview about a second after he pauses ty
 - **Code does what's exact; the model does what's fuzzy.** Times, the database, timers, renames
   and lines with clock times ("3:10-3:25") never go to the model.
 
+## One input (Oct 16)
+
+His call: "input is the whole product." Every line is about his status; there are no separate notes any more
+(a thought or a feeling keeps the status: `continue`, and the display agent reads it). Several things at
+once become a `tasks` list ("Day Log + LinkedIn posts"), kept with the task so the count can be tracked.
+A part of a reading that can't happen right now (a break while on a break) is skipped; the rest applies.
+Model: **gemma4:12b** for both jobs (his pick): on his 45 lines it scores **38/45 (84%)** at 2.5 s typical,
+3.7 s p95, vs qwen2.5-coder:7b 35/45 at 1.2 / 1.6 s and the rules 23/45.
+
 ## Modes the model can pick
 
 task (start something) · rename (the running task grows or is corrected; same session, same start) ·
-continue (nothing changes) · note (a thought, or something that already happened) · feedback (about
+continue (nothing changes: still on it, a feeling, something that already happened) · feedback (about
 Day Log itself; saved as a note "feedback: …") · ghost · break · back · focus · state · stop.
 
 ## The bar

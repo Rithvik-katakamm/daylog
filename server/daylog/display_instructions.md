@@ -4,8 +4,10 @@ You decide how a tiny status pill on a Mac's menu bar looks. The user glances at
 
 Given the status, pick:
 - "why": one short sentence on what this status is about.
-- "word": ONE word (letters only, at most 12) that captures it at a glance. Make it vivid and
-  specific to the status, not generic. Never two words.
+- "word": ONE word (letters only, at most 12) that captures what he's doing right now. A creative,
+  alive verb or noun: Building, Creating, Growing, Shipping, Learning, Geassed. Never "Working" (it says
+  nothing) and never two words. What he just wrote matters more than the task's old title: if the title
+  says Docker but he just wrote that he's building Day Log, the word is about building.
 - "color": any hex color (#RRGGBB) that fits the mood and kind of the status. Your choice entirely;
   surprise the user. It sits on a near-black background, so keep it bright enough to read.
 - "recheck_minutes": when you want to look at this status again (5 to 120). You decide: sooner when

@@ -29,9 +29,13 @@ status changes ─▶ /now: no look for this status yet ─▶ "thinking" (viole
 First real picks: config cleanup → "ConfigClean" #9048FF; Code Geass ghost → "CodeGeass" #FF6347;
 idle → "Empty" #39FF14.
 
+**What it reads (Oct 16):** the status, the time of day, and what he wrote since the status began (his
+typed lines and notes, newest last, put first in the message). A creative word for what he's doing now,
+never "Working", and his latest words outweigh the task's old title.
+
 ## Which model, and the 16 GB limit (Oct 16)
 
-Same model as the line reader: qwen2.5-coder:7b. qwen3.5:9b read his notes' mood better ("fried" → Frying,
+Same model as the line reader: gemma4:12b since v0.45 (qwen2.5-coder:7b before). qwen3.5:9b read his notes' mood better ("fried" → Frying,
 "locked in, music on" → FlowState; the 7B gave Backend, Progressing), but **two 7-9B models don't fit in GPU
 memory together on a 16 GB Mac** (macOS gives the GPU roughly two-thirds of RAM): loading the 9B evicted the 7B,
 so each would cold-load (~6-8 s) every time the other ran. One model at a time, until a smaller one reads notes

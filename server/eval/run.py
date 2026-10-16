@@ -34,7 +34,8 @@ def rules(case):
 
 
 def right(mode, states, case):
-    return mode in case["modes"] and {tuple(s) for s in states} == {tuple(s) for s in case["states"]}
+    modes = set(case["modes"]) | ({"continue"} if "note" in case["modes"] else set())  # notes became continue (Oct 16)
+    return mode in modes and {tuple(s) for s in states} == {tuple(s) for s in case["states"]}
 
 
 def main(models):

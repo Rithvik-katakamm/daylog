@@ -45,7 +45,7 @@ enum API {
         if !query.isEmpty { comps.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) } }
         if slow {
             let (data, resp) = try await slowSession.data(for: URLRequest(url: comps.url!))
-            guard (resp as? HTTPURLResponse)?.statusCode ?? 500 < 300 else { throw Failure(status: 500, message: "read failed") }
+            try check(data, resp)
             return try decoder.decode(T.self, from: data)
         }
         return try await send(URLRequest(url: comps.url!))
@@ -59,10 +59,18 @@ enum API {
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         if slow {   // the server may wait for the model first
             let (data, resp) = try await slowSession.data(for: req)
-            guard (resp as? HTTPURLResponse)?.statusCode ?? 500 < 300 else { throw Failure(status: 500, message: "log failed") }
+            try check(data, resp)
             return data
         }
         return try await raw(req)
+    }
+
+    /// A failed answer from the server, with its own reason ("you're not on a break"), not a generic "failed".
+    private static func check(_ data: Data, _ resp: URLResponse) throws {
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 500
+        guard code >= 300 else { return }
+        let detail = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["detail"]
+        throw Failure(status: code, message: (detail as? String) ?? "the server said \(code)")
     }
 
     static func delete(_ path: String, env: Env? = nil) async throws {

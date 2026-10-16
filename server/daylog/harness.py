@@ -22,11 +22,12 @@ from pydantic import BaseModel, Field, ValidationError
 from .intents import Command, states as rule_states
 
 OLLAMA = "http://localhost:11434"   # Ollama's local server; nothing leaves the Mac
-MODEL = "qwen2.5-coder:7b"          # knob: which local model reads the line (see docs/backend/harness.md)
-TIMEOUT_S = 10.0                    # knob: give up and fall back to the rules after this
+MODEL = "gemma4:12b"                # knob: his pick (Oct 16), for both jobs; 16 GB holds one model at a time
+TIMEOUT_S = 15.0                    # knob: give up and fall back to the rules after this
 
-Mode = Literal["task", "rename", "continue", "note", "feedback", "ghost", "break", "back", "focus",
-               "state", "stop"]
+# "One input is the whole product" (Oct 16): every line is about his status. No separate notes: a thought or a
+# feeling keeps the status ("continue") and the display agent reads it.
+Mode = Literal["task", "rename", "continue", "feedback", "ghost", "break", "back", "focus", "state", "stop"]
 State = Literal["high", "intoxicated", "caffeinated"]
 
 
@@ -41,6 +42,7 @@ class Reading(BaseModel):
     why: str = Field("", max_length=160)  # one short sentence: what it understood
     mode: Mode
     task: str | None = None              # a clean, short title when mode is task or rename
+    tasks: list[str] = []                # everything he's doing at once, short names ("Day Log", "LinkedIn posts")
     word: str | None = None              # one word for the pill (task / rename): "Building", "Cleanup"
     states: list[StateChange] = []       # substances mentioned anywhere in the line
     focus: int | None = Field(None, ge=0, le=3)  # 1 focused, 2 deep, 3 hyperfocus, 0 off
@@ -61,8 +63,11 @@ EXAMPLES: list[tuple[str, str, Reading]] = [
     (_RUN, "and the docs too", Reading(why="adding docs to the running API task", mode="rename",
                                        task="Working on the API + docs", word="Building")),
     (_RUN, "still on it", Reading(why="still doing the running task", mode="continue")),
-    (_RUN, "kinda tired, brain is mush", Reading(why="a feeling, not a new activity", mode="note")),
-    (_RUN, "was at the gym before this", Reading(why="something that already happened", mode="note")),
+    (_RUN, "kinda tired, brain is mush", Reading(why="a feeling about the running task; it keeps going", mode="continue")),
+    (_RUN, "was at the gym before this", Reading(why="something that already happened; the task keeps going", mode="continue")),
+    (_RUN, "also doing linkedin posts with muse on the side",
+     Reading(why="two things at once now: the API and LinkedIn posts", mode="rename",
+             task="Working on the API + LinkedIn posts", tasks=["API", "LinkedIn posts"], word="Creating")),
     (_RUN, "the bar didnt reset again ugh", Reading(why="a complaint about the app itself", mode="feedback")),
     (_RUN, "grabbing food real quick", Reading(why="stepping away briefly", mode="break")),
     (_IDLE, "movie night w roommates, couple beers",
@@ -181,6 +186,7 @@ class Plan:
     task: str | None = None
     rename: str | None = None            # new title for the running task (same session, same start)
     word: str | None = None              # one word for the pill
+    tasks: list[str] = field(default_factory=list)   # what he's doing at once (kept with the task: a metric)
     note: str | None = None
     commands: list[Command] = field(default_factory=list)
     keep: bool = False                   # "continue": nothing changes
@@ -202,13 +208,13 @@ def plan(reading: Reading, text: str) -> Plan | None:
                  if reading.focus is not None else [])
     m = reading.mode
     if m == "task":
-        return Plan(task=(reading.task or text).strip(), word=reading.word, commands=state_cmd + focus_cmd)
+        return Plan(task=(reading.task or text).strip(), word=reading.word, tasks=reading.tasks,
+                    commands=state_cmd + focus_cmd)
     if m == "rename":
-        return Plan(rename=(reading.task or text).strip(), word=reading.word, commands=state_cmd + focus_cmd)
+        return Plan(rename=(reading.task or text).strip(), word=reading.word, tasks=reading.tasks,
+                    commands=state_cmd + focus_cmd)
     if m == "continue":
         return Plan(keep=True, commands=state_cmd + focus_cmd)
-    if m == "note":
-        return Plan(note=text.strip(), commands=state_cmd + focus_cmd)
     if m == "feedback":
         return Plan(note=f"feedback: {text.strip()}")
     if m == "ghost":
