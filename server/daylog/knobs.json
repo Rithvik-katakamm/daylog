@@ -3,5 +3,6 @@
   "word_model": "qwen2.5-coder:7b",
   "word_temperature": 1.0,
   "display_temperature": 0.8,
-  "display_timeout_s": 25
+  "display_timeout_s": 25,
+  "line_wait_s": 20
 }

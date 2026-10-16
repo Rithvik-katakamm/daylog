@@ -293,3 +293,8 @@ def test_an_impossible_part_is_skipped_and_the_rest_applies(client, monkeypatch)
     client.get("/read", params={"text": "taking a smoke break"})
     r = client.post("/log", json={"text": "taking a smoke break"})   # already on a break: skipped, not "log failed"
     assert r.status_code == 201 and r.json()["on_break"]["kind"] == "walk"
+
+
+def test_a_long_monologue_is_accepted(client):
+    r = client.post("/log", json={"text": "working on daylog " + "and thinking out loud " * 60})
+    assert r.status_code == 201

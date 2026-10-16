@@ -13,6 +13,7 @@ or edit the repo's and ship.)
 | `word_model` | `qwen2.5-coder:7b` | The model that coins the pill's one word. Same as the look's model = no extra model | `null`: gemma's polished words ("Floating"); coder: playful ones ("DrunkWorkBee", "Geassed") |
 | `word_temperature` | 1.0 | How adventurous the word is (0 = safest, ~1.5 = wild) | Higher: stranger, more invented words |
 | `display_temperature` | 0.8 | How adventurous the color and reason are | Higher: bolder, more varied colors |
+| `line_wait_s` | 20 | How long ⏎ waits for the line reader before the rules take your line as typed | Lower: snappier, but more lines become verbatim titles while models swap |
 | `display_timeout_s` | 25 | How long a look may take before the pill keeps plain colors | Lower: faster fallbacks; the word model's swap needs ~20 s |
 
 **The memory cost of `word_model`:** on 16 GB, gemma (8.3 GB) and the coder (4.7 GB) can't sit in GPU memory

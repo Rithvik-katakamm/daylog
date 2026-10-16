@@ -99,7 +99,7 @@ class Entry(BaseModel):
 
 
 class Line(BaseModel):
-    text: str = Field(min_length=1, max_length=500, pattern=r"[A-Za-z0-9]")  # "\\" alone isn't a status
+    text: str = Field(min_length=1, max_length=5000, pattern=r"[A-Za-z0-9]")   # long Wispr monologues; "\\" alone isn't one
     timer: bool = False  # force a timer even if the text contains a time
     read: bool = False   # ⏎ before the bar had the model's reading: read it here first (the pill says "thinking")
     source: str = "api"
@@ -738,7 +738,7 @@ async def _log_line(body: Line):
         return {"action": "command", "did": f"rename: {title}", **timeline.now_state(conn())}
     if body.read and not body.timer and body.text.strip() not in _readings:
         try:   # at most READ_WAIT_S: then the rules, so a stuck model never holds the line
-            await asyncio.wait_for(read_line(body.text), timeout=READ_WAIT_S)
+            await asyncio.wait_for(read_line(body.text), timeout=float(display.knob("line_wait_s", READ_WAIT_S)))
         except asyncio.TimeoutError:
             pass
     hit = None if body.timer else _readings.pop(body.text.strip(), None)
@@ -754,7 +754,8 @@ async def _log_line(body: Line):
         return out | {"did": " · ".join(c.say for c in cmds)}
     p = parse.parse(body.text)
     if body.timer or not p.is_range:
-        await timer_start(TimerStart(label=p.label if p.is_range else body.text, source=body.source))
+        title = body.text.strip() if len(body.text.strip()) <= 200 else body.text.strip()[:200].rstrip() + "…"
+        await timer_start(TimerStart(label=p.label if p.is_range else title, source=body.source))
         for name, on in intents.states(body.text):
             _set_state(name, on, body.source)
         return {"action": "timer", **timeline.now_state(conn())}
