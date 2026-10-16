@@ -24,7 +24,7 @@ OLLAMA = "http://localhost:11434"   # Ollama's local server; nothing leaves the 
 MODEL = "qwen2.5-coder:7b"          # knob: which local model reads the line (best of 5 on Oct 15)
 TIMEOUT_S = 10.0                    # knob: give up and fall back to the rules after this
 
-Mode = Literal["task", "note", "ghost", "break", "back", "focus", "state", "stop"]
+Mode = Literal["task", "rename", "note", "ghost", "break", "back", "focus", "state", "stop"]
 State = Literal["high", "intoxicated", "caffeinated"]
 
 
@@ -36,7 +36,7 @@ class StateChange(BaseModel):
 class Reading(BaseModel):
     """What one typed line means. This shape is the contract between the model and the code."""
     mode: Mode
-    task: str | None = None              # a clean, short title when mode is task
+    task: str | None = None              # a clean, short title when mode is task or rename
     states: list[StateChange] = []       # substances mentioned anywhere in the line
     focus: int | None = Field(None, ge=0, le=3)  # 1 focused, 2 deep, 3 hyperfocus, 0 off
     ghost_status: str | None = None      # what he's doing off the clock, when mode is ghost
@@ -45,8 +45,10 @@ class Reading(BaseModel):
 SYSTEM = """You read one line Rithvik typed into Day Log, his time tracker, and say what it means.
 
 Pick ONE mode:
-- task: he is starting or doing something. Put a short clean title in "task" (fix typos, drop
-  feelings and substances: "wokring on daylog, little high" -> "Working on Day Log").
+- task: he is starting something new. Put a short clean title in "task" (fix typos, drop
+  feelings and substances: "reding the papr kinda tipsy" -> "Reading the paper").
+- rename: he is adding to or correcting what's already running ("and also X", "actually it's Y").
+  Put the whole new title for the running task in "task". Only when something is running.
 - note: a thought or feeling about right now, not a new activity.
 - ghost: off the clock: hanging out, watching a show, drinking with friends. Put what he's
   doing in "ghost_status".
@@ -65,10 +67,10 @@ In any mode, also fill:
 Answer with JSON only."""
 
 
-def messages(line: str, examples: Sequence[tuple[str, Reading]] = ()) -> list[dict]:
-    """The whole prompt: instructions, then his past corrections as solved examples, then the
-    new line. The examples are the harness's memory of him (step 2 reads them from the DB)."""
-    msgs = [{"role": "system", "content": SYSTEM}]
+def messages(line: str, examples: Sequence[tuple[str, Reading]] = (), context: str | None = None) -> list[dict]:
+    """The whole prompt: instructions and what's going on right now, then his past corrections as
+    solved examples, then the new line. This is everything the model knows: it remembers nothing."""
+    msgs = [{"role": "system", "content": SYSTEM + (f"\n\nRight now: {context}" if context else "")}]
     for text, reading in examples:
         msgs.append({"role": "user", "content": text})
         msgs.append({"role": "assistant", "content": reading.model_dump_json(exclude_none=True)})
@@ -77,12 +79,12 @@ def messages(line: str, examples: Sequence[tuple[str, Reading]] = ()) -> list[di
 
 
 def read_line(line: str, examples: Sequence[tuple[str, Reading]] = (), model: str = MODEL,
-              client: httpx.Client | None = None) -> tuple[Reading | None, float]:
+              client: httpx.Client | None = None, context: str | None = None) -> tuple[Reading | None, float]:
     """Ask the local model what `line` means. Returns (reading or None, milliseconds).
     None means: the model was unreachable, slow, or broke the contract; use the rules."""
     body = {
         "model": model,
-        "messages": messages(line, examples),
+        "messages": messages(line, examples, context),
         "format": Reading.model_json_schema(),   # Ollama constrains the output to this shape
         "stream": False,
         "think": False,                          # models that reason first (qwen3.5) answer directly
@@ -110,12 +112,14 @@ class Plan:
     """What a reading means for Day Log, in its own terms: an optional task or note, then
     commands run through the same code as their keys. Code decides this; the model only read."""
     task: str | None = None
+    rename: str | None = None            # new title for the running task (same session, same start)
     note: str | None = None
     commands: list[Command] = field(default_factory=list)
 
     @property
     def say(self) -> str:
-        parts = [f"task: {self.task}"] if self.task else [f"note: {self.note}"] if self.note else []
+        parts = ([f"task: {self.task}"] if self.task else [f"rename: {self.rename}"] if self.rename
+                 else [f"note: {self.note}"] if self.note else [])
         return " · ".join(parts + [c.say for c in self.commands])
 
 
@@ -129,6 +133,8 @@ def plan(reading: Reading, text: str) -> Plan | None:
     m = reading.mode
     if m == "task":
         return Plan(task=(reading.task or text).strip(), commands=state_cmd + focus_cmd)
+    if m == "rename":
+        return Plan(rename=(reading.task or text).strip(), commands=state_cmd + focus_cmd)
     if m == "note":
         return Plan(note=text.strip(), commands=state_cmd + focus_cmd)
     if m == "ghost":

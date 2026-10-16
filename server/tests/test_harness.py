@@ -133,3 +133,48 @@ def test_without_a_preview_log_uses_the_rules(client, monkeypatch):
     # ⏎ before the reading arrived: nothing cached, so the rules handle the line.
     now = client.post("/log", json={"text": "working on daylog, little high"}).json()
     assert now["timer"]["label"] == "working on daylog, little high"
+
+
+# ---------- his Oct 15 line: "and …" while a task runs renames it (same session) ----------
+
+def test_and_line_renames_the_running_task_without_the_model(client, monkeypatch):
+    def boom(*a, **kw):
+        raise AssertionError("the rule should answer; no model needed")
+    monkeypatch.setattr(harness, "read_line", boom)
+    started = client.post("/log", json={"text": "daylog"}).json()["timer"]
+    line = "and daylog and brain global config."
+    assert client.get("/parse", params={"text": line}).json()["label"] == "rename: daylog + daylog and brain global config"
+    assert client.get("/read", params={"text": line}).json()["label"].startswith("rename: ")
+    now = client.post("/log", json={"text": line}).json()
+    assert now["timer"]["id"] == started["id"]                       # same session
+    assert now["timer"]["start"] == started["start"]                 # same start time
+    assert now["timer"]["label"] == "daylog + daylog and brain global config"
+
+
+def test_and_line_with_nothing_running_is_just_a_task(client):
+    now = client.post("/log", json={"text": "and some reading"}).json()
+    assert now["timer"]["label"] == "and some reading"
+
+
+def test_model_rename_keeps_the_session(client, monkeypatch):
+    started = client.post("/log", json={"text": "daylog backend"}).json()["timer"]
+    model_reads(monkeypatch, Reading(mode="rename", task="Day Log backend + harness"))
+    client.get("/read", params={"text": "actually it's the harness too"})
+    now = client.post("/log", json={"text": "actually it's the harness too"}).json()
+    assert now["timer"]["id"] == started["id"] and now["timer"]["label"] == "Day Log backend + harness"
+
+
+def test_the_model_is_told_what_is_running(client, monkeypatch):
+    seen = {}
+    def spy(text, **kw):
+        seen.update(kw)
+        return None, 5.0
+    monkeypatch.setattr(harness, "read_line", spy)
+    client.post("/log", json={"text": "daylog backend"})
+    client.get("/read", params={"text": "deep in it now"})
+    assert 'running task is "daylog backend"' in seen["context"]
+
+
+def test_context_rides_in_the_system_prompt():
+    msgs = harness.messages("x", context="the running task is \"daylog\" (5 min so far).")
+    assert msgs[0]["role"] == "system" and msgs[0]["content"].endswith('Right now: the running task is "daylog" (5 min so far).')

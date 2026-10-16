@@ -135,12 +135,15 @@ final class Store: ObservableObject {
 
     private var previewTask: Task<Void, Never>?
     private var readTask: Task<Void, Never>?
+    @Published var isReading = false      // the model is reading the line (shown as "reading…")
+    private var waitingToSubmit = false   // ⏎ was pressed while it read; submit when it's done
+    private var readDone = true           // the model has answered (or given up) for the current line
     var onSubmitted: (() -> Void)?  // the window closes itself after a submit
 
     private func schedulePreview() {
-        previewTask?.cancel(); readTask?.cancel()
+        previewTask?.cancel(); readTask?.cancel(); isReading = false
         let text = input.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { preview = nil; return }
+        guard !text.isEmpty else { preview = nil; readDone = true; return }
         previewTask = Task {
             try? await Task.sleep(for: .milliseconds(60))  // debounce keystrokes
             guard !Task.isCancelled else { return }
@@ -148,11 +151,14 @@ final class Store: ObservableObject {
                 preview = p
             }
         }
-        // The model's reading (~1 s) replaces the rules' preview once he pauses typing. ⏎ before it
-        // arrives just uses the rules, so the bar never waits on the model.
+        // The model's reading (~1-2 s) replaces the rules' preview once he pauses typing; the bar says
+        // "reading…" meanwhile, and ⏎ waits for it (⇧⏎ doesn't). His call, Oct 15: show the thinking.
+        readDone = false
         readTask = Task {
+            defer { if !Task.isCancelled { isReading = false; readDone = true } }
             try? await Task.sleep(for: .milliseconds(350))
             guard !Task.isCancelled else { return }
+            isReading = true
             if let r: LinePreview = try? await API.get("read", query: ["text": text], slow: true), !Task.isCancelled,
                r.action != "none", input.trimmingCharacters(in: .whitespaces) == text {
                 preview = r
@@ -480,7 +486,27 @@ final class Store: ObservableObject {
         if mode == .ghost { submitGhost(); return }
         if mode == .edit { submitEdit(); return }
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, !waitingToSubmit else { return }
+        // ⏎ while the model is still reading this line: wait for its reading, then submit with it.
+        if !forceTimer, !readDone, let t = readTask {
+            waitingToSubmit = true
+            Task {
+                await t.value
+                waitingToSubmit = false
+                submit(forceTimer: false, afterRead: true)
+            }
+            return
+        }
+        submitNow(text: text, forceTimer: forceTimer)
+    }
+
+    private func submit(forceTimer: Bool, afterRead: Bool) {
+        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        submitNow(text: text, forceTimer: forceTimer)
+    }
+
+    private func submitNow(text: String, forceTimer: Bool) {
         // Only trust a preview made for exactly this line (typing fast can outrun it).
         let fresh = preview?.text?.trimmingCharacters(in: .whitespacesAndNewlines) == text ? preview : nil
         if !forceTimer, fresh?.action == "command" || (fresh == nil && preview?.action == "command") {

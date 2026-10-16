@@ -7,6 +7,7 @@ derived, fixing a bug here fixes history too; nothing stale is stored.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from datetime import date, datetime, time, timedelta
 from typing import Any
@@ -101,7 +102,15 @@ def _open_span(conn: sqlite3.Connection, start_type: str) -> dict[str, Any] | No
         " ORDER BY e.start DESC LIMIT 1",
         (start_type,),
     ).fetchone()
-    return db.to_dict(r) if r else None
+    if not r:
+        return None
+    span = db.to_dict(r)
+    # A rename (entry.amend with a label) shows on the running span too, not only in history.
+    fix = conn.execute("SELECT data FROM events WHERE type = 'entry.amend' AND ref = ?"
+                       " ORDER BY recorded_at DESC LIMIT 1", (span["id"],)).fetchone()
+    if fix:
+        span["label"] = json.loads(fix["data"] or "{}").get("label") or span["label"]
+    return span
 
 
 def running_timer(conn: sqlite3.Connection) -> dict[str, Any] | None:

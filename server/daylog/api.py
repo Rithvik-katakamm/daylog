@@ -19,6 +19,7 @@ import contextlib
 import json
 import logging
 import os
+import re
 import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -472,6 +473,8 @@ async def add_note(body: Note):
 @app.get("/parse")
 async def parse_line(text: str):
     """What would /log do with this line? Used for the live preview while typing."""
+    if title := _extended_title(text):
+        return {"action": "command", "label": f"rename: {title}", "text": text}
     cmds = intents.commands(text)
     if cmds:
         return {"action": "command", "label": " · ".join(c.say for c in cmds), "text": text}
@@ -488,6 +491,38 @@ async def parse_line(text: str):
 READ_KEEP_S = 300
 _readings: dict[str, tuple[float, harness.Reading, float]] = {}
 
+# "and brain global config" / "also X" while a task runs: same session, the title grows. A rule, so it's
+# instant and exact (his line, Oct 15: "and daylog and brain global config." meant rename, not a new task).
+_EXTEND = re.compile(r"^\s*(?:and|also|plus|\+)\s+(.+?)[.!]*\s*$", re.I)
+
+
+def _extended_title(text: str) -> str | None:
+    """The running task's new title if `text` extends it ("and X" → "<current> + X"), else None."""
+    m = _EXTEND.match(text)
+    running = timeline.running_timer(conn())
+    return f"{running['label'].rstrip('. ')} + {m.group(1)}" if m and running else None
+
+
+def _now_context() -> str:
+    """What's going on right now, in a sentence, for the model's prompt."""
+    s = timeline.now_state(conn())
+    if s["timer"]:
+        t = s["timer"]
+        return f"the running task is \"{t['label']}\" ({t['elapsed_minutes']} min so far)."
+    if s["ghost"]:
+        return f"he is in ghost mode: \"{s['ghost']['status']}\"."
+    if s["on_break"]:
+        return f"he is on a break ({s['on_break']['label']})."
+    return "nothing is running."
+
+
+async def _rename_running(title: str, source: str) -> None:
+    running = timeline.running_timer(conn())
+    if running:
+        await amend_entry(running["id"], Amend(label=title, source=source))
+    else:
+        await timer_start(TimerStart(label=title, source=source))
+
 
 @app.get("/read")
 async def read_line(text: str):
@@ -497,7 +532,9 @@ async def read_line(text: str):
     text = text.strip()
     if not text or parse.parse(text).is_range:
         return {"action": "none", "label": "", "text": text}
-    reading, ms = await asyncio.to_thread(harness.read_line, text)
+    if title := _extended_title(text):   # the rule already knows: no need to wait for the model
+        return {"action": "command", "label": f"rename: {title}", "text": text}
+    reading, ms = await asyncio.to_thread(harness.read_line, text, context=_now_context())
     p = harness.plan(reading, text) if reading else None
     if not p:
         return {"action": "none", "label": "", "text": text}
@@ -516,6 +553,8 @@ async def _apply_reading(text: str, reading: harness.Reading, ms: float, source:
               label=text, data={"reading": reading.model_dump(exclude_none=True), "ms": round(ms)})
     if p.task:
         await timer_start(TimerStart(label=p.task, source=source))
+    if p.rename:
+        await _rename_running(p.rename, source)
     if p.note:
         await add_note(Note(text=p.note, source=source))
     out: dict = {}
@@ -574,6 +613,9 @@ async def log_line(body: Line):
     """One line in, the right thing out: a command ("smoke break", "deep focus") does it; a time
     in the text logs a past block; anything else starts a timer, turning on any substance it
     mentions ("working on daylog, little high"). The same endpoint the bar, phone or an agent uses."""
+    if not body.timer and (title := _extended_title(body.text)):
+        await _rename_running(title, body.source)
+        return {"action": "command", "did": f"rename: {title}", **timeline.now_state(conn())}
     hit = None if body.timer else _readings.pop(body.text.strip(), None)
     if hit:
         return await _apply_reading(body.text.strip(), hit[1], hit[2], body.source)

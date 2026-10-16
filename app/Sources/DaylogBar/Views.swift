@@ -568,9 +568,11 @@ struct BarView: View {
         } else if typed, let p = store.preview, p.action == "command" {
             Text("⏎ \(p.label)").foregroundStyle(Theme.task).fontWeight(.semibold)
             if p.by != nil { Text("· read by the model").foregroundStyle(Theme.muted) }
+            if store.isReading { Text("· reading…").foregroundStyle(Theme.muted).italic() }
             Text("· ⇧⏎ log it as a task instead").foregroundStyle(Theme.muted)
         } else if typed {
             Text(store.timer == nil ? "⏎ start timer" : "⏎ switch timer").foregroundStyle(Theme.text)
+            if store.isReading { Text("· reading…").foregroundStyle(Theme.muted).italic() }
             if let also = store.preview?.also, !also.isEmpty {
                 Text("· + " + also.joined(separator: ", ")).foregroundStyle(Theme.high)
             } else {
