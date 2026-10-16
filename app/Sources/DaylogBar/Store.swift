@@ -579,23 +579,7 @@ final class Store: ObservableObject {
         }
     }
 
-    /// Demo (⌘K → Demo): the pill shows a made-up state for a moment. Nothing is written to the log,
-    /// and polling leaves it alone until the demo ends.
-    @Published var demoState: String?
-
-    func showDemo(_ name: String, timer: TimerInfo? = nil, ghost: GhostInfo? = nil, onBreak: BreakInfo? = nil,
-                  states: Set<String> = []) {
-        demoState = name
-        self.timer = timer; self.ghost = ghost; self.onBreak = onBreak; self.states = states
-    }
-
-    func endDemo() {
-        demoState = nil
-        Task { await refreshAll() }
-    }
-
     func refreshNow() async {
-        guard demoState == nil else { return }
         do {
             let now: NowState = try await API.get("now")
             if now.timer != timer { timer = now.timer }

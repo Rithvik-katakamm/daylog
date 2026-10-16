@@ -536,15 +536,10 @@ async def read_line(text: str):
         return {"action": "command", "label": f"rename: {title}", "text": text,
                 "why": "starts with \"and\": same session, bigger title (rule)"}
     state = timeline.now_state(conn())
-    _activity["busy"] = {"text": text, "since": db.iso(db.utcnow())}
-    try:
-        raw, ms = await asyncio.to_thread(harness.read_line, text, context=_now_context())
-    finally:
-        _activity["busy"] = None
+    raw, ms = await asyncio.to_thread(harness.read_line, text, context=_now_context())
     reading = raw and harness.check(raw, text, running=bool(state["timer"]),
                                     away=bool(state["on_break"] or state["ghost"]))
     p = harness.plan(reading, text) if reading else None
-    _log_activity(text, raw, reading, p, ms)
     if not p:
         return {"action": "none", "label": "", "text": text,
                 "why": "the model was unsure or off; the rules handle it" if raw else "no model answer"}
@@ -556,29 +551,10 @@ async def read_line(text: str):
             "why": reading.why}
 
 
-# What the model is doing right now and what it did lately, for the Dev demo menu (in memory only).
-_activity: dict = {"busy": None, "recent": []}
-
-
-def _log_activity(text: str, raw, reading, p, ms: float) -> None:
-    _activity["recent"] = [{
-        "at": db.iso(db.utcnow()), "text": text, "ms": round(ms), "model": harness.MODEL,
-        "why": raw.why if raw else "", "mode": raw.mode if raw else None,
-        "kept": bool(p), "did": p.say if p else ("rules" if raw else "no answer"),
-        "overruled": bool(raw) and (reading is None or reading.mode != raw.mode),
-    }, *_activity["recent"]][:20]
-
-
 @app.post("/harness/warm")
 async def harness_warm():
     """The bar just opened, so he's about to type: load the model now so his first line isn't cold."""
     return {"warm": await asyncio.to_thread(harness.warm)}
-
-
-@app.get("/harness")
-async def harness_activity():
-    """The model at this moment (busy with a line, or idle) and its last 20 readings."""
-    return {"model": harness.MODEL, **_activity}
 
 
 async def _apply_reading(text: str, reading: harness.Reading, ms: float, source: str) -> dict:
@@ -592,10 +568,6 @@ async def _apply_reading(text: str, reading: harness.Reading, ms: float, source:
         await timer_start(TimerStart(label=p.task, source=source))
     if p.rename:
         await _rename_running(p.rename, source)
-    for r in _activity["recent"]:
-        if r["text"] == text:
-            r["applied"] = True
-            break
     if p.note:
         await add_note(Note(text=p.note, source=source))
     out: dict = {}

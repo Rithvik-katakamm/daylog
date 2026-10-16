@@ -214,7 +214,6 @@ def test_feedback_becomes_a_feedback_note(client, monkeypatch):
     assert preview["label"] == "feedback: no overnight reset i see" and preview["why"] == "a complaint about the app"
     now = client.post("/log", json={"text": "no overnight reset i see"}).json()
     assert now["timer"]["label"] == "daylog backend"            # the task keeps running
-    assert client.get("/harness").json()["recent"][0]["applied"] is True
 
 
 def test_continue_changes_nothing(client, monkeypatch):

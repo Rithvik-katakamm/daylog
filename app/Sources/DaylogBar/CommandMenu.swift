@@ -84,8 +84,6 @@ enum Commands {
                     isAvailable: { $0.timer != nil }, run: { store.stop() }),
             Command(id: "reset-dev", group: .act, title: "Reset dev data", shortcut: "",
                     isAvailable: { $0.env == .dev }, run: { store.resetDevData() }),
-            Command(id: "demo", group: .go, title: "Demo: pill states + the model, live", shortcut: "",
-                    isAvailable: always, run: { hide(); DemoWindow.show(store: store) }),
         ]
     }
 }

@@ -1,7 +1,7 @@
 # The harness: a local model reads what he types
 
 Layer: backend + ai. Code: `server/daylog/harness.py`, wired in `server/daylog/api.py` (`/read`,
-`/log`, `/harness`). **Status: live in the bar (Oct 15).** The rules preview instantly; the model's
+`/log`, `/harness/warm`). **Status: live in the bar (Oct 15).** The rules preview instantly; the model's
 reading, with its reason, replaces the preview about a second after he pauses typing.
 
 ## The shape
@@ -47,8 +47,6 @@ Day Log itself; saved as a note "feedback: …") · ghost · break · back · fo
 - ⏎ waits for the reading (at most 3 s, then the rules); ⇧⏎ never waits.
 - Opening the bar warms the model (`POST /harness/warm`): cold it takes ~8 s, warm ~1 s; it stays
   loaded 30 min (`keep_alive`).
-- ⌘K → **Demo** shows the model live (`GET /harness`: busy line, last 20 readings with
-  reason, time, whether code overruled it, whether it was applied), every pill state, and a try-a-line box.
 
 ## Knobs
 
