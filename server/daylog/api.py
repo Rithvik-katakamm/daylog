@@ -28,7 +28,7 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from . import autolabel, db, harness, intents, parse, timeline, wispr
+from . import autolabel, db, display, harness, intents, parse, timeline, wispr
 
 log = logging.getLogger("daylog")
 
@@ -96,7 +96,7 @@ class Entry(BaseModel):
 
 
 class Line(BaseModel):
-    text: str = Field(min_length=1, max_length=500)
+    text: str = Field(min_length=1, max_length=500, pattern=r"[A-Za-z0-9]")  # "\\" alone isn't a status
     timer: bool = False  # force a timer even if the text contains a time
     read: bool = False   # ⏎ before the bar had the model's reading: read it here first (the pill says "thinking")
     source: str = "api"
@@ -249,12 +249,42 @@ async def dev_reset():
     return {"reset": True}
 
 
+# The display agent's choice per status (display.key → word, color, why), decided in the background.
+_looks: dict[str, dict] = {}
+_deciding: set[str] = set()
+
+
+async def _decide_look(k: str, state: dict) -> None:
+    try:
+        choice, ms = await display.decide(state)
+        _looks[k] = ({"word": choice.word, "color": choice.color, "why": choice.why, "ms": round(ms)}
+                     if choice else {"word": None, "color": None, "why": "", "ms": round(ms)})
+        if choice:
+            db.append(conn(), kind="prediction", type="display.choice", source=display.MODEL, start=db.utcnow(),
+                      label=display.describe(state), data=_looks[k])
+        while len(_looks) > 50:
+            _looks.pop(next(iter(_looks)))
+    finally:
+        _deciding.discard(k)
+
+
+def _with_look(state: dict) -> dict:
+    """The status plus how it should look: the agent's choice, or "thinking" while it decides."""
+    k = display.key(state)
+    if k in _looks:
+        return {**state, "display": _looks[k]}
+    if k not in _deciding:
+        _deciding.add(k)
+        asyncio.create_task(_decide_look(k, state))
+    return {**state, "display": {"thinking": True}}
+
+
 @app.get("/now")
 async def now():
     timeline.expire_break(conn())  # never show a break that should already be ghost
     timeline.expire_stale(conn())  # nor last night's status
     timeline.end_ghost_after_night(conn(), db.utcnow())  # nor a ghost he slept through
-    return timeline.now_state(conn())
+    return _with_look(timeline.now_state(conn()))
 
 
 @app.get("/auto")

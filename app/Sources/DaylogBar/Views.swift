@@ -33,7 +33,8 @@ enum Theme {
 
     /// Dimension 1 for what's going on right now (used by the bar, the pill and the side ring).
     @MainActor static func statusColor(_ s: Store) -> Color {
-        s.onBreak != nil ? away : s.ghost != nil ? ghost
+        if let hex = s.display?.color, let v = UInt32(hex.dropFirst(), radix: 16) { return Self.hex(v) }  // the agent's pick
+        return s.onBreak != nil ? away : s.ghost != nil ? ghost
             : s.timer != nil ? taskColor(focus: s.timer?.focus ?? 0) : idle
     }
 
@@ -218,7 +219,7 @@ struct BarView: View {
         // truncates before the spacers squeeze the time out.
         return HStack(spacing: 7) {
             Spacer(minLength: 0)
-            if store.thinking {  // ⏎ pressed, the model is still deciding
+            if store.thinking || store.display?.thinking == true {  // the model is still deciding
                 Circle().fill(Theme.thinking).frame(width: 6, height: 6).shadow(color: Theme.thinking, radius: 3)
                 TimelineView(.periodic(from: .now, by: 0.4)) { ctx in
                     Text("thinking" + String(repeating: ".", count: Int(ctx.date.timeIntervalSince1970 * 2.5) % 4))
@@ -226,13 +227,13 @@ struct BarView: View {
                 }
             } else if let b = store.onBreak {
                 Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").foregroundStyle(color)
-                Text(b.label + (b.resume.map { " · then \($0)" } ?? ""))
+                Text(store.display?.word ?? (b.label + (b.resume.map { " · then \($0)" } ?? "")))
             } else if let g = store.ghost {
                 Image(systemName: "moon.zzz.fill").foregroundStyle(color)
-                Text(g.status)
+                Text(store.display?.word ?? g.status)
             } else if let t = store.timer {
                 Circle().fill(color).frame(width: 6, height: 6).shadow(color: color, radius: 2)
-                Text(t.word ?? Title.display(t.label)).truncationMode(.middle)
+                Text(store.display?.word ?? t.word ?? Title.display(t.label)).truncationMode(.middle)
             } else {
                 Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
                 Text("nothing running").foregroundStyle(Theme.muted)
@@ -261,7 +262,7 @@ struct BarView: View {
         let start = store.onBreak?.start ?? store.ghost?.start ?? store.timer?.start
         return HStack(spacing: 0) {
             HStack(spacing: 5) {
-                if store.thinking {  // ⏎ pressed, the model is still deciding
+                if store.thinking || store.display?.thinking == true {  // the model is still deciding
                     Circle().fill(Theme.thinking).frame(width: 6, height: 6).shadow(color: Theme.thinking, radius: 3)
                     TimelineView(.periodic(from: .now, by: 0.4)) { ctx in
                         Text("thinking" + String(repeating: ".", count: Int(ctx.date.timeIntervalSince1970 * 2.5) % 4))
@@ -269,13 +270,13 @@ struct BarView: View {
                     }
                 } else if let b = store.onBreak {
                     Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").foregroundStyle(color)
-                    Text(b.label)
+                    Text(store.display?.word ?? b.label)
                 } else if let g = store.ghost {
                     Image(systemName: "moon.zzz.fill").foregroundStyle(color)
-                    Text(g.status)
+                    Text(store.display?.word ?? g.status)
                 } else if let t = store.timer {
                     Circle().fill(color).frame(width: 6, height: 6).shadow(color: color, radius: 2)
-                    Text(t.word ?? Title.display(t.label))
+                    Text(store.display?.word ?? t.word ?? Title.display(t.label))
                 } else {
                     Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
                     Text("idle").foregroundStyle(Theme.muted)

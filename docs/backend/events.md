@@ -23,6 +23,7 @@ Everything Day Log knows is a row in one SQLite table, `events`. Code: `server/d
 | `label` | claim | He confirmed or corrected the bar's guess for a block. **No longer written** (the guess was removed Oct 15); old ones still count as his claim | — |
 | `guess.shown` | observation | The bar showed a guess. **No longer written** (Oct 15) | — |
 | `note` | claim | A thought at a moment | the running timer (if any) |
+| `display.choice` | prediction | How the display agent made the pill look for a status (`data`: word, color, why, ms); `label` = the status in words | — |
 | `line.read` | prediction | What the local model read from a line he sent (`data.reading`, `data.ms`); what got done from it are ordinary claims | — |
 | `focus.set` | claim | Focus tier 0–3 from now on | the running timer |
 | `ghost.start` | claim | Went offline, with a status | — |

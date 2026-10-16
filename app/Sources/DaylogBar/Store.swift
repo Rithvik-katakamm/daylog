@@ -136,7 +136,8 @@ final class Store: ObservableObject {
     private var previewTask: Task<Void, Never>?
     private var readTask: Task<Void, Never>?
     @Published var isReading = false      // the model is reading the line (shown as "reading…")
-    @Published var thinking = false       // ⏎ pressed, the bar closed, the model still deciding: the pill says so
+    @Published var thinking = false
+    @Published var display: DisplayInfo?  // the display agent's word + color for the current status       // ⏎ pressed, the bar closed, the model still deciding: the pill says so
     private var waitingToSubmit = false   // ⏎ was pressed while it read; submit when it's done
     private var readDone = true           // the model has answered (or given up) for the current line
     var onSubmitted: (() -> Void)?  // the window closes itself after a submit
@@ -574,7 +575,8 @@ final class Store: ObservableObject {
                 await self?.refreshNow()
                 // Every 4s, so a change an agent makes (MCP set_status) shows up almost live. /now
                 // answers in ~3 ms locally, so this costs nothing noticeable.
-                try? await Task.sleep(for: .seconds(4))
+                // Every 4s; every 0.5s while the display agent is deciding, so its pick shows at once.
+                try? await Task.sleep(for: .seconds(self?.display?.thinking == true ? 0.5 : 4))
             }
         }
     }
@@ -585,6 +587,7 @@ final class Store: ObservableObject {
             if now.timer != timer { timer = now.timer }
             if now.ghost != ghost { ghost = now.ghost }
             if now.onBreak != onBreak { onBreak = now.onBreak }
+            if now.display != display { display = now.display }
             let on = Set((now.states ?? []).map(\.state))
             if on != states { states = on }
             serverDown = false

@@ -96,6 +96,16 @@ struct NowState: Decodable {
     let ghost: GhostInfo?
     var onBreak: BreakInfo? = nil
     var states: [StateInfo]? = nil
+    var display: DisplayInfo? = nil
+}
+
+/// How the pill looks right now, chosen by the display agent (server/daylog/display.py): one word and a
+/// color, or "thinking" while it decides. No rules pick these; the theme colors are only the fallback.
+struct DisplayInfo: Decodable, Equatable {
+    var word: String? = nil
+    var color: String? = nil
+    var why: String? = nil
+    var thinking: Bool? = nil
 }
 
 /// which version is running, and (owner only) what's new in it.
