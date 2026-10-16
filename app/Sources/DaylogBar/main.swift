@@ -279,6 +279,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // (Activating the app first cost a frame or two before anything moved.)
         panel.orderFrontRegardless()
         store.isOpen = true  // SwiftUI grows the bar down from the top of the screen
+        if let d = store.draft { store.input = d; store.draft = nil }  // what he was typing before a click closed it
         if activate {
             let front = NSWorkspace.shared.frontmostApplication
             if front?.bundleIdentifier != Bundle.main.bundleIdentifier { previousApp = front }
@@ -295,7 +296,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Click anywhere outside daylog to dismiss. The click already picked the app you
         // want, so don't hand focus back to the old one.
         clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            MainActor.assumeIsolated { self?.hide(restoreFocus: false) }
+            MainActor.assumeIsolated { self?.hide(restoreFocus: false, keepDraft: true) }  // unsent text comes back
         }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
             guard let self else { return e }
@@ -353,7 +354,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
-    private func hide(restoreFocus: Bool = true) {
+    private func hide(restoreFocus: Bool = true, keepDraft: Bool = false) {
+        // A click elsewhere closes the bar but keeps what he was typing for the next open (his call, Oct 16).
+        if keepDraft, store.mode == .input, !store.input.trimmingCharacters(in: .whitespaces).isEmpty {
+            store.draft = store.input
+        }
         store.isOpen = false
         removeMonitors()
         // Give the keyboard back to whatever you were doing before opening the bar.

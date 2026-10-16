@@ -68,7 +68,8 @@ Not back from a break within an hour? It’s logged as a ~15 min break, then gho
 ⌘B still brings you back and resumes the task.
 
 Text editing in the typing line works as anywhere on a Mac: **⌘V** paste (also how Wispr Flow types
-into the bar), **⌘X**, **⌘A**, **⌘Z** / **⌘⇧Z**. **⌘C** copies when text is selected; with nothing selected it's caffeinated.
+into the bar), **⌘X**, **⌘A**, **⌘Z** / **⌘⇧Z**. **⌘C** copies when text is selected; with nothing selected it's caffeinated. Clicking outside closes the bar but keeps
+what you typed: it's back the next time you open it. The line stays one line (scrolls sideways).
 
 Menu-only (⌘K): **Always on: center pill / side ring / pill + ring / off**: what stays on
 screen while the bar is closed.

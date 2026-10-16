@@ -137,6 +137,7 @@ final class Store: ObservableObject {
     private var readTask: Task<Void, Never>?
     @Published var isReading = false      // the model is reading the line (shown as "reading…")
     @Published var thinking = false
+    var draft: String?   // unsent text kept when a click outside closed the bar
     @Published var display: DisplayInfo?  // the display agent's word + color for the current status       // ⏎ pressed, the bar closed, the model still deciding: the pill says so
     private var waitingToSubmit = false   // ⏎ was pressed while it read; submit when it's done
     private var readDone = true           // the model has answered (or given up) for the current line
