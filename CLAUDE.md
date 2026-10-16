@@ -60,8 +60,6 @@ the experience better for someone using it.
   product, backend, infra, ai); commits get joined with his Day Log blocks to measure hours per layer. A `Try:` line (what to try, shown
   after a release) and a `Where:` line (mac / cloud) go in that same last paragraph with `Layer:`: git only reads trailers from the last paragraph.
 - **Nothing outward** (posts, messages to humans) without his approval.
-- The build loop and learn-slice protocol are injected by hooks (`.claude/hooks/build-loop.sh`,
-  `learn-trigger.py`); triggers log to `.learning/triggers.jsonl`.
 
 ## Build, test, ship
 
