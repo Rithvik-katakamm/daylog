@@ -109,7 +109,10 @@ def _open_span(conn: sqlite3.Connection, start_type: str) -> dict[str, Any] | No
     fix = conn.execute("SELECT data FROM events WHERE type = 'entry.amend' AND ref = ?"
                        " ORDER BY recorded_at DESC LIMIT 1", (span["id"],)).fetchone()
     if fix:
-        span["label"] = json.loads(fix["data"] or "{}").get("label") or span["label"]
+        d = json.loads(fix["data"] or "{}")
+        span["label"] = d.get("label") or span["label"]
+        if "word" in d or d.get("label"):   # a rename without a word clears the old one
+            span["data"] = {**span.get("data", {}), "word": d.get("word")}
     return span
 
 
@@ -543,7 +546,8 @@ def now_state(conn: sqlite3.Connection) -> dict[str, Any]:
     return {
         "now": db.iso(now),
         "timer": (
-            {"id": timer["id"], "label": timer["label"], "start": timer["start"],
+            {"id": timer["id"], "label": timer["label"], "word": (timer.get("data") or {}).get("word"),
+             "start": timer["start"],
              "elapsed_minutes": _minutes(now - db.parse(timer["start"])),
              "focus": (focus_events(conn, [timer["id"]]).get(timer["id"]) or [{"tier": 0}])[-1]["tier"]}
             if timer else None

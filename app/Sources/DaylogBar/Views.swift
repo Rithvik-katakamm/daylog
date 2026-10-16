@@ -9,6 +9,7 @@ enum Theme {
     static let idle = hex(0x6B7280)        // 1: nothing running
     static let task = hex(0xECEEF2)        // 1: a task, pearl white (heats up with focus)
     static let ghost = hex(0xB87AFF)       // 1: ghost, off the clock
+    static let thinking = hex(0x8B7BFF)    // 1: the model is deciding (after ⏎), violet: intelligence
     static let focusHeat = [task, hex(0xFFD652), hex(0xFF9A3C), hex(0xFF4D4D)]  // 2: ▲ yellow ▲▲ orange ▲▲▲ red
     static let intoxicated = hex(0xFF6FA5) // 2: outer ring
     static let high = hex(0x39FF14)        // 2: halo, neon green (brighter, Oct 11)
@@ -217,7 +218,13 @@ struct BarView: View {
         // truncates before the spacers squeeze the time out.
         return HStack(spacing: 7) {
             Spacer(minLength: 0)
-            if let b = store.onBreak {
+            if store.thinking {  // ⏎ pressed, the model is still deciding
+                Circle().fill(Theme.thinking).frame(width: 6, height: 6).shadow(color: Theme.thinking, radius: 3)
+                TimelineView(.periodic(from: .now, by: 0.4)) { ctx in
+                    Text("thinking" + String(repeating: ".", count: Int(ctx.date.timeIntervalSince1970 * 2.5) % 4))
+                        .foregroundStyle(Theme.thinking)
+                }
+            } else if let b = store.onBreak {
                 Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").foregroundStyle(color)
                 Text(b.label + (b.resume.map { " · then \($0)" } ?? ""))
             } else if let g = store.ghost {
@@ -225,7 +232,7 @@ struct BarView: View {
                 Text(g.status)
             } else if let t = store.timer {
                 Circle().fill(color).frame(width: 6, height: 6).shadow(color: color, radius: 2)
-                Text(Title.display(t.label)).truncationMode(.middle)
+                Text(t.word ?? Title.display(t.label)).truncationMode(.middle)
             } else {
                 Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
                 Text("nothing running").foregroundStyle(Theme.muted)
@@ -254,7 +261,13 @@ struct BarView: View {
         let start = store.onBreak?.start ?? store.ghost?.start ?? store.timer?.start
         return HStack(spacing: 0) {
             HStack(spacing: 5) {
-                if let b = store.onBreak {
+                if store.thinking {  // ⏎ pressed, the model is still deciding
+                    Circle().fill(Theme.thinking).frame(width: 6, height: 6).shadow(color: Theme.thinking, radius: 3)
+                    TimelineView(.periodic(from: .now, by: 0.4)) { ctx in
+                        Text("thinking" + String(repeating: ".", count: Int(ctx.date.timeIntervalSince1970 * 2.5) % 4))
+                            .foregroundStyle(Theme.thinking)
+                    }
+                } else if let b = store.onBreak {
                     Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").foregroundStyle(color)
                     Text(b.label)
                 } else if let g = store.ghost {
@@ -262,7 +275,7 @@ struct BarView: View {
                     Text(g.status)
                 } else if let t = store.timer {
                     Circle().fill(color).frame(width: 6, height: 6).shadow(color: color, radius: 2)
-                    Text(Title.display(t.label))
+                    Text(t.word ?? Title.display(t.label))
                 } else {
                     Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
                     Text("idle").foregroundStyle(Theme.muted)

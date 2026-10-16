@@ -222,3 +222,27 @@ def test_continue_changes_nothing(client, monkeypatch):
     client.get("/read", params={"text": "still working on daylog"})
     now = client.post("/log", json={"text": "still working on daylog"}).json()
     assert now["timer"]["id"] == started["id"] and now["timer"]["label"] == "working on daylog"
+
+
+# ---------- one word for the pill ----------
+
+def test_the_model_s_one_word_reaches_the_pill(client, monkeypatch):
+    model_reads(monkeypatch, Reading(mode="task", task="Cleaning up Claude config", word="cleanup!"))
+    client.get("/read", params={"text": "cleaning up caude config"})
+    now = client.post("/log", json={"text": "cleaning up caude config"}).json()
+    assert now["timer"]["label"] == "Cleaning up Claude config" and now["timer"]["word"] == "Cleanup"
+
+
+def test_a_rename_brings_its_own_word(client, monkeypatch):
+    client.post("/log", json={"text": "daylog"})
+    model_reads(monkeypatch, Reading(mode="rename", task="Day Log + harness", word="Harness"))
+    client.get("/read", params={"text": "actually the harness"})
+    assert client.post("/log", json={"text": "actually the harness"}).json()["timer"]["word"] == "Harness"
+
+
+def test_typed_tasks_have_no_word(client):
+    assert client.post("/log", json={"text": "working on daylog"}).json()["timer"]["word"] is None
+
+
+def test_instructions_come_from_the_file():
+    assert harness.SYSTEM.startswith("You read one line") and "<!--" not in harness.SYSTEM

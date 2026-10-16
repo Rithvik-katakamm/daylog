@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import re
 import time
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Literal, Sequence
 
@@ -40,45 +41,25 @@ class Reading(BaseModel):
     why: str = Field("", max_length=160)  # one short sentence: what it understood
     mode: Mode
     task: str | None = None              # a clean, short title when mode is task or rename
+    word: str | None = None              # one word for the pill (task / rename): "Building", "Cleanup"
     states: list[StateChange] = []       # substances mentioned anywhere in the line
     focus: int | None = Field(None, ge=0, le=3)  # 1 focused, 2 deep, 3 hyperfocus, 0 off
     ghost_status: str | None = None      # what he's doing off the clock, when mode is ghost
 
 
-SYSTEM = """You read one line the user typed into Day Log, their time tracker, and say what it means.
-Each message gives "Right now" (what's running) and the "Line". First write "why": one short
-sentence on what they mean. Then pick ONE mode:
-
-- task: starting something new. Put a short clean title in "task" (fix typos, drop feelings and
-  substances). Use only words from the line for the title.
-- rename: adding to or correcting what's already running ("and X", "also X", "actually it's Y").
-  Put the whole new title for the running task in "task". Only when something is running.
-- continue: still doing what's running ("still on it"). Nothing changes.
-- note: a thought, feeling, or something that already happened ("was at the gym"). Not a new activity.
-- feedback: a complaint or remark about Day Log itself (the app, the bar, a feature not working).
-- ghost: off the clock: hanging out, watching a show, drinking with friends. Put what they're
-  doing in "ghost_status".
-- break: stepping away briefly (walk, smoke, bathroom, grabbing food or coffee).
-- back: back from a break.
-- focus: the line is only about how focused they are.
-- state: the line is only about substances.
-- stop: done for now; stop the timer.
-
-In any mode, also fill "states" for substances the line names: high (high, stoned, baked),
-intoxicated (drunk, tipsy, beers, drinking alcohol), caffeinated (coffee, espresso, caffeinated).
-Drinking coffee is caffeinated, not intoxicated. on=false if they say they're not anymore.
-"focus": 1 focused or locked in, 2 deep, 3 hyperfocus or in the zone, 0 lost focus; null if not
-mentioned. Answer with JSON only."""
+# The model's instructions live in a file he can read and edit (his ask, Oct 15: "I don't know where the
+# instruction set for this thing lives"). The comment block at the top is stripped.
+SYSTEM = re.sub(r"<!--.*?-->\s*", "", (Path(__file__).with_name("instructions.md")).read_text(), flags=re.S).strip()
 
 # Worked examples in his style, made up (his real lines stay on his Mac). Each: right now, line, reading.
 _RUN = 'the running task is "Working on the API" (25 min so far).'
 _IDLE = "nothing is running."
 EXAMPLES: list[tuple[str, str, Reading]] = [
     (_IDLE, "workin on the api, lil buzzed",
-     Reading(why="starting the API work, and buzzed means a bit drunk", mode="task", task="Working on the API",
+     Reading(why="starting the API work, and buzzed means a bit drunk", mode="task", task="Working on the API", word="Building",
              states=[StateChange(state="intoxicated", on=True)])),
     (_RUN, "and the docs too", Reading(why="adding docs to the running API task", mode="rename",
-                                       task="Working on the API + docs")),
+                                       task="Working on the API + docs", word="Building")),
     (_RUN, "still on it", Reading(why="still doing the running task", mode="continue")),
     (_RUN, "kinda tired, brain is mush", Reading(why="a feeling, not a new activity", mode="note")),
     (_RUN, "was at the gym before this", Reading(why="something that already happened", mode="note")),
@@ -90,7 +71,7 @@ EXAMPLES: list[tuple[str, str, Reading]] = [
     (_RUN, "locked in rn", Reading(why="says they're focused", mode="focus", focus=1)),
     (_RUN, "had an espresso", Reading(why="caffeine", mode="state", states=[StateChange(state="caffeinated", on=True)])),
     (_IDLE, "took a nap, back on the api now", Reading(why="the nap is over; starting the API work", mode="task",
-                                                       task="Working on the API")),
+                                                       task="Working on the API", word="Building")),
 ]
 
 
@@ -179,6 +160,8 @@ def check(reading: Reading, text: str, running: bool, away: bool) -> Reading | N
         r.mode = "task"
     if r.mode == "state" and not r.states:
         return None
+    w = re.sub(r"[^A-Za-z]", "", (r.word or "").split(" ")[0])[:12]
+    r.word = w.capitalize() if w else None
     return r
 
 
@@ -194,6 +177,7 @@ class Plan:
     commands run through the same code as their keys. Code decides this; the model only read."""
     task: str | None = None
     rename: str | None = None            # new title for the running task (same session, same start)
+    word: str | None = None              # one word for the pill
     note: str | None = None
     commands: list[Command] = field(default_factory=list)
     keep: bool = False                   # "continue": nothing changes
@@ -215,9 +199,9 @@ def plan(reading: Reading, text: str) -> Plan | None:
                  if reading.focus is not None else [])
     m = reading.mode
     if m == "task":
-        return Plan(task=(reading.task or text).strip(), commands=state_cmd + focus_cmd)
+        return Plan(task=(reading.task or text).strip(), word=reading.word, commands=state_cmd + focus_cmd)
     if m == "rename":
-        return Plan(rename=(reading.task or text).strip(), commands=state_cmd + focus_cmd)
+        return Plan(rename=(reading.task or text).strip(), word=reading.word, commands=state_cmd + focus_cmd)
     if m == "continue":
         return Plan(keep=True, commands=state_cmd + focus_cmd)
     if m == "note":

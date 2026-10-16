@@ -143,6 +143,7 @@ struct TimerInfo: Decodable, Equatable {
     let label: String
     let start: String
     var focus: Int? = nil  // 0 off · 1 focused · 2 deep · 3 hyperfocus
+    var word: String? = nil  // the model's one word for the pill ("Building"); nil = show the title
 }
 
 struct ActivityInfo: Decodable {

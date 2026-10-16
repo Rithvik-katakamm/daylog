@@ -136,6 +136,7 @@ final class Store: ObservableObject {
     private var previewTask: Task<Void, Never>?
     private var readTask: Task<Void, Never>?
     @Published var isReading = false      // the model is reading the line (shown as "reading…")
+    @Published var thinking = false       // ⏎ pressed, the bar closed, the model still deciding: the pill says so
     private var waitingToSubmit = false   // ⏎ was pressed while it read; submit when it's done
     private var readDone = true           // the model has answered (or given up) for the current line
     var onSubmitted: (() -> Void)?  // the window closes itself after a submit
@@ -490,6 +491,8 @@ final class Store: ObservableObject {
         // ⏎ while the model is still reading this line: wait for its reading, then submit with it.
         if !forceTimer, !readDone, let t = readTask {
             waitingToSubmit = true
+            thinking = true
+            onSubmitted?()   // back to work at once; the pill shows "thinking" until it decides
             Task {
                 // At most 3 s: then the rules, so a stuck model never holds the bar.
                 await withTaskGroup(of: Void.self) { g in
@@ -518,6 +521,7 @@ final class Store: ObservableObject {
             submitCommand(text, say: fresh?.label ?? preview?.label ?? text)
             return
         }
+        thinking = false  // a plain timer shows at once (optimistic)
         let willLog = !forceTimer && preview?.action == "log"
         if !willLog {  // optimistic: show the timer immediately
             let label = forceTimer ? (preview?.label ?? text) : text
@@ -546,6 +550,7 @@ final class Store: ObservableObject {
             do { try await API.post("log", ["text": text, "source": "button"]) }
             catch { self.error = error.localizedDescription; self.flash = nil }
             await refreshAll()
+            thinking = false   // the decision has landed on the pill
             try? await Task.sleep(for: .seconds(0.9))
             if self.error == nil { onSubmitted?() }
             flash = nil

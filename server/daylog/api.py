@@ -79,6 +79,7 @@ def conn():
 
 class TimerStart(BaseModel):
     label: str = Field(min_length=1, max_length=500)
+    word: str | None = Field(default=None, max_length=12)   # the model's one word for the pill
     source: str = "api"
 
 
@@ -102,6 +103,7 @@ class Line(BaseModel):
 
 class Amend(BaseModel):
     label: str | None = Field(default=None, min_length=1, max_length=500)
+    word: str | None = Field(default=None, max_length=12)   # a new one-word pill title, with a rename
     start: datetime | None = None
     end: datetime | None = None
     source: str = "api"
@@ -275,7 +277,7 @@ async def timer_start(body: TimerStart):
     _end_ghost(body.source)     # starting a task means you're back
     _end_break(body.source)
     db.append(conn(), kind="claim", type="timer.start", source=body.source,
-              start=db.utcnow(), label=body.label.strip())
+              start=db.utcnow(), label=body.label.strip(), data={"word": body.word} if body.word else {})
     return timeline.now_state(conn())
 
 
@@ -336,6 +338,7 @@ async def amend_entry(event_id: str, body: Amend):
             raise HTTPException(422, "end is in the future")
     fields = {k: v for k, v in {
         "label": body.label.strip() if body.label else None,
+        "word": body.word,
         "start": db.iso(start) if body.start else None,
         "end": db.iso(end) if body.end else None,
     }.items() if v}
@@ -516,12 +519,12 @@ def _now_context() -> str:
     return "nothing is running."
 
 
-async def _rename_running(title: str, source: str) -> None:
+async def _rename_running(title: str, source: str, word: str | None = None) -> None:
     running = timeline.running_timer(conn())
     if running:
-        await amend_entry(running["id"], Amend(label=title, source=source))
+        await amend_entry(running["id"], Amend(label=title, word=word, source=source))
     else:
-        await timer_start(TimerStart(label=title, source=source))
+        await timer_start(TimerStart(label=title, word=word, source=source))
 
 
 @app.get("/read")
@@ -565,9 +568,9 @@ async def _apply_reading(text: str, reading: harness.Reading, ms: float, source:
               label=text, data={"reading": reading.model_dump(exclude_none=True), "ms": round(ms),
                                 "model": harness.MODEL})
     if p.task:
-        await timer_start(TimerStart(label=p.task, source=source))
+        await timer_start(TimerStart(label=p.task, word=p.word, source=source))
     if p.rename:
-        await _rename_running(p.rename, source)
+        await _rename_running(p.rename, source, word=p.word)
     if p.note:
         await add_note(Note(text=p.note, source=source))
     out: dict = {}

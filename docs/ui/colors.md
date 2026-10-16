@@ -64,3 +64,5 @@ from the top edge. It never takes clicks while closed.
 - Oct 9: mint green task ring, yellow for the past.
 - Oct 10: green replaced by pearl (he didn't like it); yellow moved to focus; the past became
   dashed silver; meetings moved off violet (it was too close to ghost).
+
+**Thinking** `#8B7BFF` (violet, Oct 15): after ⏎ the bar closes and the pill says *thinking…* in violet until the model decides; then it shows the model's one word for the task.
