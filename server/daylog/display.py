@@ -120,8 +120,10 @@ async def _coin_word(state: dict, why: str, model: str) -> tuple[str | None, flo
 
 
 WORD_INSTRUCTIONS = ("Coin ONE word (letters only, at most 12) for a tiny status pill on a Mac. Be playful and "
-                     "inventive: mash words together or invent one, like WorkTrix, Geassed, CigASmoke. Never "
-                     "Working. Answer as JSON.")
+                     "inventive: mash words together or invent one, like WorkTrix, Geassed, TeslaWatch. The word is "
+                     "about what he's DOING, at work or off the clock (watching, savoring, unwinding count as much "
+                     "as building). Substances are a flavor, never the word, unless taking one is the whole "
+                     "activity. Never Working or Idle. Answer as JSON.")
 
 
 _agent: Agent | None = None
