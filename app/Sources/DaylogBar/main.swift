@@ -297,6 +297,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Focus the field once SwiftUI has laid it out.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in self?.store.focusRequest += 1 }
         Task { await store.refreshAll(); await store.refreshHealth() }
+        Task { _ = try? await API.post("harness/warm") }  // he's about to type: load the model now (cold is ~8 s)
         guard activate else { return }
         // Click anywhere outside daylog to dismiss. The click already picked the app you
         // want, so don't hand focus back to the old one.

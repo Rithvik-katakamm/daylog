@@ -88,6 +88,8 @@ enum Commands {
                     isAvailable: { $0.timer != nil }, run: { store.stop() }),
             Command(id: "reset-dev", group: .act, title: "Reset dev data", shortcut: "",
                     isAvailable: { $0.env == .dev }, run: { store.resetDevData() }),
+            Command(id: "dev-demo", group: .act, title: "Dev demo: pill states + the model, live", shortcut: "",
+                    isAvailable: { $0.env == .dev }, run: { hide(); DevDemoWindow.show(store: store) }),
         ]
     }
 }

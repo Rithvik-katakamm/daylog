@@ -178,6 +178,7 @@ struct LinePreview: Decodable, Equatable {
     var text: String? = nil      // the line this preview is for (to ignore a stale preview)
     var also: [String]? = nil    // substances a task line turns on/off: ["high on"]
     var by: String? = nil        // the local model that read the line (nil: the rules did)
+    var why: String? = nil       // the model's one-line reason ("its thinking"), shown under the preview
 }
 
 /// One stop when scrolling back: a logged block, a meeting, or an untracked gap.
@@ -207,6 +208,19 @@ struct Summary: Decodable {
     let trackedMinutes: Int
     let untrackedMinutes: Int
     let computerActiveMinutes: Int
+}
+
+/// How a title reads on the bar: what he typed, tidied for display only (the log keeps his words).
+/// "daylog backend." → "Daylog backend"; runs of spaces collapse; trailing punctuation goes.
+enum Title {
+    static func display(_ raw: String) -> String {
+        var t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        while let last = t.last, ".,;:'\"…".contains(last) { t.removeLast() }
+        while let first = t.first, "…'\"".contains(first) { t.removeFirst() }
+        guard let f = t.first else { return raw }
+        return f.uppercased() + t.dropFirst()
+    }
 }
 
 enum Time {

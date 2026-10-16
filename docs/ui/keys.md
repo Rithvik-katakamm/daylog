@@ -69,7 +69,11 @@ Not back from a break within an hour? It’s logged as a ~15 min break, then gho
 ⌘B still brings you back and resumes the task.
 
 Menu-only (⌘K): **Always on: center pill / side ring / pill + ring / off**: what stays on
-screen while the bar is closed.
+screen while the bar is closed. Dev app only: **Dev demo**, a window that puts the Dev pill into
+every state, shows the model reading lines live (with its reason), and previews any line.
+
+While the model reads a line the bar says **reading…**; its reading replaces the preview with its
+reason. ⏎ waits for it (at most 3 s, then the rules); ⇧⏎ never waits.
 
 ## Reserved
 

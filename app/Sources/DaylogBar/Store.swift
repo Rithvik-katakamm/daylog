@@ -491,7 +491,12 @@ final class Store: ObservableObject {
         if !forceTimer, !readDone, let t = readTask {
             waitingToSubmit = true
             Task {
-                await t.value
+                // At most 3 s: then the rules, so a stuck model never holds the bar.
+                await withTaskGroup(of: Void.self) { g in
+                    g.addTask { await t.value }
+                    g.addTask { try? await Task.sleep(for: .seconds(3)) }
+                    await g.next(); g.cancelAll()
+                }
                 waitingToSubmit = false
                 submit(forceTimer: false, afterRead: true)
             }

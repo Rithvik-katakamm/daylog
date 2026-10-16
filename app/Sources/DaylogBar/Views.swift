@@ -225,7 +225,7 @@ struct BarView: View {
                 Text(g.status)
             } else if let t = store.timer {
                 Circle().fill(color).frame(width: 6, height: 6).shadow(color: color, radius: 2)
-                Text(t.label)
+                Text(Title.display(t.label)).truncationMode(.middle)
             } else {
                 Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
                 Text("nothing running").foregroundStyle(Theme.muted)
@@ -262,7 +262,7 @@ struct BarView: View {
                     Text(g.status)
                 } else if let t = store.timer {
                     Circle().fill(color).frame(width: 6, height: 6).shadow(color: color, radius: 2)
-                    Text(t.label)
+                    Text(Title.display(t.label))
                 } else {
                     Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
                     Text("idle").foregroundStyle(Theme.muted)
@@ -448,7 +448,7 @@ struct BarView: View {
         return HStack(spacing: 7) {
             Circle().fill(tint).frame(width: 7, height: 7)
                 .shadow(color: tint, radius: 3)
-            Text(t.label).lineLimit(1).truncationMode(.tail).frame(maxWidth: 170, alignment: .leading)
+            Text(Title.display(t.label)).lineLimit(1).truncationMode(.middle).frame(maxWidth: 220, alignment: .leading)
             if let f = t.focus, f > 0 {
                 Text(String(repeating: "▲", count: f))
                     .font(.system(size: fs(9), weight: .bold))
@@ -456,9 +456,12 @@ struct BarView: View {
                     .help(Store.focusNames[f])
             }
             TimelineView(.periodic(from: .now, by: 1)) { ctx in
-                Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(t.start)), withSeconds: true))
+                // H:MM reads first; the ticking seconds sit quieter beside it.
+                let full = Time.duration(ctx.date.timeIntervalSince(Time.parse(t.start)), withSeconds: true)
+                let cut = full.count > 3 ? full.index(full.endIndex, offsetBy: -3) : full.startIndex
+                (Text(full[..<cut]).foregroundStyle(tint)
+                 + Text(full[cut...]).foregroundStyle(tint.opacity(0.5)).font(.system(size: fs(10), weight: .medium).monospacedDigit()))
                     .font(.system(size: fs(12), weight: .semibold).monospacedDigit())
-                    .foregroundStyle(tint)
             }
         }
         .font(.system(size: fs(12), weight: .medium))
@@ -567,7 +570,10 @@ struct BarView: View {
             Text("⏎").foregroundStyle(Theme.muted)
         } else if typed, let p = store.preview, p.action == "command" {
             Text("⏎ \(p.label)").foregroundStyle(Theme.task).fontWeight(.semibold)
-            if p.by != nil { Text("· read by the model").foregroundStyle(Theme.muted) }
+            if p.by != nil {
+                Text("· " + (p.why.flatMap { $0.isEmpty ? nil : $0 } ?? "read by the model"))
+                    .foregroundStyle(Theme.muted).italic().lineLimit(1).truncationMode(.tail)
+            }
             if store.isReading { Text("· reading…").foregroundStyle(Theme.muted).italic() }
             Text("· ⇧⏎ log it as a task instead").foregroundStyle(Theme.muted)
         } else if typed {

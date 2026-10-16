@@ -11,3 +11,6 @@ RELEASE.json
 owner
 .env*
 *.pem
+
+# his real typed lines (eval data) stay on the Mac
+server/eval/*.local.*

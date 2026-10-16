@@ -42,12 +42,13 @@ def test_no_model_running_means_use_the_rules():
 def test_his_past_corrections_ride_in_the_prompt():
     # The model remembers nothing between calls: memory is what the harness puts in the prompt.
     seen: list = []
-    past = [("geass", Reading(mode="ghost", ghost_status="watching code geass"))]
+    past = [("nothing is running.", "geass", Reading(mode="ghost", ghost_status="watching code geass"))]
     harness.read_line("geass again", examples=past, client=fake_ollama('{"mode": "ghost"}', seen))
     sent = seen[0]["messages"]
-    assert [m["role"] for m in sent] == ["system", "user", "assistant", "user"]
-    assert sent[1]["content"] == "geass" and '"ghost"' in sent[2]["content"]
-    assert sent[-1]["content"] == "geass again"
+    n = len(harness.EXAMPLES)
+    assert [m["role"] for m in sent] == ["system"] + ["user", "assistant"] * (n + 1) + ["user"]
+    assert sent[-3]["content"].endswith("Line: geass") and '"ghost"' in sent[-2]["content"]
+    assert sent[-1]["content"].endswith("Line: geass again")
     assert seen[0]["format"]["properties"]["mode"]   # the output shape is sent too
     assert seen[0]["options"]["temperature"] == 0
     assert seen[0]["think"] is False   # the bar can't wait for a model to reason out loud
@@ -175,6 +176,50 @@ def test_the_model_is_told_what_is_running(client, monkeypatch):
     assert 'running task is "daylog backend"' in seen["context"]
 
 
-def test_context_rides_in_the_system_prompt():
+def test_context_rides_with_the_line():
     msgs = harness.messages("x", context="the running task is \"daylog\" (5 min so far).")
-    assert msgs[0]["role"] == "system" and msgs[0]["content"].endswith('Right now: the running task is "daylog" (5 min so far).')
+    assert msgs[-1] == {"role": "user", "content": 'Right now: the running task is "daylog" (5 min so far).\nLine: x'}
+
+
+# ---------- guardrails: code keeps only what the words support ----------
+
+def test_coffee_is_never_intoxicated():
+    r = Reading(mode="note", states=[StateChange(state="intoxicated", on=True)])
+    kept = harness.check(r, "still drinking coffee and im at starbucks", running=True, away=False)
+    assert {s.state for s in kept.states} == {"caffeinated"}   # the rules add caffeinated; drunk is dropped
+
+
+def test_drinking_with_friends_adds_intoxicated_even_if_the_model_forgot():
+    kept = harness.check(Reading(mode="ghost"), "having fun wiht friends roomates drinking", running=False, away=False)
+    assert [(s.state, s.on) for s in kept.states] == [("intoxicated", True)]
+
+
+def test_a_break_needs_a_break_word():
+    assert harness.check(Reading(mode="break"), "took a nap now deep in the harness", running=True, away=False) is None
+    assert harness.check(Reading(mode="break"), "grabbing a coffee", running=True, away=False).mode == "break"
+
+
+def test_rename_with_nothing_running_is_a_new_task():
+    assert harness.check(Reading(mode="rename", task="X"), "and x", running=False, away=False).mode == "task"
+
+
+def test_back_needs_somewhere_to_come_back_from():
+    assert harness.check(Reading(mode="back"), "back at it", running=True, away=False) is None
+
+
+def test_feedback_becomes_a_feedback_note(client, monkeypatch):
+    client.post("/log", json={"text": "daylog backend"})
+    model_reads(monkeypatch, Reading(why="a complaint about the app", mode="feedback"))
+    preview = client.get("/read", params={"text": "no overnight reset i see"}).json()
+    assert preview["label"] == "feedback: no overnight reset i see" and preview["why"] == "a complaint about the app"
+    now = client.post("/log", json={"text": "no overnight reset i see"}).json()
+    assert now["timer"]["label"] == "daylog backend"            # the task keeps running
+    assert client.get("/harness").json()["recent"][0]["applied"] is True
+
+
+def test_continue_changes_nothing(client, monkeypatch):
+    started = client.post("/log", json={"text": "working on daylog"}).json()["timer"]
+    model_reads(monkeypatch, Reading(mode="continue"))
+    client.get("/read", params={"text": "still working on daylog"})
+    now = client.post("/log", json={"text": "still working on daylog"}).json()
+    assert now["timer"]["id"] == started["id"] and now["timer"]["label"] == "working on daylog"
