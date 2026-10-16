@@ -19,7 +19,10 @@ status changes ─▶ /now: no look for this status yet ─▶ "thinking" (viole
                          └─▶ OpenTelemetry spans ─▶ ~/Library/Logs/daylog/traces.jsonl (local)
 ```
 
-- **Same status, same look:** decided once per status (`display.key`); time passing doesn't re-decide.
+- **It looks again on its own schedule (Oct 16):** with each pick it also says `recheck_minutes` (5-120),
+  and it's told the time of day. When that time passes it decides again by itself (`again: true`), so the
+  word and color can change as the day moves on without him doing anything. The old look stays up until
+  the new one is in. A new status always decides at once. First picks: a walk → 15 min, idle → 60, work → 30.
 - **Model down or slow (8 s):** the plain theme colors and the title stay.
 - **The bar polls every 0.5 s while it thinks**, every 4 s otherwise.
 

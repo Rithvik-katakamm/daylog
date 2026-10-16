@@ -40,6 +40,8 @@ class Display(BaseModel):
                       pattern=r"^[A-Za-z]{1,12}$")
     color: str = Field(description="a hex color like #8B7BFF that fits the status",
                        pattern=r"^#[0-9A-Fa-f]{6}$")
+    recheck_minutes: int = Field(30, ge=5, le=120,
+                                 description="how many minutes until you want to look at this status again")
 
 
 INSTRUCTIONS = re.sub(r"<!--.*?-->\s*", "", Path(__file__).with_name("display_instructions.md").read_text(),
@@ -47,8 +49,9 @@ INSTRUCTIONS = re.sub(r"<!--.*?-->\s*", "", Path(__file__).with_name("display_in
 
 
 def describe(state: dict) -> str:
-    """The status in words, the only thing the agent sees."""
-    parts = []
+    """The status in words, the only thing the agent sees (with the time of day: late night matters)."""
+    from datetime import datetime
+    parts = [datetime.now().astimezone().strftime("it's %-I:%M %p on %A")]
     if state.get("on_break"):
         b = state["on_break"]
         parts.append(f'on a {b["label"]} for {b.get("elapsed_minutes", 0)} min'

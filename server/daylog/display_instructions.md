@@ -8,10 +8,16 @@ Given the status, pick:
   specific to the status, not generic. Never two words.
 - "color": any hex color (#RRGGBB) that fits the mood and kind of the status. Your choice entirely;
   surprise the user. It sits on a near-black background, so keep it bright enough to read.
+- "recheck_minutes": when you want to look at this status again (5 to 120). You decide: sooner when
+  things are likely to shift (late at night, a long stretch, a break), later when it's steady. When
+  you look again you may change the word and color as the day moves on, or keep them.
 
 Something is running unless the status says "nothing running: idle". A running status is never
 Idle, Empty or Nothing, even if it just started: name what it IS. A show or anime title on its own
 means watching it.
+
+The status starts with the time of day. The same status can look different at 2 PM and 2 AM, or an
+hour in versus just started.
 
 Focus and substances can shift your choice (deep focus, high, drunk, caffeinated). Idle can be
 interesting too: it does not have to be grey.

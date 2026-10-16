@@ -254,14 +254,21 @@ _looks: dict[str, dict] = {}
 _deciding: set[str] = set()
 
 
-async def _decide_look(k: str, state: dict) -> None:
+async def _decide_look(k: str, state: dict, again: bool = False) -> None:
+    """Ask the display agent how this status looks. `again`: its own scheduled second look (the old look
+    stays on the pill until the new one is in, so he sees it change, not flicker)."""
     try:
         choice, ms = await display.decide(state)
-        _looks[k] = ({"word": choice.word, "color": choice.color, "why": choice.why, "ms": round(ms)}
-                     if choice else {"word": None, "color": None, "why": "", "ms": round(ms)})
         if choice:
+            _looks[k] = {"word": choice.word, "color": choice.color, "why": choice.why, "ms": round(ms),
+                         "recheck_minutes": choice.recheck_minutes, "again": again, "_at": time.monotonic()}
             db.append(conn(), kind="prediction", type="display.choice", source=display.MODEL, start=db.utcnow(),
-                      label=display.describe(state), data=_looks[k])
+                      label=display.describe(state), data={k2: v for k2, v in _looks[k].items() if k2 != "_at"})
+        elif k in _looks:   # a second look failed: keep the old one, try again after its interval
+            _looks[k]["_at"] = time.monotonic()
+        else:
+            _looks[k] = {"word": None, "color": None, "why": "", "ms": round(ms), "recheck_minutes": 10,
+                         "_at": time.monotonic()}
         while len(_looks) > 50:
             _looks.pop(next(iter(_looks)))
     finally:
@@ -269,14 +276,17 @@ async def _decide_look(k: str, state: dict) -> None:
 
 
 def _with_look(state: dict) -> dict:
-    """The status plus how it should look: the agent's choice, or "thinking" while it decides."""
+    """The status plus how it should look: the agent's choice ("thinking" while it first decides). When the
+    agent's own recheck time has passed, it looks again in the background, with the time of day."""
     k = display.key(state)
-    if k in _looks:
-        return {**state, "display": _looks[k]}
-    if k not in _deciding:
-        _deciding.add(k)
-        asyncio.create_task(_decide_look(k, state))
-    return {**state, "display": {"thinking": True}}
+    look = _looks.get(k)
+    if look is None or time.monotonic() - look["_at"] > look["recheck_minutes"] * 60:
+        if k not in _deciding:
+            _deciding.add(k)
+            asyncio.create_task(_decide_look(k, state, again=look is not None))
+    if look is None:
+        return {**state, "display": {"thinking": True}}
+    return {**state, "display": {k2: v for k2, v in look.items() if k2 != "_at"}}
 
 
 @app.get("/now")

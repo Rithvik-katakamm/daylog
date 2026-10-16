@@ -29,8 +29,8 @@ def test_the_shape_holds_the_model_to_one_word_and_a_color():
 
 def test_describe_is_what_the_agent_sees():
     s = {"timer": {"label": "daylog backend", "elapsed_minutes": 12, "focus": 2}, "states": [{"state": "high"}]}
-    assert display.describe(s) == 'doing "daylog backend" for 12 min, in deep focus, also high'
-    assert display.describe({}) == "nothing running: idle"
+    assert display.describe(s).endswith('doing "daylog backend" for 12 min, in deep focus, also high')
+    assert display.describe({}).startswith("it's ") and display.describe({}).endswith("nothing running: idle")
 
 
 def test_time_passing_is_the_same_status():
@@ -62,4 +62,33 @@ def test_a_junk_line_is_not_a_status(client):
 
 def test_just_started_is_not_zero_minutes():
     s = {"timer": {"label": "Code Geass", "elapsed_minutes": 0, "focus": 0}}
-    assert display.describe(s) == 'doing "Code Geass", just started'
+    assert display.describe(s).endswith('doing "Code Geass", just started')
+
+
+def test_the_agent_looks_again_on_its_own_schedule(client, monkeypatch):
+    picks = iter([Display(why="just started", word="Starting", color="#111111", recheck_minutes=5),
+                  Display(why="an hour in, late", word="Winding", color="#222222", recheck_minutes=20)])
+
+    async def decide(state):
+        return next(picks), 10.0
+    monkeypatch.setattr(display, "decide", decide)
+    from daylog import api
+    client.post("/log", json={"text": "watching code geass"})
+
+    def look():
+        for _ in range(50):
+            d = client.get("/now").json()["display"]
+            if not d.get("thinking"):
+                return d
+            time.sleep(0.02)
+    first = look()
+    assert first["word"] == "Starting" and first["recheck_minutes"] == 5
+    k = next(iter(api._looks))
+    api._looks[k]["_at"] -= 6 * 60          # its 5 minutes have passed
+    assert client.get("/now").json()["display"]["word"] == "Starting"   # old look stays while it rethinks
+    for _ in range(50):
+        d = client.get("/now").json()["display"]
+        if d["word"] == "Winding":
+            break
+        time.sleep(0.02)
+    assert d["word"] == "Winding" and d["again"] is True
