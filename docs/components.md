@@ -38,7 +38,7 @@ Technical work → Linear (team RIT). Product/design questions → Notion.
 
 | Component | Layer | What it is | Code | State | Open problems |
 |---|---|---|---|---|---|
-| **Channels** | infra | Stable (frozen tag) + Dev; for now stable = dev. One server day to day: Dev's :7879 runs only between `devctl start`/`stop` | `scripts/release.sh`, `dev.sh`, `tools/devctl.swift` | Auto-ship each checked build; ⌘K shows `vX · runs releases/vX` (v0.18) | Building on the Mac he uses: one instance rule; maybe a test user/VM later |
+| **One version** | infra | Day Log prototype: one app, one server, his real log; every green push ships (Oct 15). The hidden test copy lives in `.build/` and runs only during tests | `scripts/autorelease.sh`, `release.sh`, `test-copy.sh`, `tools/devctl.swift` | ⌘K shows `Day Log prototype vX · runs releases/vX` | A dev/prod split comes back when there are real users |
 | **Launch agents** | infra | launchd keeps server + app alive | `scripts/lib.sh write_agent` | Idempotent (no repeat "Background Items Added"). App runs as `ProcessType Interactive` (v0.7): unspecified = CPU-throttled, which made stable stutter while Dev was smooth | — |
 | **Agent status** | backend, ai | Agents set his status in plain words via MCP `set_status` (source `agent:<name>`); the pill polls every 4s | `mcp_server.py`, `Store.startPolling` | MVP v0.7 | Push instead of poll; agent-set status is a claim *on his behalf*, show it differently? |
 
@@ -56,7 +56,7 @@ Technical work → Linear (team RIT). Product/design questions → Notion.
 | Component | Layer | What it is | Code | State | Open problems |
 |---|---|---|---|---|---|
 | **Server tests** | testing, backend | Unit + API tests for the server | `server/tests/` | 136 pass (Oct 13) | Some tests depend on the clock; two midnight bugs fixed Oct 13 |
-| **devctl** | testing | Test remote for the Dev app (no keyboard, no focus) | `tools/devctl.swift`, `AppDelegate` test channel | Shipped; `start`/`stop`/`snap` added Oct 13 | — |
-| **Headless Dev** | testing | Dev app off-screen and silent; snapshots of the bar | `Flavor.headless`, `snapshot(name:)`, `Sound.play` | Shipped Oct 13 (default for all tests) | Snapshot may differ from a real window (glow/blur) |
+| **devctl** | testing | Test remote for the hidden test copy (no keyboard, no focus) | `tools/devctl.swift`, `AppDelegate` test channel | Shipped; `start`/`stop`/`snap` added Oct 13 | — |
+| **Headless test copy** | testing | `.build/Daylog Test.app` off-screen and silent; snapshots of the bar | `Flavor.headless`, `snapshot(name:)`, `Sound.play` | Shipped Oct 13 (default for all tests) | Snapshot may differ from a real window (glow/blur) |
 | **Lab VM** | testing, infra | Hidden macOS VM for real-window checks | — | Not set up (his call: when needed) | Costs Mac memory/CPU/disk; one-time setup needs him |
 | **CI gate** | testing, infra | GitHub Actions on every push | `.github/workflows/ci.yml` | Shipped Oct 13; see dev infra above | — |

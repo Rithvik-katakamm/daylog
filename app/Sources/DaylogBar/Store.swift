@@ -63,7 +63,7 @@ final class Store: ObservableObject {
     @Published var preview: LinePreview?
     @Published var flash: String?  // brief confirmation after an action
     @Published var isOpen = false   // drives the grow/shrink animation
-    /// Real or dev (⌥D). Dev talks to a separate server and database; colors stay identical.
+    /// Real, or dev inside the test copy (its own server and throwaway database); colors stay identical.
     @Published var env: API.Env = .real { didSet { API.env = env } }
 
     // Scrolling back through the past with ↑/↓.
@@ -579,7 +579,23 @@ final class Store: ObservableObject {
         }
     }
 
+    /// Demo (⌘K → Demo): the pill shows a made-up state for a moment. Nothing is written to the log,
+    /// and polling leaves it alone until the demo ends.
+    @Published var demoState: String?
+
+    func showDemo(_ name: String, timer: TimerInfo? = nil, ghost: GhostInfo? = nil, onBreak: BreakInfo? = nil,
+                  states: Set<String> = []) {
+        demoState = name
+        self.timer = timer; self.ghost = ghost; self.onBreak = onBreak; self.states = states
+    }
+
+    func endDemo() {
+        demoState = nil
+        Task { await refreshAll() }
+    }
+
     func refreshNow() async {
+        guard demoState == nil else { return }
         do {
             let now: NowState = try await API.get("now")
             if now.timer != timer { timer = now.timer }
@@ -635,7 +651,7 @@ final class Store: ObservableObject {
 
     /// ⌘K "What's new": show the line again, or just the version when there are no notes.
     func whatsNew() {
-        if let r = release, !r.new.isEmpty { showWhatsNew = true } else { flashBriefly("Day Log \(version)") }
+        if let r = release, !r.new.isEmpty { showWhatsNew = true } else { flashBriefly("Day Log prototype \(version)") }
     }
 
     func refreshAll() async {

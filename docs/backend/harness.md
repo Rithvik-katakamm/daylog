@@ -47,7 +47,7 @@ Day Log itself; saved as a note "feedback: …") · ghost · break · back · fo
 - ⏎ waits for the reading (at most 3 s, then the rules); ⇧⏎ never waits.
 - Opening the bar warms the model (`POST /harness/warm`): cold it takes ~8 s, warm ~1 s; it stays
   loaded 30 min (`keep_alive`).
-- Dev app: ⌘K → **Dev demo** shows the model live (`GET /harness`: busy line, last 20 readings with
+- ⌘K → **Demo** shows the model live (`GET /harness`: busy line, last 20 readings with
   reason, time, whether code overruled it, whether it was applied), every pill state, and a try-a-line box.
 
 ## Knobs

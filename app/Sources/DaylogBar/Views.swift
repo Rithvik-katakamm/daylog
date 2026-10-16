@@ -102,7 +102,7 @@ struct BarView: View {
         }
     }
 
-    // MARK: dev tag (⌥D): same colors, but nothing here touches the real log
+    // MARK: dev tag (test copy only): same colors, but nothing here touches the real log
 
     private var devTag: some View {
         HStack(spacing: 6) {
@@ -303,7 +303,7 @@ struct BarView: View {
                 : store.timer == nil ? "What are you doing?" : "Switch, or log: client call 3:10-3:25"
         case .note: "What’s on your mind?"
         case .ghost: "Status (optional): dinner with family, deep reset…"
-        case .menu: "Type a command… (↑↓ ⏎, esc) · Day Log \(store.versionLabel)"
+        case .menu: "Type a command… (↑↓ ⏎, esc) · Day Log prototype \(store.versionLabel)"
         case .edit: "Title"
         case .fill: "What were you doing then?"
         case .browse: ""

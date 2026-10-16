@@ -18,10 +18,8 @@ struct Command: Identifiable {
 
 @MainActor
 enum Commands {
-    /// Built once at launch. `hide` and `openDevApp` come from the window owner;
-    /// `openDevApp` is nil inside the Dev app itself.
-    static func all(store: Store, hide: @escaping () -> Void,
-                    openDevApp: (() -> Void)?) -> [Command] {
+    /// Built once at launch. `hide` comes from the window owner.
+    static func all(store: Store, hide: @escaping () -> Void) -> [Command] {
         let always: @MainActor (Store) -> Bool = { _ in true }
         return [
             // WHAT am I doing / typing
@@ -56,8 +54,6 @@ enum Commands {
                     isAvailable: always, run: { store.enterBrowse() }),
             Command(id: "edit", group: .go, title: "Edit the running or last block", shortcut: "↓",
                     isAvailable: always, run: { store.beginEdit() }),
-            Command(id: "dev", group: .go, title: "Open the Dev app (latest build)", shortcut: "⌥D",
-                    isAvailable: { _ in openDevApp != nil }, run: { openDevApp?() }),
             Command(id: "whats-new", group: .go, title: "What's new in this version", shortcut: "",
                     isAvailable: always, run: { store.whatsNew() }),
             Command(id: "work", group: .go, title: "Back to work (close)", shortcut: "Tab",
@@ -88,8 +84,8 @@ enum Commands {
                     isAvailable: { $0.timer != nil }, run: { store.stop() }),
             Command(id: "reset-dev", group: .act, title: "Reset dev data", shortcut: "",
                     isAvailable: { $0.env == .dev }, run: { store.resetDevData() }),
-            Command(id: "dev-demo", group: .act, title: "Dev demo: pill states + the model, live", shortcut: "",
-                    isAvailable: { $0.env == .dev }, run: { hide(); DevDemoWindow.show(store: store) }),
+            Command(id: "demo", group: .go, title: "Demo: pill states + the model, live", shortcut: "",
+                    isAvailable: always, run: { hide(); DemoWindow.show(store: store) }),
         ]
     }
 }

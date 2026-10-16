@@ -1,4 +1,4 @@
-# Shared by release.sh and dev.sh. Source it; don't run it.
+# Shared by release.sh and test-copy.sh. Source it; don't run it.
 UV="$(command -v uv)"
 AGENTS="$HOME/Library/LaunchAgents"
 LOGS="$HOME/Library/Logs/daylog"

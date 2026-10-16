@@ -1,11 +1,11 @@
 import AppKit
 import SwiftUI
 
-/// Dev-only demo window (⌘K → "Dev demo"): put the Dev pill into every state, watch the model read
-/// lines live, and try a line without logging it. Everything here talks to the Dev server (:7879) and
-/// its throwaway database; the real Day Log is never touched.
+/// Demo window (⌘K → Demo): see the pill in every state, watch the model read lines live, and try a
+/// line. Read-only: the pill states are made up on screen (nothing is written), and the model views
+/// only read from the server.
 @MainActor
-final class DevDemoWindow {
+final class DemoWindow {
     private static var window: NSWindow?
 
     static func show(store: Store) {
@@ -13,9 +13,9 @@ final class DevDemoWindow {
         let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 600),
                          styleMask: [.titled, .closable, .resizable, .miniaturizable],
                          backing: .buffered, defer: false)
-        w.title = "Day Log Dev · demo"
+        w.title = "Day Log prototype · demo"
         w.isReleasedWhenClosed = false
-        w.contentView = NSHostingView(rootView: DevDemoView(store: store))
+        w.contentView = NSHostingView(rootView: DemoView(store: store))
         w.center()
         w.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -44,31 +44,32 @@ struct HarnessActivity: Decodable {
     let recent: [Reading]
 }
 
-struct DevDemoView: View {
+struct DemoView: View {
     @ObservedObject var store: Store
     @State private var activity: HarnessActivity?
     @State private var tryText = ""
     @State private var tryResult: LinePreview?
     @State private var tryBusy = false
     @State private var touring = false
-    @State private var stateName = "—"
 
-    /// Each pill state: a name, and the Dev-server calls that produce it from a clean slate.
-    private static let states: [(String, [(String, [String: Any])])] = [
-        ("Idle", []),
-        ("Task", [("log", ["text": "working on daylog backend"])]),
-        ("Focus ▲", [("log", ["text": "working on daylog backend"]), ("focus", ["tier": 1])]),
-        ("Deep ▲▲", [("log", ["text": "working on daylog backend"]), ("focus", ["tier": 2])]),
-        ("Hyper ▲▲▲", [("log", ["text": "working on daylog backend"]), ("focus", ["tier": 3])]),
-        ("Long title", [("log", ["text": "daylog backend"]), ("log", ["text": "and the harness and brain global config"])]),
-        ("Walk", [("log", ["text": "working on daylog"]), ("break", ["kind": "walk"])]),
-        ("Smoke", [("log", ["text": "working on daylog"]), ("break", ["kind": "smoke"])]),
-        ("Ghost", [("ghost", ["status": "watching code geass"])]),
-        ("High", [("log", ["text": "working on daylog"]), ("state", ["state": "high"])]),
-        ("Drunk", [("log", ["text": "working on daylog"]), ("state", ["state": "intoxicated"])]),
-        ("Coffee", [("log", ["text": "working on daylog"]), ("state", ["state": "caffeinated"])]),
-        ("All rings", [("log", ["text": "working on daylog"]), ("state", ["state": "high"]),
-                       ("state", ["state": "intoxicated"]), ("state", ["state": "caffeinated"]), ("focus", ["tier": 2])]),
+    private static func ago(_ minutes: Double) -> String { Time.string(Date().addingTimeInterval(-minutes * 60)) }
+
+    /// Each pill state, made up on screen: (name, timer, ghost, break, substances).
+    private static let states: [(String, TimerInfo?, GhostInfo?, BreakInfo?, Set<String>)] = [
+        ("Idle", nil, nil, nil, []),
+        ("Task", TimerInfo(id: "d", label: "working on daylog backend", start: ago(42)), nil, nil, []),
+        ("Focus ▲", TimerInfo(id: "d", label: "working on daylog backend", start: ago(42), focus: 1), nil, nil, []),
+        ("Deep ▲▲", TimerInfo(id: "d", label: "working on daylog backend", start: ago(42), focus: 2), nil, nil, []),
+        ("Hyper ▲▲▲", TimerInfo(id: "d", label: "working on daylog backend", start: ago(42), focus: 3), nil, nil, []),
+        ("Long title", TimerInfo(id: "d", label: "daylog backend + the harness and brain global config", start: ago(95)), nil, nil, []),
+        ("Walk", nil, nil, BreakInfo(id: "d", kind: "walk", label: "walk", start: ago(6), resume: "working on daylog"), []),
+        ("Smoke", nil, nil, BreakInfo(id: "d", kind: "smoke", label: "smoke break", start: ago(4), resume: "working on daylog"), []),
+        ("Ghost", nil, GhostInfo(id: "d", status: "watching code geass", start: ago(70)), nil, []),
+        ("High", TimerInfo(id: "d", label: "working on daylog", start: ago(30)), nil, nil, ["high"]),
+        ("Drunk", TimerInfo(id: "d", label: "working on daylog", start: ago(30)), nil, nil, ["intoxicated"]),
+        ("Coffee", TimerInfo(id: "d", label: "working on daylog", start: ago(30)), nil, nil, ["caffeinated"]),
+        ("All rings", TimerInfo(id: "d", label: "working on daylog", start: ago(30), focus: 2), nil, nil,
+         ["high", "intoxicated", "caffeinated"]),
     ]
 
     var body: some View {
@@ -82,6 +83,7 @@ struct DevDemoView: View {
         .padding(20)
         .frame(minWidth: 560, minHeight: 540, alignment: .topLeading)
         .task { await poll() }
+        .onDisappear { store.endDemo() }
     }
 
     // MARK: pill states
@@ -90,9 +92,10 @@ struct DevDemoView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Pill states").font(.headline)
-                Text("now: \(stateName)").foregroundStyle(.secondary)
+                Text(store.demoState.map { "showing: \($0) (made up, nothing logged)" } ?? "showing: your real state")
+                    .foregroundStyle(.secondary)
                 Spacer()
-                Picker("Show the Dev pill on", selection: Binding(
+                Picker("Pill on", selection: Binding(
                     get: { store.restStyle == .off ? "off" : store.pillScreen.rawValue },
                     set: { v in
                         if v == "off" { store.restStyle = .off }
@@ -107,32 +110,30 @@ struct DevDemoView: View {
             }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
                 ForEach(Self.states, id: \.0) { s in
-                    Button(s.0) { Task { await show(s) } }.disabled(touring)
+                    Button(s.0) { show(s) }.disabled(touring)
                 }
             }
             HStack {
                 Button(touring ? "Touring…" : "Tour every state (3 s each)") { Task { await tour() } }.disabled(touring)
-                Text("The Dev pill and the open Dev bar both follow; nothing real is logged.")
-                    .font(.caption).foregroundStyle(.secondary)
+                Button("Back to my real state") { store.endDemo() }.disabled(store.demoState == nil || touring)
+                Text("Made up on screen only; your log is untouched.").font(.caption).foregroundStyle(.secondary)
             }
         }
     }
 
-    private func show(_ s: (String, [(String, [String: Any])])) async {
-        _ = try? await API.post("dev/reset", env: .dev)
-        for (path, body) in s.1 { _ = try? await API.post(path, body.merging(["source": "demo"]) { a, _ in a }, env: .dev) }
-        stateName = s.0
-        await store.refreshAll()
+    private func show(_ s: (String, TimerInfo?, GhostInfo?, BreakInfo?, Set<String>)) {
+        store.showDemo(s.0, timer: s.1, ghost: s.2, onBreak: s.3, states: s.4)
     }
 
     private func tour() async {
         touring = true
         if store.restStyle == .off { store.restStyle = .pill }
         for s in Self.states {
-            await show(s)
+            show(s)
             try? await Task.sleep(for: .seconds(3))
         }
         touring = false
+        store.endDemo()
     }
 
     // MARK: the model, live
@@ -154,7 +155,7 @@ struct DevDemoView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
                     if activity?.recent.isEmpty ?? true {
-                        Text("Nothing read yet. Type in the Dev bar (⌥D) or try a line below.")
+                        Text("Nothing read yet. Type in the bar (⌥L) or try a line below.")
                             .foregroundStyle(.secondary)
                     }
                     ForEach(activity?.recent ?? []) { r in
@@ -182,7 +183,7 @@ struct DevDemoView: View {
 
     private func poll() async {
         while !Task.isCancelled {
-            activity = try? await API.get("harness", env: .dev)
+            activity = try? await API.get("harness")
             try? await Task.sleep(for: .milliseconds(500))
         }
     }
@@ -213,7 +214,7 @@ struct DevDemoView: View {
 
     private func tryLine() async {
         tryBusy = true
-        tryResult = try? await API.get("read", query: ["text": tryText], env: .dev, slow: true)
+        tryResult = try? await API.get("read", query: ["text": tryText], slow: true)
         tryBusy = false
     }
 }

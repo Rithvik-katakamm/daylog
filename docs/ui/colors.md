@@ -34,7 +34,7 @@ Oct 10). Every color in the app is a token in `enum Theme`
 chip, its ▲s, the ring and the glow all use it, so the whole bar heats up together. The glow
 radius and ring width grow with the tier.
 
-**Dev mode** (⌥D) changes no colors: a `DEV` tag floats above the bar instead.
+**The test copy** (agent tests only, never on his screens) changes no colors: a `DEV` tag floats above the bar instead.
 
 ## Substances: one blended glow, not lines
 

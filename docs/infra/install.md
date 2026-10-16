@@ -1,25 +1,37 @@
 # Install, run, test
 
-## Two channels: stable and dev
+## One version: Day Log prototype
 
-Building and testing must never disturb the version he's using.
+His call (Oct 15): "one version across the board … we're prototyping." One app, one server, his real
+log. A dev/prod split comes back only when there are real users.
 
-| | **Stable** (what he uses) | **Dev** (what gets built and tested) |
-|---|---|---|
-| App | `~/Applications/Daylog.app` (`com.rithvik.daylog`) | `~/Applications/Daylog Dev.app` (`com.rithvik.daylog.dev`) |
-| Opened with | ⌥L | ⌥D (stable hands off to the Dev app) |
-| Code | a **frozen copy of a git tag**: `~/Library/Application Support/daylog/releases/<tag>` (`current` symlink) | the working tree |
-| Server | `com.rithvik.daylog.server` on `:7878` | `com.rithvik.daylog.dev` on `:7879` (`DAYLOG_DEV=1`), only while testing (`devctl start` loads it, `devctl stop` unloads it) |
-| Data | `daylog.sqlite` (the real log) | `daylog-dev.sqlite`; importers off; `POST /dev/reset` |
-| Records Mac activity | yes | no |
-| Looks | normal | identical, plus a `DEV` tag |
-| Updated by | `scripts/release.sh <tag>`, only when he says ship | `scripts/dev.sh`, as often as needed |
+```
+change → commit → push main → CI on GitHub (server tests + macOS build)
+                                 │ green                         │ red
+                                 ▼                               ▼
+          CD (autorelease.sh, started by the push)        nothing ships; the pill says
+          freezes the tag, rebuilds the app                "update skipped: why"
+                                 ▼
+          Day Log prototype vX · ⌥L · :7878 · his real database
+```
+
+| | |
+|---|---|
+| App | `~/Applications/Daylog.app` (`com.rithvik.daylog`), opened with ⌥L |
+| Code | a **frozen copy of a git tag**: `~/Library/Application Support/daylog/releases/<tag>` (`current` symlink), so the running version is always known and rollback is one command |
+| Server | `com.rithvik.daylog.server` on `:7878` |
+| Data | `daylog.sqlite` (the real log). Backups: `daylog/backups/` |
+| Updated by | CD after every green push (`scripts/autorelease.sh`); `release.sh` only by hand to roll back |
+
+**The test copy** (agents only, never on his screens): `scripts/test-copy.sh` builds
+`.build/Daylog Test.app` (`com.rithvik.daylog.dev`) and its server job (`:7879`, `daylog-dev.sqlite`,
+importers off) into the repo's `.build/`, not ~/Applications or LaunchAgents. `devctl start` runs them
+headless; `devctl stop` ends them. See `docs/testing/strategy.md`.
 
 ```sh
-scripts/dev.sh             # rebuild Dev app + restart dev server (stable untouched)
-scripts/release.sh v0.2    # tag HEAD (clean tree required), freeze it, ship to stable
-scripts/release.sh v0.1    # roll back = release an older tag
-scripts/install.sh         # first-time: latest tag → stable, working tree → dev
+scripts/test-copy.sh       # build the hidden test copy (nothing starts)
+scripts/release.sh v0.31   # roll back = release an older tag
+scripts/install.sh         # first-time: latest tag → the app, working tree → the test copy
 scripts/uninstall.sh       # remove agents + app (data kept)
 ```
 

@@ -9,23 +9,22 @@ final class KeyPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
-/// Two channels, one codebase (see docs/infra/install.md):
-/// - **Stable** `Daylog.app` (com.rithvik.daylog): what he uses. ⌥L opens it; ⌥D hands off to Dev.
-///   Built from a tagged release, talks to the real server, records Mac activity.
-/// - **Dev** `Daylog Dev.app` (com.rithvik.daylog.dev): the latest build, for trying and testing
-///   new work. Dev database only, DEV tag, no global hotkeys, no activity recording, and a
-///   private test channel so an agent can drive it without touching his keyboard or focus.
+/// One app (his call, Oct 15: "one version across the board, we're prototyping"):
+/// - `Daylog.app` (com.rithvik.daylog): Day Log prototype. Every change goes push → CI → CD → this app.
+///   ⌥L opens it; it talks to the one server (:7878) and his real log, and records Mac activity.
+/// - The **test copy** (com.rithvik.daylog.dev, "Daylog Test", built into the repo's .build/) exists only
+///   while an agent test runs: headless, silent, a throwaway database, no hotkeys, no recording, and a
+///   private test channel so it can be driven without touching his keyboard or focus. Never on his screens.
 enum Flavor {
     static let stableID = "com.rithvik.daylog"
     static let devID = "com.rithvik.daylog.dev"
     static let isDev = Bundle.main.bundleIdentifier == devID
-    /// Headless testing (his default, Oct 13): the Dev app runs with every window off-screen and no sound,
+    /// Headless testing (his default, Oct 13): the test copy runs with every window off-screen and no sound,
     /// so tests never appear on his screens. Started by `devctl start` (DAYLOG_HEADLESS=1). See docs/testing/.
     static let headless = isDev && ProcessInfo.processInfo.environment["DAYLOG_HEADLESS"] == "1"
     static let offscreen = NSPoint(x: -30000, y: -30000)
 
-    /// Stable → Dev: "toggle your bar". Dev ← agent: test commands.
-    static let devToggle = Notification.Name("com.rithvik.daylog.dev.toggle")
+    /// Test copy ← agent: test commands.
     static let devTest = Notification.Name("com.rithvik.daylog.dev.test")
 }
 
@@ -35,7 +34,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let recorder = ActivityRecorder()
     var panel: KeyPanel!
     var hotKey: HotKey?
-    var devHotKey: HotKey?
     var ringPanel: NSPanel!
     var clickMonitor: Any?
     var keyMonitor: Any?
@@ -60,16 +58,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         store.commands = Commands.all(
             store: store,
-            hide: { [weak self] in self?.hide() },
-            openDevApp: Flavor.isDev ? nil : { [weak self] in self?.hide(); Self.openDevApp() })
+            hide: { [weak self] in self?.hide() })
 
         if Flavor.isDev {
             redirectLogs()
             store.env = .dev
             let dnc = DistributedNotificationCenter.default()
-            dnc.addObserver(forName: Flavor.devToggle, object: nil, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.toggle() }
-            }
             dnc.addObserver(forName: Flavor.devTest, object: nil, queue: .main) { [weak self] n in
                 let info = n.userInfo as? [String: String] ?? [:]
                 print("test-recv raw=\(String(describing: n.userInfo)) parsed=\(info)"); fflush(stdout)
@@ -78,7 +72,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             print("dev app ready"); fflush(stdout)
         } else {
             hotKey = HotKey(id: 1) { [weak self] in MainActor.assumeIsolated { self?.toggle() } }
-            devHotKey = HotKey(keyCode: UInt32(kVK_ANSI_D), id: 2) { MainActor.assumeIsolated { Self.openDevApp() } }
             ActivityRecorder.requestTitleAccess()  // window titles (asks once)
             recorder.start()  // only stable records what's in front of you
             Self.watchForCD()
@@ -107,32 +100,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         try? p.run()
     }
 
-    // MARK: Dev app handoff (stable's ⌥D)
-
-    static func openDevApp() {
-        let devURL = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Applications/Daylog Dev.app")
-        let post = { DistributedNotificationCenter.default()
-            .postNotificationName(Flavor.devToggle, object: nil, userInfo: nil, deliverImmediately: true) }
-        if NSRunningApplication.runningApplications(withBundleIdentifier: Flavor.devID).isEmpty {
-            guard FileManager.default.fileExists(atPath: devURL.path) else {
-                print("dev app not built: run scripts/dev.sh"); fflush(stdout); return
-            }
-            NSWorkspace.shared.openApplication(at: devURL, configuration: .init()) { _, _ in
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: post)
-            }
-        } else {
-            post()
-        }
-    }
-
     private func redirectLogs() {
         let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/daylog")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         freopen(dir.appendingPathComponent("app-dev.log").path, "a", stdout)
     }
 
-    // MARK: test channel (Dev app only): drive the bar without the real keyboard or focus
+    // MARK: test channel (test copy only): drive the bar without the real keyboard or focus
 
     /// Commands: open · close · key (code, mods) · type (text) · state.
     /// Keys go through the same `handleKey` as real keypresses; text goes straight into the field.
@@ -311,7 +285,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Every bar shortcut, in one place. Returns true if the key was handled.
-    /// Real keypresses and the Dev app's test channel both come through here.
+    /// Real keypresses and the test copy's test channel both come through here.
     @discardableResult
     func handleKey(_ code: UInt16, _ flags: NSEvent.ModifierFlags) -> Bool {
         let store = self.store

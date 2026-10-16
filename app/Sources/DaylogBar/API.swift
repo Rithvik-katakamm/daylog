@@ -3,13 +3,13 @@ import Foundation
 /// HTTP client for the daylog server. The app never touches the database directly;
 /// everything goes through the same API that agents use.
 enum API {
-    /// Real = your actual log. Dev = a separate server and database for testing (⌥D).
+    /// Real = his log. Dev = the test copy's throwaway server and database (agent tests only).
     enum Env { case real, dev }
 
     private static let realBase = URL(string: ProcessInfo.processInfo.environment["DAYLOG_API"] ?? "http://127.0.0.1:7878")!
     private static let devBase = URL(string: ProcessInfo.processInfo.environment["DAYLOG_DEV_API"] ?? "http://127.0.0.1:7879")!
 
-    /// Which server the bar talks to right now; set on open (⌥L real, ⌥D dev).
+    /// Which server the bar talks to: real, or dev inside the test copy.
     static var env: Env = .real
 
     static func base(_ e: Env? = nil) -> URL { (e ?? env) == .dev ? devBase : realBase }

@@ -42,7 +42,6 @@ Works with Wispr Flow dictation too (⌥L, dictate, ⏎). Code: `server/daylog/i
 | Key | Where | Does |
 |---|---|---|
 | **⌥L** | anywhere | Open or close the bar (and take the keyboard) |
-| **⌥D** | anywhere | Open the bar in **dev mode** (separate test database, DEV tag); switches if already open |
 | ⏎ | typing | Start a timer, or log a past block if the text has a time (`15m`, `3:10-3:25`, `since 1pm`) |
 | ⇧⏎ | typing | Force a timer even if the text contains a time |
 | ↑ | empty line | Look back through logs, meetings, notes and gaps |
@@ -69,8 +68,9 @@ Not back from a break within an hour? It’s logged as a ~15 min break, then gho
 ⌘B still brings you back and resumes the task.
 
 Menu-only (⌘K): **Always on: center pill / side ring / pill + ring / off**: what stays on
-screen while the bar is closed. Dev app only: **Dev demo**, a window that puts the Dev pill into
-every state, shows the model reading lines live (with its reason), and previews any line.
+screen while the bar is closed. **Demo**: a window that shows the pill in every
+state (made up on screen; nothing is logged), the model reading lines live (with its reason), and a
+try-a-line box.
 
 While the model reads a line the bar says **reading…**; its reading replaces the preview with its
 reason. ⏎ waits for it (at most 3 s, then the rules); ⇧⏎ never waits.
@@ -85,7 +85,6 @@ reason. ⏎ waits for it (at most 3 s, then the rules); ⇧⏎ never waits.
 
 - Avoid keys macOS or text editing owns: ⌘Q ⌘W ⌘H ⌘M ⌘C ⌘V ⌘X ⌘Z ⌘A ⌘Tab.
 - Mnemonic first (N note, O offline, F focus).
-- **Global ⌥ shortcuts take that key away from every app.** ⌥L means you can't type ¬. ⌥D
-  in a terminal is "delete word forward", which is acceptable for dev mode only.
+- **Global ⌥ shortcuts take that key away from every app.** ⌥L means you can't type ¬.
 - One key, one meaning per context, and one sound per action (see `sounds.md`).
 - Before adding a key, add it to this file.

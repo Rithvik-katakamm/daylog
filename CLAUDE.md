@@ -66,21 +66,24 @@ the experience better for someone using it.
 - **Swift:** build with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (Command Line Tools SwiftPM
   can't link manifests on this Mac). `scripts/install.sh` sets it.
 - **Server tests:** `cd server && uv run pytest -q` (plain `python -m pytest` uses the wrong env).
-- **Never disturb the stable app.** Build with `scripts/dev.sh`; test the Dev app headless through
-  `.build/devctl`: `start` (off-screen, silent), state line, `snap <name>` (PNG in
-  `~/Library/Logs/daylog/snapshots/`), `stop`. Test windows on his screen: 0. On a real window discrepancy
-  (glow, focus, animation), ask before setting up a hidden local macOS VM. See `docs/testing/strategy.md`.
-- **Stable = dev, for now (Oct 11), shipped by CD (Oct 13):** after a change is checked in Dev, commit and push.
-  CI on GitHub tests it; `scripts/autorelease.sh` releases GitHub's main once CI is green. A push from this Mac
-  starts it at once (`.githooks/pre-push`); cloud work ships at the next unlock, wake or bar open. Don't run `release.sh` by hand. Every skip notifies him with the reason and the
-  fix, and the pill shows it. Then quit Dev (`pkill -f "Daylog Dev.app"`): only one Day Log on his screen.
+- **One version: Day Log prototype (his call, Oct 15).** One app, one server (:7878), his real database. No
+  dev/prod split until there are real users. Every change: commit → push main → CI on GitHub (server tests +
+  macOS build) → CD (`scripts/autorelease.sh`, started at once by `.githooks/pre-push`; cloud work ships at the
+  next unlock, wake or bar open) → his app. A red CI or a CD skip means he's not on the latest: tell him why
+  (the pill shows skips too). Don't run `release.sh` by hand. Back up the database before risky data changes
+  (`sqlite3 … ".backup …"` into `~/Library/Application Support/daylog/backups/`).
+- **Test before shipping, never on his screens.** `scripts/test-copy.sh` builds the hidden test copy into
+  `.build/` (Daylog Test.app + its :7879 server job, throwaway database; nothing in ~/Applications or
+  LaunchAgents). Drive it with `.build/devctl`: `start` (off-screen, silent), state line, `snap <name>` (PNG in
+  `~/Library/Logs/daylog/snapshots/`), `stop` (always stop: nothing stays running). On a real window
+  discrepancy (glow, focus, animation), ask before setting up a hidden local macOS VM. See `docs/testing/strategy.md`.
 - **Data caveat:** label totals before Oct 12 are inflated by stale statuses (fixed in v0.9). Prefer `/auto` or
   `computer_active_minutes`.
 
 ## Cloud sessions (phone loop, RIT-87)
 
 If you're running in a cloud VM (Linux, no `/Users/rithvik`), you're a cloud session started from his phone:
-- **No macOS here:** don't run `scripts/dev.sh`, `release.sh`, `devctl` or `open linear://…`. Server work, docs and
+- **No macOS here:** don't run `scripts/test-copy.sh`, `release.sh`, `devctl` or `open linear://…`. Server work, docs and
   logic tests are yours; UI/notch work waits for the Mac (say so on the card).
 - **Check your work:** `cd server && uv run pytest -q`.
 - **Push a `claude/…` branch, never `main`.** GitHub Actions (`.github/workflows/ci.yml`) runs the server tests
