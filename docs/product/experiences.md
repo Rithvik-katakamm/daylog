@@ -17,6 +17,16 @@ entry is a moment, the friction in it, and how it felt. Solutions come later, fr
 
 Good moments go in too: they show what to protect.
 
+## Versions that mattered (his marks)
+
+- **v0.46, "legendary" (Oct 16).** One input is the whole product, gemma4 12B reads it and picks the pill's
+  look: words like Floating, Igniting, Surging, Manifesting, and colors that follow his mood. "46 is great …
+  I want you to mark that shit completely … the jump from 45 to 46, there was an idea there that really
+  changed the experience."
+- **v0.47, "hit reality" (Oct 16).** The coder 7B coins only the word (FridayFiend, PushTrike, DayLogRush),
+  gemma the rest. "Version 47 has hit … these smaller coding models, they got style." And the trade-off:
+  both don't fit in 16 GB, so each look swaps them. "47 was when I consolidated and hit reality."
+
 ## Moments
 
 ### 2026-10-14
