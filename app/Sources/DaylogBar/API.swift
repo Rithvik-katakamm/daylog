@@ -121,6 +121,14 @@ struct StatsInfo: Decodable, Equatable {
     let models: [Model]
     let jobs: [String: String]
     let latency: [String: Latency]
+    struct Last: Decodable, Equatable {
+        var line: String? = nil
+        var did: String? = nil
+        var logMs: Double? = nil    // ⏎ until the server had done it
+        var lookMs: Double? = nil   // the display agent's decision
+        var totalMs: Double? = nil  // ⏎ until the pill's new look
+    }
+    var last: Last? = nil
 }
 
 /// How the pill looks right now, chosen by the display agent (server/daylog/display.py): one word and a

@@ -28,7 +28,9 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from . import autolabel, db, display, harness, intents, parse, stats, timeline, wispr
+from . import autolabel, db, display, harness, intents, parse, stats, telemetry, timeline, wispr
+from opentelemetry import trace as otel
+
 
 log = logging.getLogger("daylog")
 
@@ -260,7 +262,13 @@ async def _decide_look(k: str, state: dict, again: bool = False) -> None:
     """Ask the display agent how this status looks. `again`: its own scheduled second look (the old look
     stays on the pill until the new one is in, so he sees it change, not flicker)."""
     try:
-        choice, ms = await display.decide(state)
+        with telemetry.tracer.start_as_current_span("look") as sp:   # PydanticAI's model spans nest inside
+            sp.set_attribute("trigger", "its own recheck" if again else "a new status or something he wrote")
+            sp.set_attribute("status", display.describe(state))
+            choice, ms = await display.decide(state)
+            sp.set_attribute("decided", f"{choice.word} {choice.color} · {choice.why}" if choice else "no answer: plain colors")
+        if _last.get("t0") and "total_ms" not in _last and not again:
+            _last.update(look_ms=round(ms), total_ms=round((time.monotonic() - _last["t0"]) * 1000))
         if choice:
             _looks[k] = {"word": choice.word, "color": choice.color, "why": choice.why, "ms": round(ms),
                          "recheck_minutes": choice.recheck_minutes, "again": again, "_at": time.monotonic()}
@@ -596,10 +604,16 @@ async def read_line(text: str):
         return {"action": "command", "label": f"rename: {title}", "text": text,
                 "why": "starts with \"and\": same session, bigger title (rule)"}
     state = timeline.now_state(conn())
-    raw, ms = await asyncio.to_thread(harness.read_line, text, context=_now_context())
-    reading = raw and harness.check(raw, text, running=bool(state["timer"]),
-                                    away=bool(state["on_break"] or state["ghost"]))
-    p = harness.plan(reading, text) if reading else None
+    with telemetry.tracer.start_as_current_span("line_reader") as sp:   # what the model read and what code kept
+        raw, ms = await asyncio.to_thread(harness.read_line, text, context=_now_context())
+        reading = raw and harness.check(raw, text, running=bool(state["timer"]),
+                                        away=bool(state["on_break"] or state["ghost"]))
+        p = harness.plan(reading, text) if reading else None
+        sp.set_attribute("model", harness.MODEL)
+        sp.set_attribute("ms", round(ms))
+        sp.set_attribute("model_said", raw.model_dump_json(exclude_none=True) if raw else "no answer")
+        sp.set_attribute("kept", reading.mode if reading else "nothing (guardrails or no answer)")
+        sp.set_attribute("plan", p.say if p else "")
     if not p:
         return {"action": "none", "label": "", "text": text,
                 "why": "the model was unsure or off; the rules handle it" if raw else "no model answer"}
@@ -614,7 +628,8 @@ async def read_line(text: str):
 @app.get("/stats")
 async def get_stats():
     """The ⌘K analytics panel: version, models loaded, memory and CPU (Mac, app, server), model latency."""
-    return await asyncio.to_thread(stats.collect, conn(), release_info().get("version", "dev"), str(RELEASE_FILE.parent))
+    out = await asyncio.to_thread(stats.collect, conn(), release_info().get("version", "dev"), str(RELEASE_FILE.parent))
+    return {**out, "last": {k: v for k, v in _last.items() if k != "t0"}}
 
 
 @app.post("/harness/warm")
@@ -627,6 +642,7 @@ async def _apply_reading(text: str, reading: harness.Reading, ms: float, source:
     """Do what the model read, through the same code the keys use. The reading itself is kept as a
     prediction (never a claim), so his later corrections can be measured against it."""
     p = harness.plan(reading, text)
+    otel.get_current_span().set_attribute("applied", p.say)
     db.append(conn(), kind="prediction", type="line.read", source=harness.MODEL, start=db.utcnow(),
               label=text, data={"reading": reading.model_dump(exclude_none=True), "ms": round(ms),
                                 "model": harness.MODEL})
@@ -645,6 +661,7 @@ async def _apply_reading(text: str, reading: harness.Reading, ms: float, source:
         except HTTPException as e:   # e.g. "already on a break": skip that part, keep the rest (Oct 16 "log failed")
             if e.status_code != 409:
                 raise
+            otel.get_current_span().add_event("skipped", {"command": c.say, "why": str(e.detail)})
     return {"action": "read", "did": p.say, **(out or timeline.now_state(conn()))}
 
 
@@ -691,12 +708,32 @@ async def _run(cmd: intents.Command, source: str) -> dict:
     return {"action": "command", "did": cmd.say, **timeline.now_state(conn())}
 
 
+# The last line he sent and how long it took, end to end (⏎ → the pill's new look): the ⌘K panel shows it.
+_last: dict = {}
+
+
 @app.post("/log", status_code=201)
 async def log_line(body: Line):
-    """One line in, the right thing out: a command ("smoke break", "deep focus") does it; a time
-    in the text logs a past block; anything else starts a timer, turning on any substance it
-    mentions ("working on daylog, little high"). The same endpoint the bar, phone or an agent uses."""
+    """One line in, the right thing out (see _log_line). Each line is one trace: what read it, what it decided,
+    what got done, how long each step took (`uv run python -m daylog.why`)."""
+    t0 = time.monotonic()
+    with telemetry.tracer.start_as_current_span("line") as sp:
+        sp.set_attribute("line", body.text)
+        sp.set_attribute("read_first", body.read)
+        out = await _log_line(body)
+        sp.set_attribute("did", str(out.get("did") or out.get("action") or ""))
+    _last.clear()
+    _last.update(line=body.text, did=str(out.get("did") or out.get("action") or ""), t0=t0,
+                 log_ms=round((time.monotonic() - t0) * 1000))
+    return out
+
+
+async def _log_line(body: Line):
+    """A command ("smoke break", "deep focus") does it; a time in the text logs a past block; the model's
+    reading does what it read; anything else starts a timer, turning on any substance it mentions."""
+    span = otel.get_current_span()
     if not body.timer and (title := _extended_title(body.text)):
+        span.set_attribute("decided_by", "rule: and…")
         await _rename_running(title, body.source)
         return {"action": "command", "did": f"rename: {title}", **timeline.now_state(conn())}
     if body.read and not body.timer and body.text.strip() not in _readings:
@@ -706,7 +743,9 @@ async def log_line(body: Line):
             pass
     hit = None if body.timer else _readings.pop(body.text.strip(), None)
     if hit:
+        span.set_attribute("decided_by", "model")
         return await _apply_reading(body.text.strip(), hit[1], hit[2], body.source)
+    span.set_attribute("decided_by", "rules" + (" (the model didn't answer in time)" if body.read else ""))
     cmds = None if body.timer else intents.commands(body.text)
     if cmds:
         out: dict = {}

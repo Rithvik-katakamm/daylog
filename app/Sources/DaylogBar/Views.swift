@@ -558,6 +558,17 @@ struct BarView: View {
                     statRow("Mac", String(format: "%.0f%%", s.mac.cpu))
                     statRow("app · server", String(format: "%.1f%% · %.1f%%", s.app?.cpu ?? 0, s.server?.cpu ?? 0))
                 }
+                if let l = s.last, let line = l.line {
+                    statGroup("LAST STATUS") {
+                        Text("“\(line)”").font(.system(size: fs(11.5))).foregroundStyle(Theme.text).lineLimit(1).truncationMode(.tail)
+                        if let did = l.did, !did.isEmpty {
+                            Text("→ \(did)").font(.system(size: fs(10.5))).foregroundStyle(Theme.muted).lineLimit(1)
+                        }
+                        statRow("⏎ → pill", l.totalMs.map { String(format: "%.1f s", $0 / 1000) } ?? "deciding…")
+                        statRow("done · look", String(format: "%.1f s · %@", (l.logMs ?? 0) / 1000,
+                                                      l.lookMs.map { String(format: "%.1f s", $0 / 1000) } ?? "–"))
+                    }
+                }
                 statGroup("MODEL SPEED · 24 H") {
                     ForEach(["line reader", "display agent"], id: \.self) { job in
                         let l = s.latency[job]

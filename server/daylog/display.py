@@ -24,7 +24,7 @@ from pydantic_ai.models.instrumented import InstrumentationSettings
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.ollama import OllamaProvider
 
-from . import harness
+from . import harness, telemetry
 
 os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
 
@@ -32,7 +32,6 @@ os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
 # one (qwen3.5:9b read notes best) evicts the first, and every line then waits for a cold load (Oct 16).
 MODEL = harness.MODEL
 TIMEOUT_S = 12.0               # knob: give up after this; the pill keeps its plain colors
-TRACES = Path(os.environ.get("DAYLOG_TRACES", Path.home() / "Library/Logs/daylog/traces.jsonl"))
 
 
 class Display(BaseModel):
@@ -88,25 +87,6 @@ def key(state: dict) -> str:
                        notes[-1]["id"] if notes else None])   # a new note = a new look
 
 
-class _FileExporter:
-    """OpenTelemetry spans as JSON lines in a local file (raw logs stay local). Langfuse or any
-    OpenTelemetry backend can read the same spans later; nothing leaves the Mac."""
-
-    def export(self, spans):
-        from opentelemetry.sdk.trace.export import SpanExportResult
-        TRACES.parent.mkdir(parents=True, exist_ok=True)
-        with TRACES.open("a") as f:
-            for s in spans:
-                f.write(s.to_json(indent=None) + "\n")
-        return SpanExportResult.SUCCESS
-
-    def shutdown(self):
-        pass
-
-    def force_flush(self, timeout_millis: int = 0) -> bool:
-        return True
-
-
 _agent: Agent | None = None
 _IDLE_WORDS = {"idle", "empty", "nothing", "none", "blank", "rest", "void", "waiting"}
 
@@ -114,10 +94,6 @@ _IDLE_WORDS = {"idle", "empty", "nothing", "none", "blank", "rest", "void", "wai
 def _get_agent() -> Agent:
     global _agent
     if _agent is None:
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-        provider = TracerProvider()
-        provider.add_span_processor(SimpleSpanProcessor(_FileExporter()))
         model = OpenAIChatModel(MODEL, provider=OllamaProvider(base_url=f"{harness.OLLAMA}/v1"))
         # reasoning_effort none: qwen3.5 thinks at length by default, which ran past the timeout every time.
         _agent = Agent(model, output_type=NativeOutput(Display), instructions=INSTRUCTIONS, retries=1,
@@ -132,7 +108,7 @@ def _get_agent() -> Agent:
                 raise ModelRetry(f'"{out.word}" says nothing is happening, but something is running. '
                                  "Pick a word for what it is.")
             return out
-        Agent.instrument_all(InstrumentationSettings(tracer_provider=provider))
+        Agent.instrument_all(InstrumentationSettings(tracer_provider=telemetry.PROVIDER))  # nests in the look's trace
     return _agent
 
 

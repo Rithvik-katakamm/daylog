@@ -124,3 +124,13 @@ def test_stats_reports_the_mac_the_models_and_latency(client, monkeypatch):
     assert s["server"]["ram_mb"] > 0
     assert s["models"][0]["gb"] == 4.7 and s["jobs"]["display agent"]
     assert s["latency"]["line reader"] == {"count": 0}
+
+
+def test_a_line_leaves_one_readable_trace(client, monkeypatch):
+    from daylog import harness, why
+    from daylog.harness import Reading as LineReading
+    monkeypatch.setattr(harness, "read_line", lambda text, **kw: (LineReading(why="a task", mode="task", task="Day Log"), 900.0))
+    client.post("/log", json={"text": "building day log", "read": True})
+    text = why.render(3)
+    assert "⏎ line" in text and "line reader" in text and "decided_by: model" in text and "applied" not in text.split("decided_by")[0]
+    assert client.get("/stats").json()["last"]["line"] == "building day log"
