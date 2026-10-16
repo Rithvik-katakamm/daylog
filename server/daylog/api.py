@@ -28,7 +28,7 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from . import autolabel, db, display, harness, intents, parse, timeline, wispr
+from . import autolabel, db, display, harness, intents, parse, stats, timeline, wispr
 
 log = logging.getLogger("daylog")
 
@@ -275,9 +275,20 @@ async def _decide_look(k: str, state: dict, again: bool = False) -> None:
         _deciding.discard(k)
 
 
+def _recent_notes(state: dict, limit: int = 3) -> list[dict]:
+    """His notes since the current status began (at most the last 3, within 3 hours): the display
+    agent rethinks the look when he writes one."""
+    cur = state.get("timer") or state.get("ghost") or state.get("on_break")
+    now = db.utcnow()
+    since = max(db.parse(cur["start"]), now - timedelta(hours=3)) if cur else now - timedelta(hours=1)
+    rows = db.query(conn(), types=["note"], since=since, until=now + timedelta(seconds=1))
+    return [{"id": r["id"], "text": r["label"]} for r in rows[-limit:]]
+
+
 def _with_look(state: dict) -> dict:
     """The status plus how it should look: the agent's choice ("thinking" while it first decides). When the
     agent's own recheck time has passed, it looks again in the background, with the time of day."""
+    state = {**state, "notes": _recent_notes(state)}
     k = display.key(state)
     look = _looks.get(k)
     if look is None or time.monotonic() - look["_at"] > look["recheck_minutes"] * 60:
@@ -594,6 +605,12 @@ async def read_line(text: str):
     _readings[text] = (now, reading, ms)
     return {"action": "command", "label": p.say, "text": text, "by": harness.MODEL, "ms": round(ms),
             "why": reading.why}
+
+
+@app.get("/stats")
+async def get_stats():
+    """The ⌘K analytics panel: version, models loaded, memory and CPU (Mac, app, server), model latency."""
+    return await asyncio.to_thread(stats.collect, conn(), release_info().get("version", "dev"), str(RELEASE_FILE.parent))
 
 
 @app.post("/harness/warm")

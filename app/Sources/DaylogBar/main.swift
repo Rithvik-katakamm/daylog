@@ -41,7 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// A transparent stage; SwiftUI draws the capsules inside it. It only grows tall while
     /// the command menu is open, so it never sits over the screen when it doesn't need to.
     static let windowSize = NSSize(width: 620, height: 170)
-    static let menuWindowSize = NSSize(width: 620, height: 470)
+    static let menuWindowSize = NSSize(width: 1130, height: 470)  // menu centered, analytics panel to its right
     private var modeWatch: AnyCancellable?
     private var restWatch: AnyCancellable?
 

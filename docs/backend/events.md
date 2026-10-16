@@ -42,6 +42,7 @@ Everything Day Log knows is a row in one SQLite table, `events`. Code: `server/d
 | POST | `/timer/start`, `/timer/stop` | Start (auto-stops the old timer, ends ghost) / stop |
 | POST | `/log` | One line in: logs a past block if it has a time, else starts a timer |
 | GET | `/parse` | What `/log` would do (live preview, no write) |
+| GET | `/stats` | The ⌘K analytics panel: version, models loaded (from Ollama), memory + CPU (psutil: Mac, app, server), model speed from the predictions' `ms` |
 | GET | `/read` | The local model's reading of a line (~1 s; see `harness.md`). `/log` uses it for that exact line within 5 min |
 | POST | `/entries` | Log a past block (`minutes` or `start`+`end`) |
 | POST | `/entries/{id}/amend` | Rename or move start/end |

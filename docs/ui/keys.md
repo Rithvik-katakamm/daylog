@@ -71,6 +71,10 @@ Text editing in the typing line works as anywhere on a Mac: **⌘V** paste (also
 into the bar), **⌘X**, **⌘A**, **⌘Z** / **⌘⇧Z**. **⌘C** copies when text is selected; with nothing selected it's caffeinated. Clicking outside closes the bar but keeps
 what you typed: it's back the next time you open it. The line stays one line (scrolls sideways).
 
+**⌘K also opens a live analytics panel** beside the menu (refreshes every 2 s while open): version,
+models loaded and which job uses them, memory (Mac, models, app, server), CPU, and model speed over 24 h.
+It reads `GET /stats` (`server/daylog/stats.py`).
+
 Menu-only (⌘K): **Always on: center pill / side ring / pill + ring / off**: what stays on
 screen while the bar is closed.
 

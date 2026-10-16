@@ -92,3 +92,35 @@ def test_the_agent_looks_again_on_its_own_schedule(client, monkeypatch):
             break
         time.sleep(0.02)
     assert d["word"] == "Winding" and d["again"] is True
+
+
+def test_a_new_note_makes_the_agent_rethink(client, monkeypatch):
+    seen = []
+
+    async def decide(state):
+        seen.append(display.describe(state))
+        return Display(why="x", word="Fried" if state.get("notes") else "Coding", color="#123456"), 5.0
+    monkeypatch.setattr(display, "decide", decide)
+    client.post("/log", json={"text": "daylog backend"})
+
+    def settle(word):
+        for _ in range(50):
+            d = client.get("/now").json()["display"]
+            if d.get("word") == word:
+                return d
+            time.sleep(0.02)
+        return d
+    assert settle("Coding")["word"] == "Coding"
+    client.post("/notes", json={"text": "fried, need a break"})
+    assert settle("Fried")["word"] == "Fried"
+    assert seen[-1].startswith('He just wrote: "fried, need a break"')
+
+
+def test_stats_reports_the_mac_the_models_and_latency(client, monkeypatch):
+    from daylog import stats
+    monkeypatch.setattr(stats, "_models", lambda: [{"name": "qwen2.5-coder:7b", "gb": 4.7, "jobs": ["line reader"], "until": None}])
+    s = client.get("/stats").json()
+    assert s["mac"]["ram_total_gb"] > 0 and 0 <= s["mac"]["ram_used_pct"] <= 100
+    assert s["server"]["ram_mb"] > 0
+    assert s["models"][0]["gb"] == 4.7 and s["jobs"]["display agent"]
+    assert s["latency"]["line reader"] == {"count": 0}

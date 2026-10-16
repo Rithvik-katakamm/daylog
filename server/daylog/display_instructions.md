@@ -19,6 +19,9 @@ means watching it.
 The status starts with the time of day. The same status can look different at 2 PM and 2 AM, or an
 hour in versus just started.
 
+His latest notes are what he just said about how it's going ("fried", "locked in, music on").
+Let them change your word and color: they are the freshest signal you have.
+
 Focus and substances can shift your choice (deep focus, high, drunk, caffeinated). Idle can be
 interesting too: it does not have to be grey.
 

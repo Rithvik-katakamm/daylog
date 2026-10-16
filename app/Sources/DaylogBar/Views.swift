@@ -45,6 +45,7 @@ enum Theme {
 
     static let open = Animation.spring(response: 0.32, dampingFraction: 0.8)
     static let barSize = CGSize(width: 560, height: 50)
+    static let statsWidth: CGFloat = 270  // the ⌘K analytics panel
     static let ear: CGFloat = 100  // width of each side of the closed pill, beside the notch
     /// Monitor (no notch) closed pill: one compact island, status centered (knobs, docs/ui/design-notes.md).
     static let monitorPill = CGSize(width: 280, height: 30)
@@ -71,7 +72,14 @@ struct BarView: View {
         VStack(spacing: 6) {
             bar
             Group {
-                if store.mode == .menu { menuList } else { hintChip }
+                if store.mode == .menu {
+                    // Menu stays centered under the notch; the analytics panel sits to its right.
+                    HStack(alignment: .top, spacing: 12) {
+                        Color.clear.frame(width: Theme.statsWidth)
+                        menuList
+                        statsPanel.frame(width: Theme.statsWidth)
+                    }
+                } else { hintChip }
             }
             .opacity(store.isOpen ? 1 : 0)
             .offset(y: store.isOpen ? 0 : -10)
@@ -80,7 +88,7 @@ struct BarView: View {
             if store.env == .dev { devTag }
             Spacer(minLength: 0)
         }
-        .frame(width: AppDelegate.windowSize.width,
+        .frame(width: store.mode == .menu ? AppDelegate.menuWindowSize.width : AppDelegate.windowSize.width,
                height: store.mode == .menu ? AppDelegate.menuWindowSize.height : AppDelegate.windowSize.height,
                alignment: .top)
         .environment(\.colorScheme, .dark)
@@ -520,6 +528,75 @@ struct BarView: View {
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.edge, lineWidth: 1))
         .shadow(color: .black.opacity(0.4), radius: 18, y: 6)
         .animation(.easeOut(duration: 0.1), value: store.menuIndex)
+    }
+
+    // MARK: ⌘K analytics: what Day Log costs the Mac, live
+
+    private var statsPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("LIVE").font(.system(size: fs(9), weight: .bold)).tracking(1.2).foregroundStyle(Theme.thinking)
+                Spacer()
+                Text(store.stats.map { "\($0.version) · \(($0.code as NSString).lastPathComponent)" } ?? "…")
+                    .font(.system(size: fs(10.5), weight: .medium).monospacedDigit()).foregroundStyle(Theme.muted)
+            }
+            if let s = store.stats {
+                statGroup("MODELS") {
+                    if s.models.isEmpty { statRow("none loaded", "cold") }
+                    ForEach(s.models, id: \.name) { m in
+                        statRow(m.name, String(format: "%.1f GB", m.gb))
+                        if !m.jobs.isEmpty { Text(m.jobs.joined(separator: " · ")).font(.system(size: fs(10.5))).foregroundStyle(Theme.muted) }
+                    }
+                }
+                statGroup("MEMORY") {
+                    meter(s.mac.ramUsedPct / 100)
+                    statRow("Mac", String(format: "%.1f / %.0f GB", s.mac.ramUsedGb, s.mac.ramTotalGb))
+                    statRow("model(s)", String(format: "%.1f GB", s.models.reduce(0) { $0 + $1.gb }))
+                    statRow("app · server", "\(Int(s.app?.ramMb ?? 0)) MB · \(Int(s.server?.ramMb ?? 0)) MB")
+                }
+                statGroup("CPU") {
+                    statRow("Mac", String(format: "%.0f%%", s.mac.cpu))
+                    statRow("app · server", String(format: "%.1f%% · %.1f%%", s.app?.cpu ?? 0, s.server?.cpu ?? 0))
+                }
+                statGroup("MODEL SPEED · 24 H") {
+                    ForEach(["line reader", "display agent"], id: \.self) { job in
+                        let l = s.latency[job]
+                        statRow(job, l.flatMap { $0.p50 == nil ? nil : String(format: "%.1f s · p95 %.1f s · %d", ($0.p50 ?? 0) / 1000, ($0.p95 ?? 0) / 1000, $0.count) } ?? "no calls")
+                    }
+                }
+            } else {
+                Text("reading the Mac…").font(.system(size: fs(12))).foregroundStyle(Theme.muted)
+            }
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.chrome))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.edge, lineWidth: 1))
+        .shadow(color: .black.opacity(0.4), radius: 18, y: 6)
+    }
+
+    private func statGroup<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.system(size: fs(9), weight: .bold)).tracking(1.2).foregroundStyle(Theme.muted)
+            content()
+        }
+    }
+
+    private func statRow(_ label: String, _ value: String) -> some View {
+        HStack(spacing: 6) {
+            Text(label).font(.system(size: fs(12))).foregroundStyle(Theme.text).lineLimit(1)
+            Spacer(minLength: 4)
+            Text(value).font(.system(size: fs(11.5), weight: .medium).monospacedDigit()).foregroundStyle(Theme.text).lineLimit(1)
+        }
+    }
+
+    private func meter(_ f: Double) -> some View {
+        GeometryReader { g in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.white.opacity(0.08))
+                Capsule().fill(f > 0.85 ? Theme.focusHeat[3] : f > 0.7 ? Theme.focusHeat[2] : Theme.thinking)
+                    .frame(width: g.size.width * min(max(f, 0), 1))
+            }
+        }.frame(height: 5)
     }
 
     // MARK: the floating chip above the bar

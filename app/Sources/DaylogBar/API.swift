@@ -99,6 +99,22 @@ struct NowState: Decodable {
     var display: DisplayInfo? = nil
 }
 
+/// The ⌘K analytics panel (GET /stats): what Day Log costs the Mac and how its models are doing.
+struct StatsInfo: Decodable, Equatable {
+    struct Mac: Decodable, Equatable { let ramTotalGb: Double; let ramUsedGb: Double; let ramUsedPct: Double; let cpu: Double }
+    struct Usage: Decodable, Equatable { let ramMb: Double; let cpu: Double }
+    struct Model: Decodable, Equatable { let name: String; let gb: Double; let jobs: [String] }
+    struct Latency: Decodable, Equatable { let count: Int; var p50: Double? = nil; var p95: Double? = nil }
+    let version: String
+    let code: String
+    let mac: Mac
+    let app: Usage?
+    let server: Usage?
+    let models: [Model]
+    let jobs: [String: String]
+    let latency: [String: Latency]
+}
+
 /// How the pill looks right now, chosen by the display agent (server/daylog/display.py): one word and a
 /// color, or "thinking" while it decides. No rules pick these; the theme colors are only the fallback.
 struct DisplayInfo: Decodable, Equatable {

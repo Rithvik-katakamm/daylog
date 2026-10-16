@@ -70,14 +70,20 @@ def describe(state: dict) -> str:
     states = [s["state"] for s in state.get("states") or []]
     if states:
         parts.append("also " + " and ".join(states))
+    notes = [n["text"] for n in state.get("notes") or []]
+    if notes:   # his own words come first: a small model weighs the start of the message most
+        said = " / ".join(f'"{t}"' for t in notes)
+        return f"He just wrote: {said}. That's how it's going right now. Status: " + ", ".join(parts)
     return ", ".join(parts)
 
 
 def key(state: dict) -> str:
     """What makes a status 'the same' (time passing doesn't): decide once per status."""
     t, g, b = state.get("timer") or {}, state.get("ghost") or {}, state.get("on_break") or {}
+    notes = state.get("notes") or []
     return json.dumps([t.get("id"), t.get("label"), t.get("focus"), g.get("id"), g.get("status"),
-                       b.get("id"), sorted(s["state"] for s in state.get("states") or [])])
+                       b.get("id"), sorted(s["state"] for s in state.get("states") or []),
+                       notes[-1]["id"] if notes else None])   # a new note = a new look
 
 
 class _FileExporter:

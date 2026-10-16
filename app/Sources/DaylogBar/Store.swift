@@ -122,7 +122,10 @@ final class Store: ObservableObject {
     @Published var editTarget: EditTarget?
     @Published var editEnd = Date()
     @Published var mode: Mode = .input {
-        didSet { if Flavor.isDev, mode != oldValue { debugTrace("mode \(oldValue)->\(mode)") } }
+        didSet {
+            if Flavor.isDev, mode != oldValue { debugTrace("mode \(oldValue)->\(mode)") }
+            if mode == .menu, oldValue != .menu { watchStats() } else if mode != .menu { statsTask?.cancel() }
+        }
     }
     @Published var history: [HistoryItem] = []
     @Published var index = 0
@@ -138,7 +141,19 @@ final class Store: ObservableObject {
     @Published var isReading = false      // the model is reading the line (shown as "reading…")
     @Published var thinking = false
     var draft: String?   // unsent text kept when a click outside closed the bar
-    @Published var display: DisplayInfo?  // the display agent's word + color for the current status       // ⏎ pressed, the bar closed, the model still deciding: the pill says so
+    @Published var display: DisplayInfo?  // the display agent's word + color for the current status
+    @Published var stats: StatsInfo?      // the ⌘K analytics panel, refreshed every 2 s while the menu is open
+    private var statsTask: Task<Void, Never>?
+
+    private func watchStats() {
+        statsTask?.cancel()
+        statsTask = Task { [weak self] in
+            while !Task.isCancelled {
+                if let s: StatsInfo = try? await API.get("stats") { self?.stats = s }
+                try? await Task.sleep(for: .seconds(2))
+            }
+        }
+    }       // ⏎ pressed, the bar closed, the model still deciding: the pill says so
     private var waitingToSubmit = false   // ⏎ was pressed while it read; submit when it's done
     private var readDone = true           // the model has answered (or given up) for the current line
     var onSubmitted: (() -> Void)?  // the window closes itself after a submit
