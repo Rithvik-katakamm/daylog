@@ -246,3 +246,16 @@ def test_typed_tasks_have_no_word(client):
 
 def test_instructions_come_from_the_file():
     assert harness.SYSTEM.startswith("You read one line") and "<!--" not in harness.SYSTEM
+
+
+def test_log_with_read_asks_the_model_itself(client, monkeypatch):
+    # ⏎ before the bar had the reading: /log reads the line, then does it.
+    model_reads(monkeypatch, Reading(mode="task", task="Cleaning up Claude config", word="Cleanup"))
+    now = client.post("/log", json={"text": "cleaning up caude config", "read": True}).json()
+    assert now["timer"]["label"] == "Cleaning up Claude config" and now["timer"]["word"] == "Cleanup"
+
+
+def test_log_with_read_and_no_model_uses_the_rules(client, monkeypatch):
+    model_reads(monkeypatch, None)
+    now = client.post("/log", json={"text": "working on daylog", "read": True}).json()
+    assert now["timer"]["label"] == "working on daylog"

@@ -489,28 +489,23 @@ final class Store: ObservableObject {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !waitingToSubmit else { return }
         // ⏎ while the model is still reading this line: wait for its reading, then submit with it.
-        if !forceTimer, !readDone, let t = readTask {
+        // ⏎ before the model's reading arrived: the bar goes back to work at once and the pill says
+        // "thinking" while the server reads the line itself (at most ~4 s, then the rules) and does it.
+        if !forceTimer, !readDone {
+            readTask?.cancel(); readDone = true
             waitingToSubmit = true
             thinking = true
-            onSubmitted?()   // back to work at once; the pill shows "thinking" until it decides
+            input = ""; preview = nil
+            onSubmitted?()
             Task {
-                // At most 3 s: then the rules, so a stuck model never holds the bar.
-                await withTaskGroup(of: Void.self) { g in
-                    g.addTask { await t.value }
-                    g.addTask { try? await Task.sleep(for: .seconds(3)) }
-                    await g.next(); g.cancelAll()
-                }
+                do { try await API.post("log", ["text": text, "read": true, "source": "button"], slow: true) }
+                catch { self.error = error.localizedDescription }
+                await refreshAll()
                 waitingToSubmit = false
-                submit(forceTimer: false, afterRead: true)
+                thinking = false
             }
             return
         }
-        submitNow(text: text, forceTimer: forceTimer)
-    }
-
-    private func submit(forceTimer: Bool, afterRead: Bool) {
-        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
         submitNow(text: text, forceTimer: forceTimer)
     }
 

@@ -52,11 +52,16 @@ enum API {
     }
 
     @discardableResult
-    static func post(_ path: String, _ body: [String: Any] = [:], env: Env? = nil) async throws -> Data {
+    static func post(_ path: String, _ body: [String: Any] = [:], env: Env? = nil, slow: Bool = false) async throws -> Data {
         var req = URLRequest(url: base(env).appendingPathComponent(path))
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        if slow {   // the server may wait for the model first
+            let (data, resp) = try await slowSession.data(for: req)
+            guard (resp as? HTTPURLResponse)?.statusCode ?? 500 < 300 else { throw Failure(status: 500, message: "log failed") }
+            return data
+        }
         return try await raw(req)
     }
 

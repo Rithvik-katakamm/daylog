@@ -98,6 +98,7 @@ class Entry(BaseModel):
 class Line(BaseModel):
     text: str = Field(min_length=1, max_length=500)
     timer: bool = False  # force a timer even if the text contains a time
+    read: bool = False   # ⏎ before the bar had the model's reading: read it here first (the pill says "thinking")
     source: str = "api"
 
 
@@ -492,6 +493,7 @@ async def parse_line(text: str):
 # What the model read for lines typed in the last few minutes, so ⏎ uses the reading the bar showed
 # without waiting for the model again. Keyed by the exact line.
 READ_KEEP_S = 300
+READ_WAIT_S = 4.0   # knob: how long /log waits for the model when the bar sends read=True
 _readings: dict[str, tuple[float, harness.Reading, float]] = {}
 
 # "and brain global config" / "also X" while a task runs: same session, the title grows. A rule, so it's
@@ -632,6 +634,11 @@ async def log_line(body: Line):
     if not body.timer and (title := _extended_title(body.text)):
         await _rename_running(title, body.source)
         return {"action": "command", "did": f"rename: {title}", **timeline.now_state(conn())}
+    if body.read and not body.timer and body.text.strip() not in _readings:
+        try:   # at most READ_WAIT_S: then the rules, so a stuck model never holds the line
+            await asyncio.wait_for(read_line(body.text), timeout=READ_WAIT_S)
+        except asyncio.TimeoutError:
+            pass
     hit = None if body.timer else _readings.pop(body.text.strip(), None)
     if hit:
         return await _apply_reading(body.text.strip(), hit[1], hit[2], body.source)
