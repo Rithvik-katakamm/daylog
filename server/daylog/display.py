@@ -28,8 +28,10 @@ from . import harness
 
 os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
 
-MODEL = harness.MODEL          # knob: the same local model as the line reader (already warm)
-TIMEOUT_S = 8.0                # knob: give up after this; the pill keeps its plain colors
+# knob: the same model as the line reader. On 16 GB only one 7-9B model fits in GPU memory at a time: a second
+# one (qwen3.5:9b read notes best) evicts the first, and every line then waits for a cold load (Oct 16).
+MODEL = harness.MODEL
+TIMEOUT_S = 12.0               # knob: give up after this; the pill keeps its plain colors
 TRACES = Path(os.environ.get("DAYLOG_TRACES", Path.home() / "Library/Logs/daylog/traces.jsonl"))
 
 
@@ -117,8 +119,10 @@ def _get_agent() -> Agent:
         provider = TracerProvider()
         provider.add_span_processor(SimpleSpanProcessor(_FileExporter()))
         model = OpenAIChatModel(MODEL, provider=OllamaProvider(base_url=f"{harness.OLLAMA}/v1"))
+        # reasoning_effort none: qwen3.5 thinks at length by default, which ran past the timeout every time.
         _agent = Agent(model, output_type=NativeOutput(Display), instructions=INSTRUCTIONS, retries=1,
-                       name="display", deps_type=bool)
+                       name="display", deps_type=bool,
+                       model_settings={"extra_body": {"reasoning_effort": "none", "keep_alive": "30m"}})
 
         @_agent.output_validator
         def _alive(ctx: RunContext[bool], out: Display) -> Display:

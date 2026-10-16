@@ -616,7 +616,7 @@ async def get_stats():
 @app.post("/harness/warm")
 async def harness_warm():
     """The bar just opened, so he's about to type: load the model now so his first line isn't cold."""
-    return {"warm": await asyncio.to_thread(harness.warm)}
+    return {"warm": await asyncio.to_thread(harness.warm, harness.MODEL, display.MODEL)}
 
 
 async def _apply_reading(text: str, reading: harness.Reading, ms: float, source: str) -> dict:

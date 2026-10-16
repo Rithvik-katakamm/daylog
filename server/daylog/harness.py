@@ -120,11 +120,12 @@ def read_line(line: str, examples: Sequence[tuple[str, str, Reading]] = (), mode
     return reading, (time.perf_counter() - started) * 1000
 
 
-def warm(model: str = MODEL) -> bool:
-    """Load the model into memory now (it takes seconds cold) and keep it there 30 min. No prompt."""
+def warm(*models: str) -> bool:
+    """Load the models into memory now (each takes seconds cold) and keep them 30 min. No prompt."""
     try:
         with httpx.Client(base_url=OLLAMA, timeout=60) as c:
-            c.post("/api/generate", json={"model": model, "keep_alive": "30m"}).raise_for_status()
+            for m in models or (MODEL,):
+                c.post("/api/generate", json={"model": m, "keep_alive": "30m"}).raise_for_status()
         return True
     except httpx.HTTPError:
         return False
