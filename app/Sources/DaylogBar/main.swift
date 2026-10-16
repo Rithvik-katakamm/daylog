@@ -46,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var restWatch: AnyCancellable?
 
     func applicationDidFinishLaunching(_ note: Notification) {
+        NSApp.mainMenu = Self.editMenu()
         makePanel()
         makeRingPanel()
         restWatch = store.$restStyle.removeDuplicates().sink { [weak self] _ in
@@ -77,6 +78,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Self.watchForCD()
         }
         store.startPolling()
+    }
+
+    /// No menu bar ever shows (accessory app), but macOS routes ⌘V / ⌘X / ⌘A / ⌘Z to the text field through
+    /// the main menu's Edit items. Without them paste did nothing, and Wispr Flow (which pastes) couldn't
+    /// type into the bar (Oct 16). ⌘C stays caffeinated: the bar's key monitor sees it first.
+    static func editMenu() -> NSMenu {
+        let main = NSMenu(), holder = NSMenuItem(), edit = NSMenu(title: "Edit")
+        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        let redo = edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
+        redo.keyEquivalentModifierMask = [.command, .shift]
+        edit.addItem(.separator())
+        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        holder.submenu = edit
+        main.addItem(holder)
+        return main
     }
 
     // MARK: CD on unlock
