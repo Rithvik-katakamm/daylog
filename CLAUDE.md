@@ -94,5 +94,4 @@ If you're running in a cloud VM (Linux, no `/Users/rithvik`), you're a cloud ses
 
 `main` is what he runs; the current stable is the latest `v*` tag. The problem framing is RIT-116: every Mac
 minute gets the right label with zero input, scored against what he typed. The agreed order is on RIT-128, the
-model path on RIT-118. Build-first week from Oct 12 (no system/meta work unless he asks):
-`~/workspace/brain/records/plans/2026-10-12-founder-pattern-plan.md`.
+model path on RIT-118. Build-first week from Oct 12 (no system/meta work unless he asks).
