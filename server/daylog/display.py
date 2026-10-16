@@ -98,8 +98,10 @@ def knob(name: str, default):
         return default
 
 
-async def _coin_word(state: dict, why: str, model: str) -> tuple[str | None, float]:
+async def _coin_word(state: dict, model: str) -> tuple[str | None, float]:
     """The word model's one job (his experiment, Oct 16): coin the pill's word, playfully, like "WorkTrix".
+    It sees the raw status and his own words, never the look model's reading (his design, Oct 16: "both
+    models see raw input, but the things they do are different"), so one model's framing can't steer the other.
     A second model can't sit in memory beside the first on 16 GB, so this swaps it in (slower)."""
     import httpx
     started = time.perf_counter()
@@ -108,7 +110,7 @@ async def _coin_word(state: dict, why: str, model: str) -> tuple[str | None, flo
             "format": {"type": "object", "properties": {"word": {"type": "string", "pattern": "^[A-Za-z]{1,12}$"}},
                        "required": ["word"]},
             "messages": [{"role": "system", "content": WORD_INSTRUCTIONS},
-                         {"role": "user", "content": f"Status: {describe(state)}\nWhat it means: {why}"}]}
+                         {"role": "user", "content": f"Status: {describe(state)}"}]}
     try:
         async with httpx.AsyncClient(base_url=harness.OLLAMA, timeout=TIMEOUT_S) as c:
             r = await c.post("/api/chat", json=body)
@@ -166,7 +168,7 @@ async def decide(state: dict) -> tuple[Display | None, float]:
         if word_model and word_model != MODEL:   # the experiment: another model coins the word
             from . import telemetry
             with telemetry.tracer.start_as_current_span("word") as sp:
-                word, wms = await _coin_word(state, choice.why, word_model)
+                word, wms = await _coin_word(state, word_model)
                 sp.set_attribute("model", word_model)
                 sp.set_attribute("coined", word or f"nothing; kept {choice.word}")
             if word and (idle or word.lower() not in _IDLE_WORDS):

@@ -33,6 +33,12 @@ idle → "Empty" #39FF14.
 typed lines and notes, newest last, put first in the message). A creative word for what he's doing now,
 never "Working", and his latest words outweigh the task's old title.
 
+**Two models, same raw input, different jobs (his design, Oct 16):** gemma decides the color, reason and
+recheck; the word model (`word_model` knob) coins the word. Both read the raw status and his own words; the
+word model never sees gemma's reason, so one model's framing can't steer the other ("in an altered state"
+became "BullseyeVape" when it did). Off the clock is named as creatively as work; substances flavor the word,
+they aren't the word.
+
 ## Which model, and the 16 GB limit (Oct 16)
 
 Same model as the line reader: gemma4:12b since v0.45 (qwen2.5-coder:7b before). qwen3.5:9b read his notes' mood better ("fried" → Frying,
