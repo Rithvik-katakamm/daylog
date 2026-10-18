@@ -39,6 +39,7 @@ hand it to a few other people for feedback.
 ## Knobs: the monitor pill
 
 On a screen with no notch (external monitor) the closed pill is one compact island with the
-status and time **centered** together (Oct 12: "maybe we centre it? let's try"). Size lives in
+status **centered** (Oct 12: "maybe we centre it? let's try") and the clock in the right
+corner (Oct 18). Size lives in
 `Theme.monitorPill` (`app/Sources/DaylogBar/Views.swift`): 280 × 30 pt, scaled by text size.
 Wider shows more of a long title; taller hangs further below the menu bar.

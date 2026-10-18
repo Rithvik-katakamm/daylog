@@ -60,13 +60,6 @@ enum Theme {
 /// A font size, scaled by the user's text size (⌘= / ⌘−).
 func fs(_ size: CGFloat) -> CGFloat { (size * Theme.textScale).rounded() }
 
-extension View {
-    /// In a baseline-aligned row, a shape (no baseline of its own) centers on the capitals of 12 pt text.
-    func capCentered(_ size: CGFloat = 12) -> some View {
-        alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] + fs(size) * 0.35 }
-    }
-}
-
 struct BarView: View {
     @ObservedObject var store: Store
     @FocusState private var inputFocused: Bool
@@ -99,6 +92,7 @@ struct BarView: View {
                height: store.mode == .menu ? AppDelegate.menuWindowSize.height : AppDelegate.windowSize.height,
                alignment: .top)
         .environment(\.colorScheme, .dark)
+        .fontDesign(.monospaced)
         .onChange(of: store.focusRequest) { inputFocused = true }
         .onChange(of: store.isOpen) { liquid(store.isOpen) }
         // Each mode swaps in a new field; give it the keyboard straight away.
@@ -214,6 +208,7 @@ struct BarView: View {
             HStack(spacing: 10) {
                 leadingChip
                 field(prompt)
+                ClockRing(start: activeStart, color: Theme.statusColor(store), size: fs(24))  // "hide the time" is only for the closed view
             }
             .opacity(store.mode == .browse ? 0 : 1)
             .allowsHitTesting(store.mode != .browse)
@@ -230,89 +225,59 @@ struct BarView: View {
 
     private var monitorRow: some View {
         let color = Theme.statusColor(store)
-        let start = store.onBreak?.start ?? store.ghost?.start ?? store.timer?.start
-        // Centered like an island: status and time sit together in the middle; a long title
-        // truncates before the spacers squeeze the time out.
+        let clock = fs(18)
+        // Like an island: the status sits centered; the clock owns the right corner. Both sides
+        // keep room for the clock so the title stays truly centered and never runs under it.
         // Baseline-aligned: SF Symbols sit on the text's baseline as designed (Oct 17: the moon hung below it).
-        return HStack(alignment: .firstTextBaseline, spacing: 7) {
-            Spacer(minLength: 0)
-            if store.thinking || store.display?.thinking == true {  // the model is still deciding
-                Circle().fill(Theme.thinking).frame(width: 6, height: 6).shadow(color: Theme.thinking, radius: 3).capCentered()
-                ThinkingLabel()
-            } else if let b = store.onBreak {
-                Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").foregroundStyle(color)
-                Text(store.display?.word ?? (b.label + (b.resume.map { " · then \($0)" } ?? "")))
-            } else if let g = store.ghost {
-                Image(systemName: "moon.zzz.fill").foregroundStyle(color)
-                    .offset(y: -fs(2))  // the crescent dips under the baseline; offset leaves the row where it is
-                Text(store.display?.word ?? g.status)
-            } else if let t = store.timer {
-                Circle().fill(color).frame(width: 6, height: 6).shadow(color: color, radius: 2).capCentered()
-                Text(store.display?.word ?? t.word ?? Title.display(t.label)).truncationMode(.middle)
-            } else {
-                Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6).capCentered()
-                Text("nothing running").foregroundStyle(Theme.muted)
+        return ZStack {
+            HStack(alignment: .firstTextBaseline, spacing: 7) { statusLabel(color, moonOffset: fs(2), resume: true) }
+                .padding(.horizontal, clock + 12)
+            if store.restTime {
+                ClockRing(start: activeStart, color: color, size: clock)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
-            if let f = store.timer?.focus, f > 0, store.onBreak == nil, store.ghost == nil {
-                Text(String(repeating: "▲", count: f)).font(.system(size: fs(8), weight: .bold)).foregroundStyle(color)
-            }
-            if let start, store.restTime {
-                TimelineView(.periodic(from: .now, by: 30)) { ctx in
-                    Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(start))))
-                        .font(.system(size: fs(12), weight: .semibold).monospacedDigit())
-                        .foregroundStyle(color)
-                        .fixedSize()
-                }
-            }
-            Spacer(minLength: 0)
         }
         .lineLimit(1).truncationMode(.tail)
         .font(.system(size: fs(12), weight: .medium))
         .foregroundStyle(Theme.text)
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 10)
     }
 
     private func notchRow(ear: CGFloat) -> some View {
         let color = Theme.statusColor(store)
-        let start = store.onBreak?.start ?? store.ghost?.start ?? store.timer?.start
         return HStack(spacing: 0) {
-            HStack(spacing: 5) {
-                if store.thinking || store.display?.thinking == true {  // the model is still deciding
-                    Circle().fill(Theme.thinking).frame(width: 6, height: 6).shadow(color: Theme.thinking, radius: 3)
-                    ThinkingLabel()
-                } else if let b = store.onBreak {
-                    Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").foregroundStyle(color)
-                    Text(store.display?.word ?? b.label)
-                } else if let g = store.ghost {
-                    Image(systemName: "moon.zzz.fill").foregroundStyle(color)
-                    Text(store.display?.word ?? g.status)
-                } else if let t = store.timer {
-                    Circle().fill(color).frame(width: 6, height: 6).shadow(color: color, radius: 2)
-                    Text(store.display?.word ?? t.word ?? Title.display(t.label))
-                } else {
-                    Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
-                    Text("nothing running").foregroundStyle(Theme.muted)
-                }
-            }
-            .lineLimit(1).truncationMode(.tail)
-            .frame(width: ear - 12, alignment: .leading).padding(.leading, 12)
+            HStack(spacing: 5) { statusLabel(color) }
+                .lineLimit(1).truncationMode(.tail)
+                .frame(width: ear - 12, alignment: .leading).padding(.leading, 12)
             Color.clear.frame(width: store.notchWidth)
-            HStack(spacing: 4) {
-                if let f = store.timer?.focus, f > 0, store.onBreak == nil, store.ghost == nil {
-                    Text(String(repeating: "▲", count: f)).font(.system(size: fs(7), weight: .bold)).foregroundStyle(color)
-                }
-                if let start, store.restTime {
-                    TimelineView(.periodic(from: .now, by: 30)) { ctx in
-                        Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(start))))
-                            .font(.system(size: fs(11), weight: .semibold).monospacedDigit())
-                            .foregroundStyle(color)
-                    }
-                }
+            Group {
+                if store.restTime { ClockRing(start: activeStart, color: color, size: min(fs(18), store.topInset - 8)) }
             }
             .frame(width: ear - 12, alignment: .trailing).padding(.trailing, 12)
         }
         .font(.system(size: fs(11), weight: .medium))
         .foregroundStyle(Theme.text)
+    }
+
+    /// When whatever's running started: what the clock counts from.
+    private var activeStart: String? { store.onBreak?.start ?? store.ghost?.start ?? store.timer?.start }
+
+    /// What's going on, in words. No dots (Oct 18): the clock's ring carries the color.
+    @ViewBuilder private func statusLabel(_ color: Color, moonOffset: CGFloat = 0, resume: Bool = false) -> some View {
+        if store.thinking || store.display?.thinking == true {  // the model is still deciding
+            ThinkingLabel()
+        } else if let b = store.onBreak {
+            Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").foregroundStyle(color)
+            Text(store.display?.word ?? (b.label + (resume ? b.resume.map { " · then \($0)" } ?? "" : "")))
+        } else if let g = store.ghost {
+            Image(systemName: "moon.zzz.fill").foregroundStyle(color)
+                .offset(y: -moonOffset)  // the crescent dips under the baseline; offset leaves the row where it is
+            Text(store.display?.word ?? g.status)
+        } else if let t = store.timer {
+            Text(store.display?.word ?? t.word ?? Title.display(t.label)).truncationMode(.middle)
+        } else {
+            Text("nothing running").foregroundStyle(Theme.muted)
+        }
     }
 
     /// "On a walk", "On a smoke break", or a break he named: "On break: peeing".
@@ -443,10 +408,6 @@ struct BarView: View {
         HStack(spacing: 7) {
             Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").font(.system(size: fs(10)))
             Text(b.label)
-            TimelineView(.periodic(from: .now, by: 1)) { ctx in
-                Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(b.start)), withSeconds: true))
-                    .font(.system(size: fs(12), weight: .semibold).monospacedDigit())
-            }
         }
         .font(.system(size: fs(12), weight: .medium))
         .foregroundStyle(Theme.away)
@@ -458,10 +419,6 @@ struct BarView: View {
         HStack(spacing: 7) {
             Image(systemName: "moon.zzz.fill").font(.system(size: fs(10)))
             Text(g.status).lineLimit(1).truncationMode(.tail).frame(maxWidth: 170, alignment: .leading)
-            TimelineView(.periodic(from: .now, by: 30)) { ctx in
-                Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(g.start))))
-                    .font(.system(size: fs(12), weight: .semibold).monospacedDigit())
-            }
         }
         .font(.system(size: fs(12), weight: .medium))
         .foregroundStyle(Theme.ghost)
@@ -471,30 +428,13 @@ struct BarView: View {
 
     private func timerChip(_ t: TimerInfo) -> some View {
         let tint = Theme.taskColor(focus: t.focus ?? 0)
-        return HStack(spacing: 7) {
-            Circle().fill(tint).frame(width: 7, height: 7)
-                .shadow(color: tint, radius: 3)
-            Text(Title.display(t.label)).lineLimit(1).truncationMode(.middle).frame(maxWidth: 220, alignment: .leading)
-            if let f = t.focus, f > 0 {
-                Text(String(repeating: "▲", count: f))
-                    .font(.system(size: fs(9), weight: .bold))
-                    .foregroundStyle(tint)
-                    .help(Store.focusNames[f])
-            }
-            TimelineView(.periodic(from: .now, by: 1)) { ctx in
-                // H:MM reads first; the ticking seconds sit quieter beside it.
-                let full = Time.duration(ctx.date.timeIntervalSince(Time.parse(t.start)), withSeconds: true)
-                let cut = full.count > 3 ? full.index(full.endIndex, offsetBy: -3) : full.startIndex
-                (Text(full[..<cut]).foregroundStyle(tint)
-                 + Text(full[cut...]).foregroundStyle(tint.opacity(0.5)).font(.system(size: fs(10), weight: .medium).monospacedDigit()))
-                    .font(.system(size: fs(12), weight: .semibold).monospacedDigit())
-            }
-        }
-        .font(.system(size: fs(12), weight: .medium))
-        .foregroundStyle(Theme.text)
-        .padding(.horizontal, 10).frame(height: 30)
-        .background(Capsule().fill(tint.opacity(0.13)))
-        .help("Running. ⌘. stops it")
+        return Text(Title.display(t.label))
+            .lineLimit(1).truncationMode(.middle).frame(maxWidth: 220, alignment: .leading)
+            .font(.system(size: fs(12), weight: .medium))
+            .foregroundStyle(Theme.text)
+            .padding(.horizontal, 10).frame(height: 30)
+            .background(Capsule().fill(tint.opacity(0.13)))
+            .help("Running. ⌘. stops it")
     }
 
     // MARK: the command menu (⌘K / "/"): every command, grouped, with its shortcut
@@ -777,6 +717,38 @@ struct Breathing: ViewModifier {
         content
             .opacity(active ? (phase ? 1 : 0.55) : 0.8)
             .onAppear { withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) { phase = true } }
+    }
+}
+
+/// The clock (Oct 18): one number inside a ring, on the right of the pill open or closed.
+/// The outline fills clockwise with the minutes of the hour. Under an hour the number is minutes;
+/// after that it's hours and the outline starts over, like a minute hand. Only the filled arc and
+/// the number take the accent (focus yellow, ghost violet…), so focus shows in every state.
+struct ClockRing: View {
+    let start: String?  // nil: nothing running, an empty ring
+    let color: Color
+    let size: CGFloat
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 10)) { ctx in
+            let s = start.map { max(0, ctx.date.timeIntervalSince(Time.parse($0))) } ?? 0
+            let m = Int(s / 60)
+            let line = max(1.5, size * 0.09)
+            ZStack {
+                Circle().stroke(Theme.text.opacity(0.22), lineWidth: line)  // the track: title color, dimmed
+                Circle().trim(from: 0, to: s.truncatingRemainder(dividingBy: 3600) / 3600)
+                    .stroke(color, style: StrokeStyle(lineWidth: line, lineCap: .round))
+                    .rotationEffect(.degrees(-90))  // 12 o'clock first
+                if start != nil {
+                    Text(m < 60 ? "\(m)" : "\(m / 60)")
+                        .font(.system(size: size * 0.44, weight: .semibold, design: .monospaced))
+                        .minimumScaleFactor(0.6)
+                        .foregroundStyle(color)
+                }
+            }
+            .frame(width: size, height: size)
+            .animation(.easeOut(duration: 0.6), value: m)
+        }
     }
 }
 

@@ -31,10 +31,25 @@ Oct 10). Every color in the app is a token in `enum Theme`
 | — | Hairline edge / text / muted text | white 9% / 94% / 48% | — | `edge`, `text`, `muted` |
 
 **How the heat works:** `Theme.taskColor(focus:)` picks the task color for a tier. The timer
-chip, its ▲s, the ring and the glow all use it, so the whole bar heats up together. The glow
+chip, the clock (its filled arc and number), the ring and the glow all use it, so the whole bar
+heats up together, open or closed. The glow
 radius and ring width grow with the tier.
 
 **The test copy** (agent tests only, never on his screens) changes no colors: a `DEV` tag floats above the bar instead.
+
+## The clock (Oct 18)
+
+One number inside a ring, on the **right** of the pill in every state: the right ear by the notch,
+the right corner of the monitor pill, the right end of the open bar (the input sits in the middle).
+His words: "a circle around it filling in like an analog watch… simple and minimalistic."
+
+- The outline fills clockwise with the minutes of the hour. Under an hour the number is minutes;
+  from 60 on it's hours, and the outline starts over (a minute hand).
+- **Accent:** only the filled arc and the number take the status color (focus yellow → red, ghost
+  violet, break blue-grey). The unfilled track is the title's color, dimmed to 22% so a pearl
+  (no-focus) fill still reads against it. That dim is a knob.
+- "Hide the time" (⌘K) hides the clock on the closed pill only; the open bar always shows it.
+- Component: `ClockRing` in `Views.swift`. Font: SF Mono across the bar (Oct 18: the Claude Code look).
 
 ## Substances: one blended glow, not lines
 
@@ -46,8 +61,8 @@ The crisp main ring stays dimension 1 + focus heat. Component: `OuterRings` in `
 ## Always on: the notch pill (Oct 11)
 
 **One shape, not two.** Closed, the bar hugs the notch like the Dynamic Island: black (it merges
-with the notch), status + task on the left ear, ▲s + minutes on the right ear, the camera in
-between. ⌥L grows the same shape down into the bar; closing shrinks it back. The notch width
+with the notch), the status in words on the left ear, the clock on the right ear, the camera in
+between. No dots beside the status (Oct 18): the clock carries the color. ⌥L grows the same shape down into the bar; closing shrinks it back. The notch width
 comes from macOS (`auxiliaryTopLeftArea/RightArea`); with no notch it's a small tab hanging
 from the top edge. It never takes clicks while closed.
 
