@@ -249,7 +249,7 @@ struct BarView: View {
             if let f = store.timer?.focus, f > 0, store.onBreak == nil, store.ghost == nil {
                 Text(String(repeating: "▲", count: f)).font(.system(size: fs(8), weight: .bold)).foregroundStyle(color)
             }
-            if let start {
+            if let start, store.restTime {
                 TimelineView(.periodic(from: .now, by: 30)) { ctx in
                     Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(start))))
                         .font(.system(size: fs(12), weight: .semibold).monospacedDigit())
@@ -297,7 +297,7 @@ struct BarView: View {
                 if let f = store.timer?.focus, f > 0, store.onBreak == nil, store.ghost == nil {
                     Text(String(repeating: "▲", count: f)).font(.system(size: fs(7), weight: .bold)).foregroundStyle(color)
                 }
-                if let start {
+                if let start, store.restTime {
                     TimelineView(.periodic(from: .now, by: 30)) { ctx in
                         Text(Time.duration(ctx.date.timeIntervalSince(Time.parse(start))))
                             .font(.system(size: fs(11), weight: .semibold).monospacedDigit())
@@ -785,7 +785,7 @@ struct SideRing: View {
 
     @ViewBuilder private func minutes(_ color: Color) -> some View {
         let start = store.onBreak?.start ?? store.ghost?.start ?? store.timer?.start
-        if let start {
+        if let start, store.restTime {
             TimelineView(.periodic(from: .now, by: 30)) { ctx in
                 let m = Int(ctx.date.timeIntervalSince(Time.parse(start)) / 60)
                 Text(m >= 60 ? "\(m / 60)h" : "\(m)")

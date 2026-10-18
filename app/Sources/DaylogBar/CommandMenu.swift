@@ -78,6 +78,10 @@ enum Commands {
                     isAvailable: { $0.restStyle != .both }, run: { store.restStyle = .both }),
             Command(id: "rest-off", group: .go, title: "Always on: off (hide when closed)", shortcut: "",
                     isAvailable: { $0.restStyle != .off }, run: { store.restStyle = .off }),
+            Command(id: "rest-time-off", group: .go, title: "Always on: hide the time (just chilling)", shortcut: "",
+                    isAvailable: { $0.restTime }, run: { store.restTime = false }),
+            Command(id: "rest-time-on", group: .go, title: "Always on: show the time", shortcut: "",
+                    isAvailable: { !$0.restTime }, run: { store.restTime = true }),
 
             // DO
             Command(id: "stop", group: .act, title: "Stop the timer", shortcut: "⌘.",

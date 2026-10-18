@@ -77,6 +77,8 @@ It reads `GET /stats` (`server/daylog/stats.py`).
 
 Menu-only (⌘K): **Always on: center pill / side ring / pill + ring / off**: what stays on
 screen while the bar is closed.
+**Always on: hide the time / show the time**: the closed pill and side ring drop the clock, for
+when you're just chilling (Oct 17). The open bar still shows it. Remembered across restarts.
 
 While the model reads a line the bar says **reading…**; its reading replaces the preview with its
 reason. ⏎ waits for it (at most 3 s, then the rules); ⇧⏎ never waits.

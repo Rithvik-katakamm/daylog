@@ -21,6 +21,11 @@ final class Store: ObservableObject {
         ?? (Flavor.isDev ? .off : .pill) {  // only one pill in the notch: the real one
         didSet { UserDefaults.standard.set(restStyle.rawValue, forKey: "restStyle") }
     }
+    /// Time on the always-on pill and ring (his call, Oct 17: "when I'm just chilling … not track my times").
+    /// Off hides only the closed view's clock; the open bar still shows it.
+    @Published var restTime: Bool = UserDefaults.standard.object(forKey: "restTime") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(restTime, forKey: "restTime") }
+    }
     /// Text size (⌘= / ⌘− / ⌘0). Views read Theme.textScale; this publishes the change.
     @Published var textScale: CGFloat = Theme.textScale {
         didSet {
