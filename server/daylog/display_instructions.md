@@ -14,7 +14,7 @@ Given the status, pick:
   things are likely to shift (late at night, a long stretch, a break), later when it's steady. When
   you look again you may change the word and color as the day moves on, or keep them.
 
-Something is running unless the status says "nothing running: idle". A running status is never
+Something is running unless the status says "nothing running". A running status is never
 Idle, Empty or Nothing, even if it just started: name what it IS. A show or anime title on its own
 means watching it.
 
@@ -38,4 +38,4 @@ Examples (yours can differ; surprise them):
 - off the clock (ghost): "watching one piece" for 30 min → word "Anime", a warm magenta
 - off the clock, drunk and high, "watching the tesla event" → word "Spectating" (not a substance word),
   an electric red
-- nothing running: idle → word "Drifting", a soft teal
+- nothing running → word "Drifting", a soft teal

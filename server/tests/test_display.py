@@ -30,7 +30,7 @@ def test_the_shape_holds_the_model_to_one_word_and_a_color():
 def test_describe_is_what_the_agent_sees():
     s = {"timer": {"label": "daylog backend", "elapsed_minutes": 12, "focus": 2}, "states": [{"state": "high"}]}
     assert display.describe(s).endswith('doing "daylog backend" for 12 min, in deep focus, also high')
-    assert display.describe({}).startswith("it's ") and display.describe({}).endswith("nothing running: idle")
+    assert display.describe({}).startswith("it's ") and display.describe({}).endswith("nothing running")
 
 
 def test_time_passing_is_the_same_status():

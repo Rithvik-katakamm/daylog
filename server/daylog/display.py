@@ -67,7 +67,7 @@ def describe(state: dict) -> str:
         if t.get("focus"):
             parts.append(["", "focused", "in deep focus", "in hyperfocus"][t["focus"]])
     else:
-        parts.append("nothing running: idle")
+        parts.append("nothing running")
     states = [s["state"] for s in state.get("states") or []]
     if states:
         parts.append("also " + " and ".join(states))

@@ -287,7 +287,7 @@ struct BarView: View {
                     Text(store.display?.word ?? t.word ?? Title.display(t.label))
                 } else {
                     Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
-                    Text("idle").foregroundStyle(Theme.muted)
+                    Text("nothing running").foregroundStyle(Theme.muted)
                 }
             }
             .lineLimit(1).truncationMode(.tail)
@@ -495,7 +495,27 @@ struct BarView: View {
 
     // MARK: the command menu (⌘K / "/"): every command, grouped, with its shortcut
 
+    /// Short lists sit as they are; a list taller than the window scrolls, and the selection
+    /// (↑/↓) pulls itself into view (Oct 17: the commands at the bottom were cut off, unreachable).
     private var menuList: some View {
+        let maxHeight = AppDelegate.menuWindowSize.height - store.topInset - Theme.barSize.height - 40
+        return ViewThatFits(in: .vertical) {
+            menuRows
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: false) { menuRows }
+                    .onChange(of: store.menuIndex) { _, i in proxy.scrollTo(i) }
+            }
+        }
+        .frame(maxHeight: maxHeight)
+        .padding(8)
+        .frame(width: Theme.barSize.width - 40)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.chrome))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.edge, lineWidth: 1))
+        .shadow(color: .black.opacity(0.4), radius: 18, y: 6)
+        .animation(.easeOut(duration: 0.1), value: store.menuIndex)
+    }
+
+    private var menuRows: some View {
         let items = store.menuItems
         return VStack(alignment: .leading, spacing: 1) {
             if items.isEmpty {
@@ -503,6 +523,7 @@ struct BarView: View {
                     .padding(.horizontal, 12).padding(.vertical, 8)
             }
             ForEach(Array(items.enumerated()), id: \.element.id) { i, cmd in
+              VStack(alignment: .leading, spacing: 1) {
                 if i == 0 || items[i - 1].group != cmd.group {
                     Text(cmd.group.rawValue)
                         .font(.system(size: fs(9), weight: .bold)).tracking(1.2)
@@ -520,14 +541,11 @@ struct BarView: View {
                     .fill(Color.white.opacity(i == store.menuIndex ? 0.1 : 0)))
                 .contentShape(Rectangle())
                 .onTapGesture { store.menuIndex = i; store.runSelectedCommand() }
+              }
+              .id(i)  // the group header scrolls in with its first row
             }
         }
-        .padding(8)
-        .frame(width: Theme.barSize.width - 40)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.chrome))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.edge, lineWidth: 1))
-        .shadow(color: .black.opacity(0.4), radius: 18, y: 6)
-        .animation(.easeOut(duration: 0.1), value: store.menuIndex)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: ⌘K analytics: what Day Log costs the Mac, live

@@ -25,7 +25,7 @@ enum Commands {
             // WHAT am I doing / typing
             Command(id: "note", group: .what, title: "Note: a thought, timestamped", shortcut: "⌘N",
                     isAvailable: always, run: { store.beginNote() }),
-            Command(id: "ghost", group: .what, title: "Ghost mode (off the clock)", shortcut: "⌘O",
+            Command(id: "ghost", group: .what, title: "Go offline (ghost mode, off the clock)", shortcut: "⌘O",
                     isAvailable: { $0.ghost == nil }, run: { store.ghostKey() }),
             Command(id: "online", group: .what, title: "Back online", shortcut: "⌘O",
                     isAvailable: { $0.ghost != nil }, run: { store.ghostKey() }),
