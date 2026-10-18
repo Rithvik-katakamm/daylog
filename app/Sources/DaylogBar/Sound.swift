@@ -8,7 +8,7 @@ enum Sound {
 
     private var name: String {
         switch self {
-        case .open: "Pop"
+        case .open: "Purr"
         case .mode: "Tink"
         case .saved: "Bottle"
         case .ghost: "Submarine"
