@@ -12,7 +12,6 @@ from daylog.display import Display
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("DAYLOG_DB", str(tmp_path / "t.sqlite"))
-    monkeypatch.setenv("DAYLOG_IMPORTERS", "0")
     from daylog import api
     api._looks.clear(); api._deciding.clear()
     with TestClient(api.app) as c:

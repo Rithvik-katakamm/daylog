@@ -71,7 +71,6 @@ def test_states_in_task_lines(text, expected):
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("DAYLOG_DB", str(tmp_path / "t.sqlite"))
-    monkeypatch.setenv("DAYLOG_IMPORTERS", "0")
     from daylog.api import app
     with TestClient(app) as c:
         yield c

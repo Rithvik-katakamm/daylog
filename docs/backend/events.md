@@ -29,8 +29,8 @@ Everything Day Log knows is a row in one SQLite table, `events`. Code: `server/d
 | `ghost.start` | claim | Went offline, with a status | — |
 | `app.focus` | observation | App in front (plus a heartbeat every 5 min) | — |
 | `away.start` | observation | Locked, asleep, or idle for 5+ min | — |
-| `meeting` | observation | Wispr Notetaker meeting (start, end) | — |
-| `dictation` | observation | Wispr dictation (app, url, words) | — |
+| `meeting` | observation | Wispr Notetaker meeting (start, end). **No longer imported** (Oct 18: the importer is off until the data-integrity work); past ones stay in the log | — |
+| `dictation` | observation | Wispr dictation (app, url, words). **No longer imported** (Oct 18) | — |
 
 ## API (`127.0.0.1:7878`, live docs at `/docs`)
 
@@ -54,7 +54,6 @@ Everything Day Log knows is a row in one SQLite table, `events`. Code: `server/d
 | GET | `/timeline` | Claims, meetings, activity, dictations, notes for a day or range |
 | GET | `/history` | Newest-first stops for scrolling back (entries, meetings, notes, gaps ≥10m) |
 | GET | `/summary` | Minutes by label, app, focus tier; tracked vs. untracked |
-| POST | `/import/wispr` | Run the Wispr import now (it also runs every 10 min) |
 
 ## MCP (`server/daylog/mcp_server.py`)
 

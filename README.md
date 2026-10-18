@@ -59,8 +59,6 @@ API docs (live): http://127.0.0.1:7878/docs
  │ pill + panel     │──POST────▶ │ FastAPI  :7878           │ ◀─────── │ MCP server   │◀── Claude, Muse…
  │ activity recorder│──POST────▶ │  rules: one timer, no    │          │ (thin client)│
  └──────────────────┘ ◀──JSON─── │  future entries, …       │          └──────────────┘
-                                 │        │                 │
-                Wispr flow.sqlite ──read──▶ importer (10 min)
                                  │        ▼                 │
                                  │  events (append-only)    │
                                  │  └▶ timeline / summary / now are DERIVED at read time
@@ -88,8 +86,7 @@ API docs (live): http://127.0.0.1:7878/docs
 ```
 server/daylog/db.py          the event store + append-only triggers
 server/daylog/timeline.py    derived views: claims, meetings, activity, summary, now
-server/daylog/api.py         HTTP routes + background Wispr import
-server/daylog/wispr.py       Wispr Flow importer (read-only)
+server/daylog/api.py         HTTP routes + the once-a-minute break check
 server/daylog/mcp_server.py  MCP tools for agents
 app/Sources/DaylogBar/       Swift app: main (windows), Views, Store, API, ActivityRecorder, HotKey
 docs/                        start at docs/README.md (product, ui, backend, infra)

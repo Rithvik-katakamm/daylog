@@ -28,14 +28,11 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from . import autolabel, db, display, harness, intents, parse, stats, telemetry, timeline, wispr
+from . import autolabel, db, display, harness, intents, parse, stats, telemetry, timeline
 from opentelemetry import trace as otel
 
 
 log = logging.getLogger("daylog")
-
-IMPORT_EVERY = timedelta(minutes=int(os.environ.get("DAYLOG_IMPORT_MINUTES", "10")))
-
 
 async def _break_loop(app: FastAPI) -> None:
     """Once a minute: a break nobody came back from turns into ghost (see timeline.expire_break)."""
@@ -47,23 +44,10 @@ async def _break_loop(app: FastAPI) -> None:
         await asyncio.sleep(60)
 
 
-async def _import_loop(app: FastAPI) -> None:
-    while True:
-        try:
-            counts = wispr.import_all(app.state.conn)
-            if any(counts.values()):
-                log.info("wispr import: %s", counts)
-        except Exception:  # an importer failing must never take the API down
-            log.exception("wispr import failed")
-        await asyncio.sleep(IMPORT_EVERY.total_seconds())
-
-
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.conn = db.connect()
     tasks = [asyncio.create_task(_break_loop(app))]
-    if os.environ.get("DAYLOG_IMPORTERS", "1") == "1":
-        tasks.append(asyncio.create_task(_import_loop(app)))
     yield
     for t in tasks:
         t.cancel()
@@ -784,8 +768,3 @@ async def get_summary(date: date | None = None, start: datetime | None = None,
                       end: datetime | None = None):
     lo, hi = _window(date, start, end)
     return timeline.summary(conn(), lo, hi)
-
-
-@app.post("/import/wispr")
-async def import_wispr():
-    return wispr.import_all(conn())

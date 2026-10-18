@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The TEST COPY, for agent tests only (his call, Oct 15: one Day Log on his Mac, "prototype").
 # Builds the working tree into .build/Daylog Test.app (never ~/Applications) and writes its server job
-# (:7879, a throwaway database, importers off) into .build/ (never ~/Library/LaunchAgents, so it can't
+# (:7879, a throwaway database) into .build/ (never ~/Library/LaunchAgents, so it can't
 # start at login). Nothing runs after this script: `.build/devctl start` runs both headless and silent,
 # `.build/devctl stop` ends them. It never appears on his screens and never touches his real log.
 set -euo pipefail
@@ -23,7 +23,6 @@ cat > "$BUILD/com.rithvik.daylog.dev.plist" <<PLIST
   <key>EnvironmentVariables</key><dict>
     <key>DAYLOG_DEV</key><string>1</string>
     <key>DAYLOG_DB</key><string>$DATA/daylog-dev.sqlite</string>
-    <key>DAYLOG_IMPORTERS</key><string>0</string>
   </dict>
   <key>RunAtLoad</key><true/>
   <key>StandardOutPath</key><string>$LOGS/server-dev.log</string>

@@ -5,13 +5,12 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi.testclient import TestClient
 
-from daylog import db, timeline, wispr
+from daylog import db, timeline
 
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("DAYLOG_DB", str(tmp_path / "t.sqlite"))
-    monkeypatch.setenv("DAYLOG_IMPORTERS", "0")
     from daylog.api import app
     with TestClient(app) as c:
         yield c
@@ -152,32 +151,6 @@ def test_activity_never_invents_time_past_the_cap(conn):
 def test_observation_endpoint_only_accepts_known_types(client):
     assert client.post("/observations", json={"type": "app.focus", "data": {"app": "X"}}).status_code == 201
     assert client.post("/observations", json={"type": "timer.start"}).status_code == 422
-
-
-# ---------- wispr import ----------
-
-def test_wispr_import_meetings_and_dictations(conn, tmp_path):
-    w = sqlite3.connect(tmp_path / "flow.sqlite")
-    w.executescript("""
-        CREATE TABLE Meetings (id TEXT, title TEXT, createdAt TEXT, endedAt INTEGER,
-            participantNames TEXT, isDeleted INTEGER, isTourDemo INTEGER);
-        CREATE TABLE History (transcriptEntityId TEXT, timestamp TEXT, app TEXT, url TEXT,
-            duration REAL, numWords INTEGER, isArchived INTEGER);
-    """)
-    start = datetime(2026, 10, 8, 20, 0, tzinfo=timezone.utc)
-    end_ms = int((start + timedelta(minutes=30)).timestamp() * 1000)
-    w.execute("INSERT INTO Meetings VALUES ('m1','Sync','2026-10-08 20:00:00.000 +00:00',?,NULL,0,0)", (end_ms,))
-    w.execute("INSERT INTO Meetings VALUES ('m2','Live','2026-10-08 21:00:00.000 +00:00',NULL,NULL,0,0)")
-    w.execute("INSERT INTO History VALUES ('d1','2026-10-08 20:10:05.000 +00:00','com.apple.Safari','x.com',5.0,12,0)")
-    w.commit()
-    w.close()
-
-    assert wispr.import_all(conn, tmp_path / "flow.sqlite") == {"meetings": 1, "dictations": 1}
-    assert wispr.import_all(conn, tmp_path / "flow.sqlite") == {"meetings": 0, "dictations": 0}
-
-    ms = timeline.meetings(conn, start - timedelta(hours=1), start + timedelta(hours=2))
-    assert [(m["label"], m["start"], m["end"]) for m in ms] == [
-        ("Sync", "2026-10-08T20:00:00Z", "2026-10-08T20:30:00Z")]
 
 
 # ---------- one-line logging ----------
@@ -441,7 +414,6 @@ def test_dev_reset_is_refused_on_the_real_server(client):
 
 def test_dev_reset_wipes_only_the_dev_db(tmp_path, monkeypatch):
     monkeypatch.setenv("DAYLOG_DB", str(tmp_path / "dev.sqlite"))
-    monkeypatch.setenv("DAYLOG_IMPORTERS", "0")
     monkeypatch.setenv("DAYLOG_DEV", "1")
     from daylog.api import app
     with TestClient(app) as c:
@@ -458,7 +430,6 @@ def test_health_reports_version_and_hides_notes_from_non_owners(tmp_path, monkey
     from fastapi.testclient import TestClient
     from daylog import api
     monkeypatch.setenv("DAYLOG_DB", str(tmp_path / "t.sqlite"))
-    monkeypatch.setenv("DAYLOG_IMPORTERS", "0")
     rel = tmp_path / "RELEASE.json"
     rel.write_text('{"version": "v9.9", "new": ["the bar shows what\'s new"], "try": ["open the bar"]}')
     monkeypatch.setattr(api, "RELEASE_FILE", rel)

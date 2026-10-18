@@ -28,7 +28,6 @@ def clock(monkeypatch):
 @pytest.fixture
 def client(tmp_path, monkeypatch, clock):
     monkeypatch.setenv("DAYLOG_DB", str(tmp_path / "t.sqlite"))
-    monkeypatch.setenv("DAYLOG_IMPORTERS", "0")
     from daylog.api import app
     with TestClient(app) as c:
         yield c

@@ -72,7 +72,6 @@ from fastapi.testclient import TestClient
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("DAYLOG_DB", str(tmp_path / "t.sqlite"))
-    monkeypatch.setenv("DAYLOG_IMPORTERS", "0")
     from daylog import api
     api._readings.clear()
     with TestClient(api.app) as c:
