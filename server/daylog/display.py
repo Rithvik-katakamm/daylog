@@ -59,7 +59,7 @@ def describe(state: dict) -> str:
                      + (f', then back to "{b["resume"]}"' if b.get("resume") else ""))
     elif state.get("ghost"):
         g = state["ghost"]
-        parts.append(f'off the clock (ghost): "{g["status"]}" for {g.get("elapsed_minutes", 0)} min')
+        parts.append(f'offline (ghost): "{g["status"]}" for {g.get("elapsed_minutes", 0)} min')
     elif state.get("timer"):
         t = state["timer"]
         mins = t.get("elapsed_minutes", 0)
@@ -123,7 +123,7 @@ async def _coin_word(state: dict, model: str) -> tuple[str | None, float]:
 
 WORD_INSTRUCTIONS = ("Coin ONE word (letters only, at most 12) for a tiny status pill on a Mac. Be playful and "
                      "inventive: mash words together or invent one, like WorkTrix, Geassed, TeslaWatch. The word is "
-                     "about what he's DOING, at work or off the clock (watching, savoring, unwinding count as much "
+                     "about what he's DOING, on a task or offline (watching, savoring, unwinding count as much "
                      "as building). Substances are a flavor, never the word, unless taking one is the whole "
                      "activity. Never Working or Idle. Answer as JSON.")
 

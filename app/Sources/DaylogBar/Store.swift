@@ -263,7 +263,7 @@ final class Store: ObservableObject {
     private func submitGhost() {
         let status = input.trimmingCharacters(in: .whitespacesAndNewlines)
         input = ""
-        timer = nil  // optimistic: going dark stops the clock
+        timer = nil  // optimistic: going offline stops the timer
         ghost = GhostInfo(id: "pending", status: status.isEmpty ? "offline" : status, start: Time.string(Date()))
         Sound.ghost.play()
         flash = "Ghost mode · nothing is being logged"

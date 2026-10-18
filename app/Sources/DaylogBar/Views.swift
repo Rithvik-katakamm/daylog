@@ -8,7 +8,7 @@ enum Theme {
     // 1. WHAT am I doing (main ring)  2. HOW am I (heat + outer rings)  3. WHAT am I typing.
     static let idle = hex(0x6B7280)        // 1: nothing running
     static let task = hex(0xECEEF2)        // 1: a task, pearl white (heats up with focus)
-    static let ghost = hex(0xB87AFF)       // 1: ghost, off the clock
+    static let ghost = hex(0xB87AFF)       // 1: ghost, offline
     static let thinking = hex(0x8B7BFF)    // 1: the model is deciding (after ⏎), violet: intelligence
     static let focusHeat = [task, hex(0xFFD652), hex(0xFF9A3C), hex(0xFF4D4D)]  // 2: ▲ yellow ▲▲ orange ▲▲▲ red
     static let intoxicated = hex(0xFF6FA5) // 2: outer ring

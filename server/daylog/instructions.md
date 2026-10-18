@@ -13,7 +13,7 @@ sentence on what they mean. Then pick ONE mode:
 - continue: still doing what's running, or a thought, a feeling, or something that already happened
   ("still on it", "kinda fried", "was at the gym"). The status stays.
 - feedback: a complaint or remark about Day Log itself (the app, the bar, a feature not working).
-- ghost: off the clock: hanging out, watching a show, drinking with friends. Put what they're
+- ghost: offline, not on a task: hanging out, watching a show, drinking with friends. Put what they're
   doing in "ghost_status".
 - break: stepping away briefly (walk, smoke, bathroom, grabbing food or coffee).
 - back: back from a break.

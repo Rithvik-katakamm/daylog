@@ -46,7 +46,7 @@ class Reading(BaseModel):
     word: str | None = None              # one word for the pill (task / rename): "Building", "Cleanup"
     states: list[StateChange] = []       # substances mentioned anywhere in the line
     focus: int | None = Field(None, ge=0, le=3)  # 1 focused, 2 deep, 3 hyperfocus, 0 off
-    ghost_status: str | None = None      # what he's doing off the clock, when mode is ghost
+    ghost_status: str | None = None      # what he's doing offline, when mode is ghost
 
 
 # The model's instructions live in a file he can read and edit (his ask, Oct 15: "I don't know where the
@@ -71,13 +71,13 @@ EXAMPLES: list[tuple[str, str, Reading]] = [
     (_RUN, "the bar didnt reset again ugh", Reading(why="a complaint about the app itself", mode="feedback")),
     (_RUN, "grabbing food real quick", Reading(why="stepping away briefly", mode="break")),
     (_IDLE, "movie night w roommates, couple beers",
-     Reading(why="off the clock with friends, drinking beer", mode="ghost", ghost_status="movie night with roommates",
+     Reading(why="offline with friends, drinking beer", mode="ghost", ghost_status="movie night with roommates",
              states=[StateChange(state="intoxicated", on=True)])),
     (_RUN, "locked in rn", Reading(why="says they're focused", mode="focus", focus=1)),
     (_RUN, "had an espresso", Reading(why="caffeine", mode="state", states=[StateChange(state="caffeinated", on=True)])),
     (_IDLE, "took a nap, back on the api now", Reading(why="the nap is over; starting the API work", mode="task",
                                                        task="Working on the API", word="Building")),
-    (_IDLE, "attack on titan", Reading(why="a show's name on its own: watching it, off the clock", mode="ghost",
+    (_IDLE, "attack on titan", Reading(why="a show's name on its own: watching it, offline", mode="ghost",
                                        ghost_status="watching Attack on Titan")),
 ]
 

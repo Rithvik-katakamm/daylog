@@ -36,7 +36,7 @@ never "Working", and his latest words outweigh the task's old title.
 **Two models, same raw input, different jobs (his design, Oct 16):** gemma decides the color, reason and
 recheck; the word model (`word_model` knob) coins the word. Both read the raw status and his own words; the
 word model never sees gemma's reason, so one model's framing can't steer the other ("in an altered state"
-became "BullseyeVape" when it did). Off the clock is named as creatively as work; substances flavor the word,
+became "BullseyeVape" when it did). Offline time is named as creatively as a task; substances flavor the word,
 they aren't the word.
 
 ## Which model, and the 16 GB limit (Oct 16)

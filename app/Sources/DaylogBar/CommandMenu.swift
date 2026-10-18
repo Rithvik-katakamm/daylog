@@ -25,7 +25,7 @@ enum Commands {
             // WHAT am I doing / typing
             Command(id: "note", group: .what, title: "Note: a thought, timestamped", shortcut: "⌘N",
                     isAvailable: always, run: { store.beginNote() }),
-            Command(id: "ghost", group: .what, title: "Go offline (ghost mode, off the clock)", shortcut: "⌘O",
+            Command(id: "ghost", group: .what, title: "Go offline (ghost mode)", shortcut: "⌘O",
                     isAvailable: { $0.ghost == nil }, run: { store.ghostKey() }),
             Command(id: "online", group: .what, title: "Back online", shortcut: "⌘O",
                     isAvailable: { $0.ghost != nil }, run: { store.ghostKey() }),
@@ -56,7 +56,7 @@ enum Commands {
                     isAvailable: always, run: { store.beginEdit() }),
             Command(id: "whats-new", group: .go, title: "What's new in this version", shortcut: "",
                     isAvailable: always, run: { store.whatsNew() }),
-            Command(id: "work", group: .go, title: "Back to work (close)", shortcut: "Tab",
+            Command(id: "work", group: .go, title: "Close (back to what you were doing)", shortcut: "Tab",
                     isAvailable: always, run: { hide() }),
             Command(id: "text-bigger", group: .go, title: "Text bigger", shortcut: "⌘=",
                     isAvailable: always, run: { store.resizeText(1) }),

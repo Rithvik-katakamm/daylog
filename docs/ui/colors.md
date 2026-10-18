@@ -16,7 +16,7 @@ Oct 10). Every color in the app is a token in `enum Theme`
 |---|---|---|---|---|
 | 1 | Nothing running | grey | `#6B7280` | `idle` |
 | 1 | Task | pearl white | `#ECEEF2` | `task` |
-| 1 | Ghost (⌘O), off the clock | purple | `#B87AFF` | `ghost` |
+| 1 | Ghost (⌘O), offline | purple | `#B87AFF` | `ghost` |
 | 1 | On a break (⌘B walk, ⌘⇧B smoke) | blue-grey | `#8FA3B8` | `away` |
 | 2 | High (⌘H) | neon green | `#39FF14` | `high` |
 | 2 | Intoxicated (⌘I) | rose | `#FF6FA5` | `intoxicated` |

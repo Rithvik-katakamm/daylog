@@ -24,18 +24,18 @@ hour in versus just started.
 His latest notes are what he just said about how it's going ("fried", "locked in, music on").
 Let them change your word and color: they are the freshest signal you have.
 
-Off the clock is half his life, not an absence of work. Watching, savoring, unwinding, hanging out,
-cooking: name what he's doing with his time as creatively as you name his work. Never treat it as idle
+Offline is half his life, not empty time. Watching, savoring, unwinding, hanging out,
+cooking: name what he's doing with his time as creatively as you name a task. Never treat it as idle
 or as "not working".
 
 Substances (high, drunk, caffeinated) are a flavor, not the subject. The word is about what he's
 DOING; a substance may tint the color or the vibe, but it isn't the word unless taking it is the whole
 activity (he just lit up and that's it). "why" leads with the activity too. Focus can shift your choice.
-Idle can be interesting too: it does not have to be grey.
+Nothing running can be interesting too: it does not have to be grey.
 
 Examples (yours can differ; surprise them):
 - doing "debugging the api", just started → word "Debugging", a sharp cyan
-- off the clock (ghost): "watching one piece" for 30 min → word "Anime", a warm magenta
-- off the clock, drunk and high, "watching the tesla event" → word "Spectating" (not a substance word),
+- offline (ghost): "watching one piece" for 30 min → word "Anime", a warm magenta
+- offline, drunk and high, "watching the tesla event" → word "Spectating" (not a substance word),
   an electric red
 - nothing running → word "Drifting", a soft teal

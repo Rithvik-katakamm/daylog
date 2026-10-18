@@ -33,7 +33,7 @@ sources, for me and for every AI agent that works for me.
 
 | Dimension | Shown as | Examples |
 |---|---|---|
-| **What am I doing** | the main ring | a task, ghost (off the clock), a break |
+| **What am I doing** | the main ring | a task, ghost (offline), a break |
 | **How am I** | ring heat + outer rings | focus tiers, altered states |
 | **What am I typing** | the ring, while typing | a note, looking back, editing |
 
