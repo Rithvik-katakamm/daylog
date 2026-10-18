@@ -60,6 +60,13 @@ enum Theme {
 /// A font size, scaled by the user's text size (⌘= / ⌘−).
 func fs(_ size: CGFloat) -> CGFloat { (size * Theme.textScale).rounded() }
 
+extension View {
+    /// In a baseline-aligned row, a shape (no baseline of its own) centers on the capitals of 12 pt text.
+    func capCentered(_ size: CGFloat = 12) -> some View {
+        alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] + fs(size) * 0.35 }
+    }
+}
+
 struct BarView: View {
     @ObservedObject var store: Store
     @FocusState private var inputFocused: Bool
@@ -165,8 +172,9 @@ struct BarView: View {
             .opacity(open ? 1 : 0)
             .animation(open ? .easeOut(duration: 0.12).delay(Motion.current.contentDelay) : .easeIn(duration: 0.06), value: open)
             // Closed: a glance at the ears beside the camera.
+            // Monitor: the pill is taller than the menu bar, so the row fills the pill to sit centered in it.
             restRow(ear: Theme.ear * Theme.textScale)
-                .frame(height: store.topInset)
+                .frame(height: store.notchWidth > 0 ? store.topInset : closedSize.height)
                 .opacity(open ? 0 : 0.85)
                 .animation(open ? .easeIn(duration: 0.06) : .easeOut(duration: 0.14).delay(Motion.current.closeResponse), value: open)
         }
@@ -225,10 +233,11 @@ struct BarView: View {
         let start = store.onBreak?.start ?? store.ghost?.start ?? store.timer?.start
         // Centered like an island: status and time sit together in the middle; a long title
         // truncates before the spacers squeeze the time out.
-        return HStack(spacing: 7) {
+        // Baseline-aligned: SF Symbols sit on the text's baseline as designed (Oct 17: the moon hung below it).
+        return HStack(alignment: .firstTextBaseline, spacing: 7) {
             Spacer(minLength: 0)
             if store.thinking || store.display?.thinking == true {  // the model is still deciding
-                Circle().fill(Theme.thinking).frame(width: 6, height: 6).shadow(color: Theme.thinking, radius: 3)
+                Circle().fill(Theme.thinking).frame(width: 6, height: 6).shadow(color: Theme.thinking, radius: 3).capCentered()
                 TimelineView(.periodic(from: .now, by: 0.4)) { ctx in
                     Text("thinking" + String(repeating: ".", count: Int(ctx.date.timeIntervalSince1970 * 2.5) % 4))
                         .foregroundStyle(Theme.thinking)
@@ -238,12 +247,13 @@ struct BarView: View {
                 Text(store.display?.word ?? (b.label + (b.resume.map { " · then \($0)" } ?? "")))
             } else if let g = store.ghost {
                 Image(systemName: "moon.zzz.fill").foregroundStyle(color)
+                    .offset(y: -fs(2))  // the crescent dips under the baseline; offset leaves the row where it is
                 Text(store.display?.word ?? g.status)
             } else if let t = store.timer {
-                Circle().fill(color).frame(width: 6, height: 6).shadow(color: color, radius: 2)
+                Circle().fill(color).frame(width: 6, height: 6).shadow(color: color, radius: 2).capCentered()
                 Text(store.display?.word ?? t.word ?? Title.display(t.label)).truncationMode(.middle)
             } else {
-                Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6)
+                Circle().strokeBorder(color, lineWidth: 1).frame(width: 6, height: 6).capCentered()
                 Text("nothing running").foregroundStyle(Theme.muted)
             }
             if let f = store.timer?.focus, f > 0, store.onBreak == nil, store.ghost == nil {
