@@ -14,3 +14,6 @@ owner
 
 # his real typed lines (eval data) stay on the Mac
 server/eval/*.local.*
+
+# Obsidian vault state for docs/ (his reading setup, not the project)
+docs/.obsidian/
