@@ -65,7 +65,7 @@ from the top edge. It never takes clicks while closed.
 - Oct 10: green replaced by pearl (he didn't like it); yellow moved to focus; the past became
   dashed silver; meetings moved off violet (it was too close to ghost).
 
-**Thinking** `#8B7BFF` (violet, Oct 15): after ⏎ the bar closes and the pill says *thinking…* in violet until the model decides; then it shows the model's one word for the task.
+**Thinking** `#8B7BFF` (violet, Oct 15): after ⏎ the bar closes and the pill says *thinking* in violet, the word pulsing (no dots, Oct 18), until the model decides; then it shows the model's one word for the task.
 
 **The display agent picks the status color (Oct 16).** For every status the agent chooses the pill +
 ring + bar color itself (`docs/backend/display.md`); the colors above are only the fallback when the

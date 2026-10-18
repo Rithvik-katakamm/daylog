@@ -238,10 +238,7 @@ struct BarView: View {
             Spacer(minLength: 0)
             if store.thinking || store.display?.thinking == true {  // the model is still deciding
                 Circle().fill(Theme.thinking).frame(width: 6, height: 6).shadow(color: Theme.thinking, radius: 3).capCentered()
-                TimelineView(.periodic(from: .now, by: 0.4)) { ctx in
-                    Text("thinking" + String(repeating: ".", count: Int(ctx.date.timeIntervalSince1970 * 2.5) % 4))
-                        .foregroundStyle(Theme.thinking)
-                }
+                ThinkingLabel()
             } else if let b = store.onBreak {
                 Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").foregroundStyle(color)
                 Text(store.display?.word ?? (b.label + (b.resume.map { " · then \($0)" } ?? "")))
@@ -282,10 +279,7 @@ struct BarView: View {
             HStack(spacing: 5) {
                 if store.thinking || store.display?.thinking == true {  // the model is still deciding
                     Circle().fill(Theme.thinking).frame(width: 6, height: 6).shadow(color: Theme.thinking, radius: 3)
-                    TimelineView(.periodic(from: .now, by: 0.4)) { ctx in
-                        Text("thinking" + String(repeating: ".", count: Int(ctx.date.timeIntervalSince1970 * 2.5) % 4))
-                            .foregroundStyle(Theme.thinking)
-                    }
+                    ThinkingLabel()
                 } else if let b = store.onBreak {
                     Image(systemName: b.kind == "smoke" ? "smoke.fill" : "figure.walk").foregroundStyle(color)
                     Text(store.display?.word ?? b.label)
@@ -783,6 +777,18 @@ struct Breathing: ViewModifier {
         content
             .opacity(active ? (phase ? 1 : 0.55) : 0.8)
             .onAppear { withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) { phase = true } }
+    }
+}
+
+/// "thinking" while the model decides: the word pulses, no dots (Oct 18: dots don't suit the pill).
+/// Faster than Breathing so it reads as work in progress, not a resting glow.
+struct ThinkingLabel: View {
+    @State private var phase = false
+    var body: some View {
+        Text("thinking")
+            .foregroundStyle(Theme.thinking)
+            .opacity(phase ? 1 : 0.4)
+            .onAppear { withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) { phase = true } }
     }
 }
 
