@@ -22,8 +22,11 @@ the experience better for someone using it.
 
 ## Linear (team RIT, project "Day Log")
 
-- **What's next = issue priority:** In Progress first, then Todo from Urgent down. You may re-rank when a
-  decision changes what's next; say what you moved.
+- **What's next = the queue (Oct 19):** cards titled `Q1 ·`, `Q2 ·`, … are the order of execution, each blocked by
+  the one before. Only one thing is now: the lowest Q number, In Progress. Everything else is Backlog. A new
+  concern either folds into a queued card or he places it; say what you moved.
+- **Demo-ready waits for his words:** it starts when he says the backend is "good enough to demo" (then a
+  codebase walkthrough, the README, the resume bullet). Until then, don't push it.
 - **Read, then confirm, then build (Oct 13).** For a build card: open it with what we're doing and the options
   (your pick), then stop. He reads it; code starts only when he confirms.
 - **Keep status live:** current card In Progress; on ship move it to Done, the next one to In Progress, and open
