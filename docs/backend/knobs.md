@@ -17,7 +17,7 @@ or edit the repo's and ship.)
 | `display_timeout_s` | 25 | How long a look may take before the pill keeps plain colors | Lower: faster fallbacks; the word model's swap needs ~20 s |
 
 **The memory cost of `word_model`:** on 16 GB, gemma (8.3 GB) and the coder (4.7 GB) can't sit in GPU memory
-together, so each look swaps them (8-19 s instead of ~7). Watch ⌘K → MODELS flip between them.
+together, so each look swaps them (8-19 s instead of ~7). Watch ⌘K → MODELS flip between them. Full story and log evidence: [`infra/ram.md`](../infra/ram.md).
 
 ## Knobs in the code (need a release)
 

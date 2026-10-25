@@ -40,6 +40,7 @@ Technical work → Linear (team RIT). Product/design questions → Notion.
 |---|---|---|---|---|---|
 | **One version** | infra | Day Log prototype: one app, one server, his real log; every green push ships (Oct 15). The hidden test copy lives in `.build/` and runs only during tests | `scripts/autorelease.sh`, `release.sh`, `test-copy.sh`, `tools/devctl.swift` | ⌘K shows `Day Log prototype vX · runs releases/vX` | A dev/prod split comes back when there are real users |
 | **Launch agents** | infra | launchd keeps server + app alive | `scripts/lib.sh write_agent` | Idempotent (no repeat "Background Items Added"). App runs as `ProcessType Interactive` (v0.7): unspecified = CPU-throttled, which made stable stutter while Dev was smooth | — |
+| **Ollama (models)** | infra, ai | Local model server that runs both of Day Log's models (line reader + pill word) | `harness.OLLAMA`, `harness.MODEL`, `knobs.json word_model`, `docs/infra/ram.md` | gemma4:12b + qwen2.5-coder:7b, keep_alive 30m (Oct 25) | The RAM problem: the two models swap on 16 GB and can freeze the Mac (Oct 21). Pick one model and/or shorter keep_alive |
 | **Agent status** | backend, ai | Agents set his status in plain words via MCP `set_status` (source `agent:<name>`); the pill polls every 4s | `mcp_server.py`, `Store.startPolling` | MVP v0.7 | Push instead of poll; agent-set status is a claim *on his behalf*, show it differently? |
 
 ### Infra → dev infra: `docs/infra/dev-infra/`
