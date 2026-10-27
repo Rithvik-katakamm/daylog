@@ -46,6 +46,9 @@ STALE_AFTER = timedelta(hours=3)
 STALE_MIN_OFF = timedelta(hours=1)  # so a quick lock late in a long session never ends the task
 DISPLAY_OFF_REASONS = {"NSWorkspaceScreensDidSleepNotification", "NSWorkspaceWillSleepNotification",
                        "locked"}
+# The lock screen reports itself as a focused app (Oct 27: "loginwindow" all night). That's the display
+# still off, not him coming back, so it never ends an off-span.
+LOCK_SCREEN_APPS = {"loginwindow", "ScreenSaverEngine"}
 # the only observation that gets through ghost. A display sleeping or the screen locking doesn't
 # count: that happens at dinner too, which is what ghost is for.
 GHOST_ENDING_REASONS = {"NSWorkspaceWillSleepNotification"}
@@ -263,7 +266,7 @@ def expire_stale(conn: sqlite3.Connection) -> datetime | None:
         a = db.to_dict(r)
         if a["type"] == "away.start" and a["data"].get("reason") in DISPLAY_OFF_REASONS:
             off_at = off_at or db.parse(a["start"])
-        elif a["type"] == "app.focus" and off_at:
+        elif a["type"] == "app.focus" and off_at and a["data"].get("app") not in LOCK_SCREEN_APPS:
             if is_stale(off_at, last_change, db.parse(a["start"])):
                 stale_at = off_at
                 break

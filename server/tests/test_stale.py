@@ -33,8 +33,8 @@ def client(tmp_path, monkeypatch, clock):
         yield c
 
 
-def observe(c, clock, type, reason=None):
-    data = {"reason": reason} if reason else {"app": "Terminal"}
+def observe(c, clock, type, reason=None, app="Terminal"):
+    data = {"reason": reason} if reason else {"app": app}
     c.post("/observations", json={"type": type, "start": db.iso(clock.t), "data": data})
 
 
@@ -76,6 +76,24 @@ def test_night_away_ends_task_and_states_when_display_went_off(client, clock):
                                          "end": db.iso(clock.t)}).json()
     anime = next(c for c in tl["claims"] if c["label"] == "watching anime")
     assert db.parse(anime["end"]) == off                    # ended when the display went off
+
+
+def test_lock_screen_focus_is_not_the_display_coming_back(client, clock):
+    # Oct 27: display off at 2:17, then the lock screen showed up as app.focus "loginwindow"
+    # through the night; that ended the off-span after 4 min and the task ran 23 hours.
+    client.post("/log", json={"text": "jobhunt"})
+    clock.advance(hours=4)
+    observe(client, clock, "away.start", "NSWorkspaceScreensDidSleepNotification")
+    off = clock.t
+    for _ in range(3):
+        clock.advance(minutes=4)
+        observe(client, clock, "app.focus", app="loginwindow")
+    clock.advance(hours=10)
+    observe(client, clock, "app.focus")                     # morning: really back
+    assert client.get("/now").json()["timer"] is None
+    tl = client.get("/timeline", params={"start": db.iso(off - timedelta(hours=5)),
+                                         "end": db.iso(clock.t)}).json()
+    assert db.parse(next(c for c in tl["claims"] if c["label"] == "jobhunt")["end"]) == off
 
 
 def test_still_asleep_past_3h_clears_on_next_check(client, clock):
