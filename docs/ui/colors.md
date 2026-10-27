@@ -49,7 +49,8 @@ His words: "a circle around it filling in like an analog watch… simple and min
   violet, break blue-grey). The unfilled track is the title's color, dimmed to 22% so a pearl
   (no-focus) fill still reads against it. That dim is a knob.
 - "Hide the time" (⌘K) hides the clock on the closed pill only; the open bar always shows it.
-- Component: `ClockRing` in `Views.swift`. Font: SF Mono across the bar (Oct 18: the Claude Code look).
+- Component: `ClockRing` in `Views.swift`. Font: SF Pro with even-width digits, like the rest
+  of the bar (Oct 27: SF Mono across the bar, tried Oct 18, went back; he didn't like it).
 
 ## Substances: one blended glow, not lines
 

@@ -92,7 +92,6 @@ struct BarView: View {
                height: store.mode == .menu ? AppDelegate.menuWindowSize.height : AppDelegate.windowSize.height,
                alignment: .top)
         .environment(\.colorScheme, .dark)
-        .fontDesign(.monospaced)
         .onChange(of: store.focusRequest) { inputFocused = true }
         .onChange(of: store.isOpen) { liquid(store.isOpen) }
         // Each mode swaps in a new field; give it the keyboard straight away.
@@ -741,7 +740,7 @@ struct ClockRing: View {
                     .rotationEffect(.degrees(-90))  // 12 o'clock first
                 if start != nil {
                     Text(m < 60 ? "\(m)" : "\(m / 60)")
-                        .font(.system(size: size * 0.44, weight: .semibold, design: .monospaced))
+                        .font(.system(size: size * 0.44, weight: .semibold).monospacedDigit())
                         .minimumScaleFactor(0.6)
                         .foregroundStyle(color)
                 }
